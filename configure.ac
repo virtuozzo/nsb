@@ -10,7 +10,7 @@ AM_PROG_CC_C_O
 AC_GNU_SOURCE
 AC_CONFIG_FILES([
 		 Makefile
-		 protobuf/Makefile
+		 patchgen/Makefile
 		 patcher/Makefile
 		 samples/Makefile
 ])
