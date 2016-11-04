@@ -2,10 +2,11 @@
 
 #include "waitsig.h"
 
-static int var = 1;
+static int var;
 
 int __attribute__ ((noinline)) func_b(void)
 {
+	var += 1;
 	return var + 3;
 }
 
