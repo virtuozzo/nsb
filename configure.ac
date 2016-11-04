@@ -20,5 +20,14 @@ if test x"$PROTOC_CHECK" != x"yes" ; then
 	AC_MSG_ERROR([protobuf-compiler is required.])
 fi
 
+AC_CHECK_LIB(
+		[protobuf-c],
+		[protobuf_c_message_get_packed_size],
+		[],
+		[AC_MSG_ERROR([*** libprotobuf-c not found.])
+])
+
+PROTODIR=${ac_pwd}/protobuf
+AC_SUBST([PROTODIR])
 AC_OUTPUT
 
