@@ -15,5 +15,10 @@ AC_CONFIG_FILES([
 		 patchgen/protobuf/Makefile
 ])
 
+AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)
+if test x"$PROTOC_CHECK" != x"yes" ; then
+	AC_MSG_ERROR([protobuf-compiler is required.])
+fi
+
 AC_OUTPUT
 
