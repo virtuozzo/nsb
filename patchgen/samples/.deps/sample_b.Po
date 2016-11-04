@@ -1,0 +1,5 @@
+sample_b.o: sample_b.c /usr/include/stdc-predef.h waitsig.h
+
+/usr/include/stdc-predef.h:
+
+waitsig.h:
