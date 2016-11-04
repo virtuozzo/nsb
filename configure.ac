@@ -27,6 +27,7 @@ AC_CHECK_LIB(
 		[AC_MSG_ERROR([*** libprotobuf-c not found.])
 ])
 
+LIBS=
 PROTODIR=${ac_pwd}/protobuf
 AC_SUBST([PROTODIR])
 AC_OUTPUT
