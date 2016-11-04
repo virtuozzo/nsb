@@ -1,6 +1,3 @@
-import sys
-sys.path.append('./protobuf')
-
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("elfa", help="Old ELF file")

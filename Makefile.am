@@ -1,1 +1,1 @@
-SUBDIRS = patchgen patcher samples
+SUBDIRS = protobuf patcher samples
