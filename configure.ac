@@ -13,6 +13,7 @@ AC_CONFIG_FILES([
 		 patchgen/Makefile
 		 patchgen/samples/Makefile
 		 patchgen/protobuf/Makefile
+		 patcher/Makefile
 ])
 
 AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)

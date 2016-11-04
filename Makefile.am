@@ -1,1 +1,1 @@
-SUBDIRS = patchgen
+SUBDIRS = patchgen patcher
