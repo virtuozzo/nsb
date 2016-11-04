@@ -132,7 +132,7 @@ class ElfFunction:
 	@staticmethod
 	def compare_content(func_a, func_b):
 		diff_lines = []
-		for a, b in zip(func_a.lines[2:], func_b.lines[2:]):
+		for a, b in zip(func_a.lines, func_b.lines):
 			if DumpLine.equal_lines(a, b) == False:
 				diff_lines.append([a, b])
 		return diff_lines
