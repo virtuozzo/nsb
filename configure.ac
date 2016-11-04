@@ -11,9 +11,9 @@ AC_GNU_SOURCE
 AC_CONFIG_FILES([
 		 Makefile
 		 patchgen/Makefile
-		 patchgen/samples/Makefile
 		 patchgen/protobuf/Makefile
 		 patcher/Makefile
+		 samples/Makefile
 ])
 
 AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)

@@ -1,1 +1,1 @@
-SUBDIRS = protobuf samples
+SUBDIRS = protobuf
