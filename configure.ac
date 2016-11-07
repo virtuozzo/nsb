@@ -26,7 +26,5 @@ AC_CHECK_LIB(
 ])
 
 LIBS=
-PROTODIR=${ac_pwd}/protobuf
-AC_SUBST([PROTODIR])
 AC_OUTPUT
 
