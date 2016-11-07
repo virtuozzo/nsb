@@ -20,10 +20,10 @@ nsb_SOURCES =						\
 			protobuf/funcpatch.pb-c.c	\
 			protobuf/funcpatch.pb-c.h	\
 							\
-			patcher/src/protobuf.c		\
-			patcher/src/log.c		\
-			patcher/src/main.c		\
-			patcher/src/patch.c
+			patcher/protobuf.c		\
+			patcher/log.c			\
+			patcher/main.c			\
+			patcher/patch.c
 
 nsb_CPPFLAGS = -Ipatcher/include -Ipatcher/compel -Iprotobuf/
 nsb_LDFLAGS = -rdynamic
