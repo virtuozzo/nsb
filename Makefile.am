@@ -45,9 +45,9 @@ am__v_CP_ = $(am__v_CP_@AM_DEFAULT_V@)
 am__v_CP_0 = @echo "  CP      " $@;
 am__v_CP_1 =
 
-patchgen/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
+generator/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
 	$(AM_V_CP) cp $< $@
 
-all: patchgen/funcpatch_pb2.py
+all: generator/funcpatch_pb2.py
 
-CLEANFILES += patchgen/funcpatch_pb2.py
+CLEANFILES += generator/funcpatch_pb2.py
