@@ -41,7 +41,7 @@ SUFFIXES += _pb2.py
 	$(AM_V_GEN) protoc -I=. --python_out=. $<
 
 AM_V_CP = $(am__v_CP_@AM_V@)
-am__v_CP_ = $(am__v_CC_@AM_DEFAULT_V@)
+am__v_CP_ = $(am__v_CP_@AM_DEFAULT_V@)
 am__v_CP_0 = @echo "  CP      " $@;
 am__v_CP_1 =
 
