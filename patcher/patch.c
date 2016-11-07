@@ -109,10 +109,37 @@ unsigned long find_syscall_ip(struct list_head *head)
 	return 0;
 }
 
+static void get_jump_instr(unsigned long old_addr, unsigned long new_addr,
+			  unsigned char *data)
+{
+	unsigned char *instr = &data[0];
+	unsigned int *addr = (unsigned int *)&data[1];
+	long off;
+	int i;
+
+	pr_debug("jump: old address : %#lx\n", old_addr);
+	pr_debug("jump: new address : %#lx\n", new_addr);
+
+	/* Relative jump */
+	*instr = 0xe9;
+	/* 5 bytes is relative jump command size */
+	off = new_addr - old_addr - 5;
+
+	pr_debug("jump: offset      : %#lx\n", off);
+
+	*addr = off;
+
+	pr_debug("jump :");
+	for (i = 0; i < 5; i++)
+		pr_msg(" %02x", data[i]);
+	pr_debug("\n");
+}
+
 static int apply_patch(pid_t pid, unsigned long addr, const char *patchfile)
 {
 	FuncPatch *fp;
-	int i;
+	int i, err;
+	unsigned char jump[8];
 
 	fp = read_funcpatch(patchfile);
 	if (!fp)
@@ -120,16 +147,27 @@ static int apply_patch(pid_t pid, unsigned long addr, const char *patchfile)
 
 	pr_debug("patch: name : %s\n", fp->name);
 	pr_debug("patch: start: %#x\n", fp->start);
-	pr_debug("patch: size : %#x\n", fp->size);
+	pr_debug("patch: size : %d\n", fp->size);
 	pr_debug("patch: new  : %d\n", fp->new_);
 	pr_debug("patch: code :");
 	for (i = 0; i < fp->size; i++)
 		pr_msg(" %02x", fp->code.data[i]);
 	pr_debug("\n");
 
+	err = ptrace_poke_area(pid, fp->code.data, (void *)addr,
+				round_up(fp->size, 8));
+	if (err < 0)
+		pr_err("failed to patch: %d\n", err);
+
+	get_jump_instr(fp->start, addr, jump);
+
+	err = ptrace_poke_area(pid, (void *)jump, (void *)(long)fp->start, 8);
+	if (err < 0)
+		pr_err("failed to patch: %d\n", err);
+
 	func_patch__free_unpacked(fp, NULL);
 
-	return 0;
+	return err;
 }
 
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
@@ -139,6 +177,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	LIST_HEAD(vma_list_head);
 	unsigned long syscall_ip;
 	int ret;
+	long hint;
 
 	unsigned long sret = -ENOSYS;
 
@@ -174,8 +213,12 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	ictx->syscall_ip = syscall_ip;
 
 	pr_debug("Allocating anon mapping in %d for %zu bytes\n", pid, mmap_size);
+
+	/* TODO: Hint has to be calculated by searching a hole in 4GB page,
+	 * where old address (taken from patch) belongs */
+	hint = 0x800000;
 	ret = compel_syscall(ctl, __NR(mmap, false), &sret,
-			     0, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+			     hint, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
 			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	if (ret < 0) {
 		pr_err("Failed to execute syscall for %d\n", pid);
