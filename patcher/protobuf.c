@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "log.h"
+#include "include/log.h"
 
 #include "protobuf.h"
 

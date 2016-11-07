@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#include <compel/compel.h>
-#include <compel/ptrace.h>
+#include "compel/compel/compel.h"
+#include "compel/compel/ptrace.h"
 
-#include "patch.h"
-#include "list.h"
-#include "log.h"
-#include "xmalloc.h"
+#include "include/patch.h"
+#include "include/list.h"
+#include "include/log.h"
+#include "include/xmalloc.h"
 
 extern int compel_syscall(struct parasite_ctl *ctl,
 			  int nr, unsigned long *ret,

@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "compiler.h"
-
 #define FP_MIN_ALIGN_BYTES		64
 
 #define FP_XSTATE_MAGIC1		0x46505853U
@@ -61,17 +59,17 @@ struct i387_fxsave_struct {
 		uint32_t		sw_reserved[12];
 	};
 
-} __aligned(16);
+}  __attribute__((aligned(16)));
 
 struct xsave_hdr_struct {
 	uint64_t			xstate_bv;
 	uint64_t			reserved1[2];
 	uint64_t			reserved2[5];
-} __packed;
+} __attribute__((__packed__));
 
 struct ymmh_struct {
 	uint32_t			ymmh_space[64];
-} __packed;
+} __attribute__((__packed__));
 
 /*
  * cpu requires it to be 64 byte aligned
@@ -80,7 +78,7 @@ struct xsave_struct {
 	struct i387_fxsave_struct	i387;
 	struct xsave_hdr_struct		xsave_hdr;
 	struct ymmh_struct		ymmh;
-} __aligned(FP_MIN_ALIGN_BYTES) __packed;
+} __attribute__((aligned(FP_MIN_ALIGN_BYTES))) __attribute__((__packed__));
 
 /*
  * This one is used in restorer.

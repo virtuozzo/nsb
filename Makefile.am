@@ -25,7 +25,7 @@ nsb_SOURCES =						\
 			patcher/main.c			\
 			patcher/patch.c
 
-nsb_CPPFLAGS = -Ipatcher/include -Ipatcher/compel -Iprotobuf/
+nsb_CPPFLAGS = -Ipatcher/compel -Iprotobuf/
 nsb_LDFLAGS = -rdynamic
 nsb_LDADD =		patcher/compel/lib/libcompel.a		\
 			patcher/compel/lib/std.built-in.o	\

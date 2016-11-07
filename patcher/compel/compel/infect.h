@@ -8,8 +8,6 @@
 #include <compel/ksigset.h>
 #include <compel/compel.h>
 
-#include "compiler.h"
-
 #define PARASITE_START_AREA_MIN	(4096)
 
 extern int compel_stop_task(int pid);

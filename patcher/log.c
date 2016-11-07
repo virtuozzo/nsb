@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "compiler.h"
-#include "log.h"
+#include "include/compiler.h"
+#include "include/log.h"
 
 static unsigned int current_loglevel = DEFAULT_LOGLEVEL;
 static int logfd = -1;
