@@ -10,6 +10,8 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 
+#include "protobuf.h"
+
 extern int compel_syscall(struct parasite_ctl *ctl,
 			  int nr, unsigned long *ret,
 			  unsigned long arg1,
@@ -107,6 +109,29 @@ unsigned long find_syscall_ip(struct list_head *head)
 	return 0;
 }
 
+static int apply_patch(pid_t pid, unsigned long addr, const char *patchfile)
+{
+	FuncPatch *fp;
+	int i;
+
+	fp = read_funcpatch(patchfile);
+	if (!fp)
+		return -1;
+
+	pr_debug("patch: name : %s\n", fp->name);
+	pr_debug("patch: start: %#x\n", fp->start);
+	pr_debug("patch: size : %#x\n", fp->size);
+	pr_debug("patch: new  : %d\n", fp->new_);
+	pr_debug("patch: code :");
+	for (i = 0; i < fp->size; i++)
+		pr_msg(" %02x", fp->code.data[i]);
+	pr_debug("\n");
+
+	func_patch__free_unpacked(fp, NULL);
+
+	return 0;
+}
+
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
 	struct parasite_ctl *ctl;
@@ -177,6 +202,8 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 *    @addr -- where to put it in task space
 	 *    @bytes -- size of patch, must be 8 byte aligned
 	 */
+
+	ret = apply_patch(pid, sret, patchfile);
 
 	/*
 	 * Patch itself
