@@ -78,7 +78,7 @@ static int parse_options(int argc, char **argv, struct options *o)
 usage:
 	pr_msg("\n"
 "Usage:\n"
-"  nsb patch -t PID -f patch-file [options]\n"
+"  nsb patch -p PID -f patch-file [options]\n"
 "\n");
 	return 1;
 
