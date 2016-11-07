@@ -58,6 +58,11 @@ static int parse_options(int argc, char **argv, struct options *o)
 		goto usage;
 	}
 
+	if (!o->patch_path) {
+		pr_msg("Error: patch file has to be provided\n");
+		goto usage;
+	}
+
 	if (optind == argc) {
 		pr_msg("Error: command has to be provided\n");
 		goto usage;
@@ -73,9 +78,9 @@ static int parse_options(int argc, char **argv, struct options *o)
 usage:
 	pr_msg("\n"
 "Usage:\n"
-"  nsb patch -t PID [options]\n"
+"  nsb patch -t PID -f patch-file [options]\n"
 "\n");
-	return 0;
+	return 1;
 
 bad_arg:
 	if (idx < 0)
@@ -105,5 +110,5 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	return patch_process(o.pid, 4096);
+	return patch_process(o.pid, 4096, o.patch_path);
 }

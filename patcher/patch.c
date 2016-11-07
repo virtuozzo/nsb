@@ -107,7 +107,7 @@ unsigned long find_syscall_ip(struct list_head *head)
 	return 0;
 }
 
-int patch_process(pid_t pid, size_t mmap_size)
+int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
 	struct parasite_ctl *ctl;
 	struct infect_ctx *ictx;

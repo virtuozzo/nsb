@@ -16,6 +16,6 @@ struct vma_area {
 	uint32_t		flags;
 };
 
-extern int patch_process(pid_t pid, size_t mmap_size);
+int patch_process(pid_t pid, size_t mmap_size, const char *patchfile);
 
 #endif /* NSB_PATCH_H__ */
