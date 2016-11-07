@@ -7,7 +7,11 @@ SUFFIXES = .pb-c.c .pb-c.h .proto
 .proto.pb-c.c:
 	$(AM_V_GEN) protoc-c -I=. --c_out=. $<
 
-BUILT_SOURCES =		protobuf/funcpatch.pb-c.c
+BUILT_SOURCES =		protobuf/funcpatch.pb-c.c	\
+			protobuf/funcpatch.pb-c.h
+
+protobuf/funcpatch.pb-c.h: protobuf/funcpatch.pb-c.c
+
 CLEANFILES = $(BUILT_SOURCES)
 
 bin_PROGRAMS = nsb
