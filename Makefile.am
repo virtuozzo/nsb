@@ -20,6 +20,12 @@ nsb_SOURCES =						\
 			protobuf/funcpatch.pb-c.c	\
 			protobuf/funcpatch.pb-c.h	\
 							\
+			patcher/include/compiler.h	\
+			patcher/include/log.h		\
+			patcher/include/list.h		\
+			patcher/include/patch.h		\
+			patcher/include/xmalloc.h	\
+							\
 			patcher/protobuf.c		\
 			patcher/log.c			\
 			patcher/main.c			\
