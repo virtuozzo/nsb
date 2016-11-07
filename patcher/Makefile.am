@@ -1,16 +1,17 @@
 AM_CFLAGS = -Wall -Wformat-security -Werror -DCONFIG_X86_64 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 AM_MAKEFLAGS = --no-print-directory
 
-%.pb-c.c: @PROTODIR@/%.proto
-	$(AM_V_GEN) protoc-c -I=@PROTODIR@ --c_out=. $<
+src/%.pb-c.c: @PROTODIR@/%.proto
+	$(AM_V_GEN) protoc-c -I=@PROTODIR@ --c_out=src/ $<
 
 BUILT_SOURCES =					\
-			funcpatch.pb-c.c	\
-			funcpatch.pb-c.h
+			src/funcpatch.pb-c.c	\
+			src/funcpatch.pb-c.h
 
 bin_PROGRAMS = nsb
 
 nsb_SOURCES =			\
+		src/protobuf.c	\
 		src/log.c	\
 		src/main.c	\
 		src/patch.c
