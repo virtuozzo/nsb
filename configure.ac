@@ -11,6 +11,7 @@ AC_GNU_SOURCE
 AC_CONFIG_FILES([
 		 Makefile
 		 samples/Makefile
+		 protobuf/Makefile
 ])
 
 AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)
