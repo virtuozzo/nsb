@@ -117,55 +117,72 @@ static void get_jump_instr(unsigned long old_addr, unsigned long new_addr,
 	long off;
 	int i;
 
-	pr_debug("jump: old address : %#lx\n", old_addr);
-	pr_debug("jump: new address : %#lx\n", new_addr);
+	pr_debug("\tjump: old address : %#lx\n", old_addr);
+	pr_debug("\tjump: new address : %#lx\n", new_addr);
 
 	/* Relative jump */
 	*instr = 0xe9;
 	/* 5 bytes is relative jump command size */
 	off = new_addr - old_addr - 5;
 
-	pr_debug("jump: offset      : %#lx\n", off);
+	pr_debug("\tjump: offset      : %#lx\n", off);
 
 	*addr = off;
 
-	pr_debug("jump :");
+	pr_debug("\tjump :");
 	for (i = 0; i < 5; i++)
 		pr_msg(" %02x", data[i]);
 	pr_debug("\n");
 }
 
-static int apply_patch(pid_t pid, unsigned long addr, const char *patchfile)
+static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
 {
-	FuncPatch *fp;
-	int i, err;
+	int i, err = 0;
 	unsigned char jump[8];
 
-	fp = read_funcpatch(patchfile);
-	if (!fp)
-		return -1;
-
-	pr_debug("patch: name : %s\n", fp->name);
-	pr_debug("patch: start: %#x\n", fp->start);
-	pr_debug("patch: size : %d\n", fp->size);
-	pr_debug("patch: new  : %d\n", fp->new_);
-	pr_debug("patch: code :");
+	pr_debug("\tpatch: name : %s\n", fp->name);
+	pr_debug("\tpatch: start: %#x\n", fp->start);
+	pr_debug("\tpatch: size : %d\n", fp->size);
+	pr_debug("\tpatch: new  : %d\n", fp->new_);
+	pr_debug("\tpatch: code :");
 	for (i = 0; i < fp->size; i++)
 		pr_msg(" %02x", fp->code.data[i]);
 	pr_debug("\n");
+
+	get_jump_instr(fp->start, addr, jump);
 
 	err = ptrace_poke_area(pid, fp->code.data, (void *)addr,
 				round_up(fp->size, 8));
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
-	get_jump_instr(fp->start, addr, jump);
-
 	err = ptrace_poke_area(pid, (void *)jump, (void *)(long)fp->start, 8);
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
-	func_patch__free_unpacked(fp, NULL);
+	return err;
+}
+static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
+{
+	BinPatch *bp;
+	int i, err;
+
+	bp = read_binpatch(patchfile);
+	if (!bp)
+		return -1;
+
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+
+		pr_debug("Funtion patch %d:\n", i);
+
+		err = apply_funcpatch(pid, addr, fp);
+		if (err)
+			break;
+
+		addr += round_up(fp->size, 16);
+	}
+	bin_patch__free_unpacked(bp, NULL);
 
 	return err;
 }
@@ -246,7 +263,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 *    @bytes -- size of patch, must be 8 byte aligned
 	 */
 
-	ret = apply_patch(pid, sret, patchfile);
+	ret = apply_binpatch(pid, sret, patchfile);
 
 	/*
 	 * Patch itself

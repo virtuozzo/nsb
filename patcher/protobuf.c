@@ -47,3 +47,22 @@ FuncPatch *read_funcpatch(const char *path)
 
 	return patch;
 }
+
+BinPatch *read_binpatch(const char *path)
+{
+	uint8_t page[4096];
+	ssize_t res;
+	BinPatch *patch;
+
+	res = read_image(path, page, 4096);
+	if (res < 0)
+		return NULL;
+
+	patch = bin_patch__unpack(NULL, res, page); // Deserialize the serialized input
+	if (patch == NULL) {
+		pr_err("failed to unpack binpatch\n");
+		return NULL;
+	}
+
+	return patch;
+}
