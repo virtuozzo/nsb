@@ -8,6 +8,8 @@ bin_PROGRAMS = nsb
 nsb_SOURCES =						\
 			protobuf/funcpatch.pb-c.c	\
 			protobuf/funcpatch.pb-c.h	\
+			protobuf/binpatch.pb-c.c	\
+			protobuf/binpatch.pb-c.h	\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\
@@ -34,7 +36,9 @@ am__v_CP_1 =
 
 generator/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
 	$(AM_V_CP) cp $< $@
+generator/binpatch_pb2.py:  protobuf/binpatch_pb2.py
+	$(AM_V_CP) cp $< $@
 
-all-local: generator/funcpatch_pb2.py
+all-local: generator/funcpatch_pb2.py generator/binpatch_pb2.py
 
-CLEANFILES = generator/funcpatch_pb2.py
+CLEANFILES = generator/funcpatch_pb2.py generator/binpatch_pb2.py
