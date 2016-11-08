@@ -108,10 +108,7 @@ class FuncPatch:
 #			info.show()
 			self.code_info.append(info)
 
-	def write(self, patchdir, code):
-		filename = patchdir + "/" + self.function.funcname + ".patch"
-		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
-
+	def get_patch(self, code):
 		image = funcpatch_pb2.FuncPatch()
 		image.name = self.function.funcname
 		image.start = self.function.start
@@ -120,6 +117,13 @@ class FuncPatch:
 		if self.functype.name == "new":
 			image.new = True
 		image.code = code
+		return image
+
+	def write(self, patchdir, code):
+		filename = patchdir + "/" + self.function.funcname + ".patch"
+		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
+
+		image = self.get_patch()
 
 		data = image.SerializeToString()
 

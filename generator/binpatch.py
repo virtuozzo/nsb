@@ -1,5 +1,7 @@
 import os
 
+import binpatch_pb2
+
 class BinPatch:
 
 	def __init__(self, bf_old, bf_new, patchdir):
@@ -14,6 +16,7 @@ class BinPatch:
 		self.new_obj = []
 		self.patches_list = []
 		self.applicable = False
+		self.name = os.path.basename(self.bf_old.filename)
 
 	def create(self):
 		if self.bf_old:
@@ -58,7 +61,7 @@ class BinPatch:
 						return
 		self.applicable = True
 
-	def write(self):
+	def write_old(self):
 		src = os.open(self.bf_new.filename, os.O_RDONLY)
 
 		for patch in self.patches_list:
@@ -66,3 +69,31 @@ class BinPatch:
 			code = os.read(src, patch.function.size)
 
 			patch.write(self.patchdir, code)
+
+	def get_patch(self):
+		image = binpatch_pb2.BinPatch()
+		image.name = self.name
+
+		src = os.open(self.bf_new.filename, os.O_RDONLY)
+
+		for patch in self.patches_list:
+			pos = os.lseek(src, patch.function.file_offset, os.SEEK_SET)
+			code = os.read(src, patch.function.size)
+
+			fpatch = patch.get_patch(code)
+			image.patches.extend([fpatch])
+
+		return image
+
+	def write(self):
+		filename = self.patchdir + "/" + self.name + ".patch"
+		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
+
+		image = self.get_patch()
+
+		data = image.SerializeToString()
+
+		os.write(pfile, data)
+		print "Written %d bytes to %s" % (len(data), filename)
+
+
