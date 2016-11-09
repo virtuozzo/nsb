@@ -1,7 +1,7 @@
 message ObjInfo {
 	required string name		= 1;
 	required int32	offset		= 2;
-	required bool	new		= 3;
+	required int32  ref_addr	= 3;
 	required bool	external	= 4;
 	enum ObjType {
 		CALL		= 0;

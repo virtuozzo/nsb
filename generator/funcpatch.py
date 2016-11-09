@@ -39,10 +39,9 @@ class CodeLineInfo:
 		self.addr = int(self.dumpline.addr, 16)
 		self.offset = self.addr - func_start
 		self.command_type = MathCommand()
-		self.access_addr = None
+		self.access_addr = 0
 		self.access_name = None
 		self.access_plt = False
-		self.access_new = False
 		self.__analize__()
 
 	def __analize__(self):
@@ -79,15 +78,15 @@ class CodeLineInfo:
 
 	def show(self):
 		if self.command_type != MathCommand():
-			print "%s: '%s', '%s', %s, %d" % (self.command_type, self.access_name, self.access_addr, str(self.access_new), self.offset)
+			print "%s: '%s', '%s', %s, %d" % (self.command_type, self.access_name, self.access_addr, self.access_addr, self.offset)
 
 	def get_patch(self):
 		print "CodeLineInfo: get_patch for %s" % self.dumpline.line
 		image = objinfo_pb2.ObjInfo()
 		image.name = self.access_name
 		image.offset = self.offset
-		image.new = self.access_new
 		image.external = self.access_plt
+		image.ref_addr = self.access_addr
 		if self.command_type.num == 1:
 			image.reftype = objinfo_pb2.ObjInfo.CALL
 		elif self.command_type.num == 3:
