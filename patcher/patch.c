@@ -12,6 +12,31 @@
 
 #include "protobuf.h"
 
+struct funcpatch_s {
+	struct list_head	list;
+	FuncPatch		 *fp;
+	unsigned long		 addr;
+};
+
+struct binpatch_s {
+	BinPatch		 *bp;
+	unsigned long		 addr;
+	struct list_head	functions;
+};
+
+struct binpatch_s binpatch = { };
+
+static struct funcpatch_s *search_func_by_name(const char *name)
+{
+	struct funcpatch_s *funcpatch;
+
+	list_for_each_entry(funcpatch, &binpatch.functions, list) {
+		if (!strcmp(funcpatch->fp->name, name))
+			return funcpatch;
+	}
+	return NULL;
+}
+
 extern int compel_syscall(struct parasite_ctl *ctl,
 			  int nr, unsigned long *ret,
 			  unsigned long arg1,
@@ -109,7 +134,7 @@ unsigned long find_syscall_ip(struct list_head *head)
 	return 0;
 }
 
-static void get_jump_instr(unsigned long old_addr, unsigned long new_addr,
+static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
 			  unsigned char *data)
 {
 	unsigned char *instr = &data[0];
@@ -117,13 +142,13 @@ static void get_jump_instr(unsigned long old_addr, unsigned long new_addr,
 	long off;
 	int i;
 
-	pr_debug("\tjump: old address : %#lx\n", old_addr);
-	pr_debug("\tjump: new address : %#lx\n", new_addr);
+	pr_debug("\tjump: cmd address : %#lx\n", cmd_addr);
+	pr_debug("\tjump: jmp address : %#lx\n", jmp_addr);
 
 	/* Relative jump */
 	*instr = 0xe9;
 	/* 5 bytes is relative jump command size */
-	off = new_addr - old_addr - 5;
+	off = jmp_addr - cmd_addr - 5;
 
 	pr_debug("\tjump: offset      : %#lx\n", off);
 
@@ -133,6 +158,62 @@ static void get_jump_instr(unsigned long old_addr, unsigned long new_addr,
 	for (i = 0; i < 5; i++)
 		pr_msg(" %02x", data[i]);
 	pr_debug("\n");
+}
+
+static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *io)
+{
+	struct funcpatch_s *funcpatch;
+	unsigned char jump[8];
+	int err;
+
+	pr_debug("\t\tinfo: name    : %s\n", io->name);
+	pr_debug("\t\tinfo: offset  : %#x\n", io->offset);
+	pr_debug("\t\tinfo: new     : %d\n", io->new_);
+	pr_debug("\t\tinfo: external: %d\n", io->external);
+	pr_debug("\t\tinfo: reftype : %d\n", io->reftype);
+
+	funcpatch = search_func_by_name(io->name);
+	if (!funcpatch) {
+		pr_debug("\t\tfailed to find function by name %s\n", io->name);
+		return -EINVAL;
+	}
+	pr_debug("\t\tfunction address : %#lx\n", funcpatch->addr);
+
+	switch (io->reftype) {
+		case OBJ_INFO__OBJ_TYPE__CALL:
+			pr_debug("\t\tinfo: call\n");
+			break;
+		case OBJ_INFO__OBJ_TYPE__JMPQ:
+			{
+				int i;
+
+				pr_debug("\t\tinfo: jmpq\n");
+				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + io->offset, 8);
+				if (err < 0)
+					pr_err("failed to patch: %d\n", err);
+
+				pr_debug("\t\told code :");
+				for (i = 0; i < 8; i++)
+					pr_msg(" %02x", jump[i]);
+				pr_debug("\n");
+
+				get_jump_instr(start + io->offset, funcpatch->addr, jump);
+
+				pr_debug("\t\tnew code :");
+				for (i = 0; i < 8; i++)
+					pr_msg(" %02x", jump[i]);
+				pr_debug("\n");
+
+				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + io->offset, 8);
+				if (err < 0)
+					pr_err("failed to patch: %d\n", err);
+			}
+			break;
+		default:
+			pr_debug("\t\tinfo: unknown\n");
+			return -1;
+	}
+	return 0;
 }
 
 static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
@@ -148,13 +229,19 @@ static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
 	for (i = 0; i < fp->size; i++)
 		pr_msg(" %02x", fp->code.data[i]);
 	pr_debug("\n");
-
-	get_jump_instr(fp->start, addr, jump);
+	pr_debug("\tplace address  : %#lx\n", addr);
 
 	err = ptrace_poke_area(pid, fp->code.data, (void *)addr,
 				round_up(fp->size, 8));
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
+
+	for (i = 0; i < fp->n_objs; i++) {
+		pr_debug("\tObject info %d:\n", i);
+		err = apply_objinfo(pid, addr, fp->objs[i]);
+	}
+
+	get_jump_instr(fp->start, addr, jump);
 
 	err = ptrace_poke_area(pid, (void *)jump, (void *)(long)fp->start, 8);
 	if (err < 0)
@@ -164,23 +251,38 @@ static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
 }
 static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
 {
-	BinPatch *bp;
 	int i, err;
+	BinPatch *bp;
+	struct funcpatch_s *funcpatch;
 
-	bp = read_binpatch(patchfile);
-	if (!bp)
+	binpatch.addr = addr;
+	INIT_LIST_HEAD(&binpatch.functions);
+
+	binpatch.bp = read_binpatch(patchfile);
+	if (!binpatch.bp)
 		return -1;
 
+	bp = binpatch.bp;
+
 	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
+		funcpatch = xmalloc(sizeof(*funcpatch));
+		if (!funcpatch) {
+			pr_err("failed to allocate\n");
+			return -ENOMEM;
+		}
+		funcpatch->addr = addr;
+		funcpatch->fp = bp->patches[i];
+		list_add_tail(&funcpatch->list, &binpatch.functions);
 
-		pr_debug("Funtion patch %d:\n", i);
+		addr += round_up(funcpatch->fp->size, 16);
+	}
 
-		err = apply_funcpatch(pid, addr, fp);
+	list_for_each_entry(funcpatch, &binpatch.functions, list) {
+		pr_debug("Function patch %d:\n", i);
+
+		err = apply_funcpatch(pid, funcpatch->addr, funcpatch->fp);
 		if (err)
 			break;
-
-		addr += round_up(fp->size, 16);
 	}
 	bin_patch__free_unpacked(bp, NULL);
 
