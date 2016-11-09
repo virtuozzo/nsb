@@ -1,7 +1,10 @@
+import "objinfo.proto";
+
 message FuncPatch {
 	required string	name	= 1;
 	required int32 start	= 2;
 	required int32 size	= 3;
 	required bool new	= 4;
 	required bytes code	= 5;
+	repeated ObjInfo objs	= 6;
 }

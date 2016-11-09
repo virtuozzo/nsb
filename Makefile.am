@@ -10,6 +10,8 @@ nsb_SOURCES =						\
 			protobuf/funcpatch.pb-c.h	\
 			protobuf/binpatch.pb-c.c	\
 			protobuf/binpatch.pb-c.h	\
+			protobuf/objinfo.pb-c.c		\
+			protobuf/objinfo.pb-c.h		\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\
@@ -29,6 +31,10 @@ nsb_LDADD =		patcher/compel/lib/libcompel.a		\
 			patcher/compel/lib/fds.built-in.o	\
 			-lprotobuf-c
 
+CP_FILES =	generator/funcpatch_pb2.py	\
+		generator/binpatch_pb2.py	\
+		generator/objinfo_pb2.py
+
 AM_V_CP = $(am__v_CP_@AM_V@)
 am__v_CP_ = $(am__v_CP_@AM_DEFAULT_V@)
 am__v_CP_0 = @echo "  CP      " $@;
@@ -38,7 +44,9 @@ generator/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
 	$(AM_V_CP) cp $< $@
 generator/binpatch_pb2.py:  protobuf/binpatch_pb2.py
 	$(AM_V_CP) cp $< $@
+generator/objinfo_pb2.py:  protobuf/objinfo_pb2.py
+	$(AM_V_CP) cp $< $@
 
-all-local: generator/funcpatch_pb2.py generator/binpatch_pb2.py
+all-local: $(CP_FILES)
 
-CLEANFILES = generator/funcpatch_pb2.py generator/binpatch_pb2.py
+CLEANFILES = $(CP_FILES)

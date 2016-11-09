@@ -3,6 +3,7 @@ import os
 from collections import namedtuple
 
 import funcpatch_pb2
+import objinfo_pb2
 
 class CommandType:
 	def __init__(self, num, name):
@@ -27,14 +28,21 @@ class VarCommand(CommandType):
 	def __init__(self):
 		CommandType.__init__(self, 2, "var")
 
+class JmpqCommand(CommandType):
+	def __init__(self):
+		CommandType.__init__(self, 3, "jmpq")
+
 
 class CodeLineInfo:
-	def __init__(self, dumpline):
+	def __init__(self, dumpline, func_start):
 		self.dumpline = dumpline
+		self.addr = int(self.dumpline.addr, 16)
+		self.offset = self.addr - func_start
 		self.command_type = MathCommand()
 		self.access_addr = None
 		self.access_name = None
 		self.access_plt = False
+		self.access_new = False
 		self.__analize__()
 
 	def __analize__(self):
@@ -54,7 +62,14 @@ class CodeLineInfo:
 					print "WTF?!"
 					print split
 					exit()
-			self.command_type = CallCommand()
+
+			if "jmpq" in self.dumpline.code:
+				self.command_type = JmpqCommand()
+			elif "call" in self.dumpline.code:
+				self.command_type = CallCommand()
+			else:
+				print "Unsupported redirect command: %s" % self.dumpline.code
+				raise
 		elif self.dumpline.hint:
 			split = filter(None, re.split('<(.+)>', self.dumpline.hint))
 			self.access_addr = split[0].strip()
@@ -63,9 +78,23 @@ class CodeLineInfo:
 
 
 	def show(self):
-		if self.command_type != CommandType.math:
-			print "%s: '%s', '%s'" % (self.command_type, self.access_addr, self.access_name)
+		if self.command_type != MathCommand():
+			print "%s: '%s', '%s', %s, %d" % (self.command_type, self.access_name, self.access_addr, str(self.access_new), self.offset)
 
+	def get_patch(self):
+		print "CodeLineInfo: get_patch for %s" % self.dumpline.line
+		image = objinfo_pb2.ObjInfo()
+		image.name = self.access_name
+		image.offset = self.offset
+		image.new = self.access_new
+		image.external = self.access_plt
+		if self.command_type.num == 1:
+			image.reftype = objinfo_pb2.ObjInfo.CALL
+		elif self.command_type.num == 3:
+			image.reftype = objinfo_pb2.ObjInfo.JMPQ
+		else:
+			print "Unsupported reftype: %s" % self.command_type.num 
+		return image
 
 
 class FuncPatch:
@@ -104,9 +133,11 @@ class FuncPatch:
 	def analize(self):
 		print "\tAnalize: %s" % self.functype.name
 		for l in self.function.lines:
-			info = CodeLineInfo(l)
+			info = CodeLineInfo(l, self.function.start)
 #			info.show()
-			self.code_info.append(info)
+			# skip pure math commands
+			if info.command_type.num:
+				self.code_info.append(info)
 
 	def get_patch(self, code):
 		image = funcpatch_pb2.FuncPatch()
@@ -117,6 +148,9 @@ class FuncPatch:
 		if self.functype.name == "new":
 			image.new = True
 		image.code = code
+		for i in self.code_info:
+			ci = i.get_patch()
+			image.objs.extend([ci])
 		return image
 
 	def write(self, patchdir, code):

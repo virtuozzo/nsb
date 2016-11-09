@@ -23,7 +23,7 @@ class DumpLine:
 	def __init__(self, line):
 		self.line = line
 		split = re.split('\t|#', self.line)
-		self.addr = split[0]
+		self.addr = split[0].rstrip(':')
 		self.bytes = split[1]
 		self.code = None
 		self.name = None

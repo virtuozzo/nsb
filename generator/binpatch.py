@@ -43,32 +43,27 @@ class BinPatch:
 			p.show()
 			p.analize()
 			for ci in p.code_info:
-				if ci.command_type.name == "call":
+				if ci.command_type.name == "call" or ci.command_type.name == "jmp":
 					if ci.access_name in self.common_func:
-						print "Call to COMMON function: '%s', '%s'" % (ci.access_name, ci.access_plt)
+						print "Call/jmpq to COMMON function: '%s', '%s'" % (ci.access_name, ci.access_plt)
 					else:
-						print "Call to NEW function: '%s', '%s'" % (ci.access_name, ci.access_plt)
+						print "Call/jmpq to NEW function: '%s', '%s'" % (ci.access_name, ci.access_plt)
+						ci.access_new = True
+						ci.show()
 						if ci.access_plt:
-							print "New call to PLT entry.\nUnsupported"
+							print "New call/jmpq to PLT entry.\nUnsupported"
 							return
 
 				elif ci.command_type.name == "var":
 					if ci.access_name in self.common_obj:
 						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 					else:
-						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
+						ci.access_new = True
+						ci.show()
+#						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 						print "Unsupported"
 						return
 		self.applicable = True
-
-	def write_old(self):
-		src = os.open(self.bf_new.filename, os.O_RDONLY)
-
-		for patch in self.patches_list:
-			pos = os.lseek(src, patch.function.file_offset, os.SEEK_SET)
-			code = os.read(src, patch.function.size)
-
-			patch.write(self.patchdir, code)
 
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
