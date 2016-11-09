@@ -134,6 +134,32 @@ unsigned long find_syscall_ip(struct list_head *head)
 	return 0;
 }
 
+static void get_call_instr(unsigned long cmd_addr, unsigned long jmp_addr,
+			   unsigned char *data)
+{
+	unsigned char *instr = &data[0];
+	unsigned int *addr = (unsigned int *)&data[1];
+	long off;
+	int i;
+
+	pr_debug("\tcall: cmd address : %#lx\n", cmd_addr);
+	pr_debug("\tcall: jmp address : %#lx\n", jmp_addr);
+
+	/* Relative callq */
+	*instr = 0xe8;
+	/* 5 bytes is relative jump command size */
+	off = jmp_addr - cmd_addr - 5;
+
+	pr_debug("\tcall: offset      : %#lx\n", off);
+
+	*addr = off;
+
+	pr_debug("\tcall :");
+	for (i = 0; i < 5; i++)
+		pr_msg(" %02x", data[i]);
+	pr_debug("\n");
+}
+
 static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
 			  unsigned char *data)
 {
@@ -160,35 +186,37 @@ static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
 	pr_debug("\n");
 }
 
-static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *io)
+static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 {
-	struct funcpatch_s *funcpatch;
 	unsigned char jump[8];
 	int err;
 
-	pr_debug("\t\tinfo: name    : %s\n", io->name);
-	pr_debug("\t\tinfo: offset  : %#x\n", io->offset);
-	pr_debug("\t\tinfo: new     : %d\n", io->new_);
-	pr_debug("\t\tinfo: external: %d\n", io->external);
-	pr_debug("\t\tinfo: reftype : %d\n", io->reftype);
+	pr_debug("\t\tinfo: name    : %s\n", oi->name);
+	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
+	pr_debug("\t\tinfo: ref_addr: %d\n", oi->ref_addr);
+	pr_debug("\t\tinfo: external: %d\n", oi->external);
+	pr_debug("\t\tinfo: reftype : %d\n", oi->reftype);
 
-	funcpatch = search_func_by_name(io->name);
-	if (!funcpatch) {
-		pr_debug("\t\tfailed to find function by name %s\n", io->name);
-		return -EINVAL;
+	if (oi->ref_addr == 0) {
+		struct funcpatch_s *funcpatch;
+
+		/* This means, that function is a new one */
+		funcpatch = search_func_by_name(oi->name);
+		if (!funcpatch) {
+			pr_debug("\t\tfailed to find function by name %s\n", oi->name);
+			return -EINVAL;
+		}
+		pr_debug("\t\tfunction address : %#lx\n", funcpatch->addr);
+		oi->ref_addr = funcpatch->addr;
 	}
-	pr_debug("\t\tfunction address : %#lx\n", funcpatch->addr);
 
-	switch (io->reftype) {
+	switch (oi->reftype) {
 		case OBJ_INFO__OBJ_TYPE__CALL:
-			pr_debug("\t\tinfo: call\n");
-			break;
-		case OBJ_INFO__OBJ_TYPE__JMPQ:
 			{
 				int i;
 
 				pr_debug("\t\tinfo: jmpq\n");
-				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + io->offset, 8);
+				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 
@@ -197,14 +225,40 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *io)
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				get_jump_instr(start + io->offset, funcpatch->addr, jump);
+				get_call_instr(start + oi->offset, oi->ref_addr, jump);
 
 				pr_debug("\t\tnew code :");
 				for (i = 0; i < 8; i++)
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + io->offset, 8);
+				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				if (err < 0)
+					pr_err("failed to patch: %d\n", err);
+			}
+			break;
+		case OBJ_INFO__OBJ_TYPE__JMPQ:
+			{
+				int i;
+
+				pr_debug("\t\tinfo: jmpq\n");
+				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				if (err < 0)
+					pr_err("failed to patch: %d\n", err);
+
+				pr_debug("\t\told code :");
+				for (i = 0; i < 8; i++)
+					pr_msg(" %02x", jump[i]);
+				pr_debug("\n");
+
+				get_jump_instr(start + oi->offset, oi->ref_addr, jump);
+
+				pr_debug("\t\tnew code :");
+				for (i = 0; i < 8; i++)
+					pr_msg(" %02x", jump[i]);
+				pr_debug("\n");
+
+				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 			}
