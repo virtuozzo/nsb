@@ -1,4 +1,4 @@
-noinst_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_cc
+noinst_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_f
 
 sample_a_SOURCES =			\
 			sample_a.c	\
@@ -30,8 +30,8 @@ sample_e_SOURCES =			\
 			waitsig.c	\
 			waitsig.h
 
-sample_cc_SOURCES =			\
-			sample_cc.c	\
+sample_f_SOURCES =			\
+			sample_f.c	\
 					\
 			waitsig.c	\
 			waitsig.h
