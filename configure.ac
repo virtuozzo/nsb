@@ -26,5 +26,8 @@ AC_CHECK_LIB(
 		[AC_MSG_ERROR([*** libprotobuf-c not found.])
 ])
 
+AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/main.py)
+AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
+
 LIBS=
 AC_OUTPUT
