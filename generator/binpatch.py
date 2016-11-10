@@ -47,6 +47,7 @@ class BinPatch:
 		# marked as modified instead of redundant "modified" list.
 		for p in self.patches_list:
 			if p.function.funcname in self.common_func:
+				self.common_func.remove(p.function.funcname)
 				self.modified_func.append(p.function.funcname)
 				print "Modified function: %s" % p.function.funcname
 
@@ -56,9 +57,11 @@ class BinPatch:
 			p.analize()
 			for ci in p.code_info:
 				if ci.command_type.name == "call" or ci.command_type.name == "jmp":
-					if ci.access_name not in self.modified_func:
+					if ci.access_name in self.common_func:
 						ci.access_addr = self.bf_old.functions_dict()[ci.access_name].start 
 						print "Call/jmpq to COMMON function: '%s', '%s', '0x%x'" % (ci.access_name, ci.access_plt, ci.access_addr)
+					elif ci.access_name in self.modified_func:
+						print "Call/jmpq to MODIFIED function: '%s', '%s', '0x%x'" % (ci.access_name, ci.access_plt, ci.access_addr)
 					else:
 						print "Call/jmpq to NEW function: '%s', '%s'" % (ci.access_name, ci.access_plt)
 						ci.show()
