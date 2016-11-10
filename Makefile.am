@@ -38,7 +38,6 @@ CP_FILES =	generator/funcpatch_pb2.py	\
 AM_V_CP = $(am__v_CP_@AM_V@)
 am__v_CP_ = $(am__v_CP_@AM_DEFAULT_V@)
 am__v_CP_0 = @echo "  CP      " $@;
-am__v_CP_1 =
 
 generator/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
 	$(AM_V_CP) cp $< $@
