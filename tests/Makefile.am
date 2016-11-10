@@ -36,3 +36,10 @@ sample_f_SOURCES =			\
 			waitsig.c	\
 			waitsig.h
 
+TESTS = sample_a_to_sample_b.py sample_a_to_sample_c.py sample_a_to_sample_f.py
+TEST_EXTENSIONS = .py
+PY_LOG_COMPILER = python
+AM_TESTS_ENVIRONMENT =	export NSB_GENERATOR=@NSB_GENERATOR@; \
+			export NSB_PATCHER=@NSB_PATCHER@;
+
+CLEANFILES = $(TESTS:.py=.binpatch)
