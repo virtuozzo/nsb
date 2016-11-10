@@ -4,10 +4,11 @@ import binpatch_pb2
 
 class BinPatch:
 
-	def __init__(self, bf_old, bf_new, patchdir):
+	def __init__(self, bf_old, bf_new, patchdir, patchfile):
 		self.bf_old = bf_old
 		self.bf_new = bf_new
 		self.patchdir = patchdir
+		self.patchfile = patchfile
 
 		self.common_func = []
 		self.removed_func = []
@@ -92,7 +93,11 @@ class BinPatch:
 		return image
 
 	def write(self):
-		filename = self.patchdir + "/" + self.name + ".patch"
+		if self.patchfile:
+			filename = self.patchfile
+		else:
+			filename = self.patchdir + "/" + self.name + ".patch"
+
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
 
 		image = self.get_patch()

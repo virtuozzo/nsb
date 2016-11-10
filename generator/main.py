@@ -2,7 +2,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("elfa", help="Old ELF file")
 parser.add_argument("elfb", help="New ELF file")
-parser.add_argument("patchdir", help="New ELF file")
+parser.add_argument("--patchdir", help="Output directory")
+parser.add_argument("--outfile", help="Output file")
 args = parser.parse_args()
 
 from funcpatch import FuncPatch
@@ -16,7 +17,10 @@ bfa = BinFile(args.elfa)
 print "ELF B: %s" % args.elfb
 bfb = BinFile(args.elfb)
 
-binpatch = BinPatch(bfa, bfb, args.patchdir)
+print args.patchdir
+print args.outfile
+
+binpatch = BinPatch(bfa, bfb, args.patchdir, args.outfile)
 binpatch.create()
 
 print "Common functions: %s" % binpatch.common_func
