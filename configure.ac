@@ -10,8 +10,8 @@ AM_PROG_CC_C_O
 AC_GNU_SOURCE
 AC_CONFIG_FILES([
 		 Makefile
-		 samples/Makefile
 		 protobuf/Makefile
+		 tests/Makefile
 ])
 
 AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)
@@ -28,4 +28,3 @@ AC_CHECK_LIB(
 
 LIBS=
 AC_OUTPUT
-

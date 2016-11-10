@@ -1,4 +1,4 @@
-SUBDIRS = samples protobuf
+SUBDIRS = protobuf tests
 
 AM_CFLAGS = -Wall -Wformat-security -Werror -DCONFIG_X86_64 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 AM_MAKEFLAGS = --no-print-directory
