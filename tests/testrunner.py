@@ -7,12 +7,17 @@ from multiprocessing import Process, Pipe
 from collections import namedtuple
 
 def thread_run(path, pipe):
-	p = subprocess.Popen(path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	pipe.send(p.pid)
-	out, err = p.communicate()
-	pipe.send(out)
-	pipe.send(err)
-	pipe.send(p.returncode)
+	try:
+		p = subprocess.Popen(path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		pipe.send(p.pid)
+		out, err = p.communicate()
+		pipe.send(out)
+		pipe.send(err)
+		pipe.send(p.returncode)
+	except:
+		print "Unexpected error:", sys.exc_info()[0]
+		return 1
+	return 0
 
 
 class Test:
@@ -39,11 +44,15 @@ class Test:
 				print "Test is not new. State: %s" % self.__state__
 				raise
 
-			pipe = multiprocessing.Pipe(False)
-			self.pipe = pipe[0]
+			read_end, write_end = multiprocessing.Pipe(False)
+			self.pipe = read_end
 
-			p = Process(target=thread_run, args=(os.getcwd() + "/" + self.path, pipe[1]))
+			p = Process(target=thread_run, args=(self.path, write_end))
 			p.start()
+			if not p.is_alive:
+				print "Failed to fork a child"
+				raise
+
 			self.pid = self.pipe.recv()
 			self.__state__ = "started"
 		except:
@@ -79,7 +88,7 @@ class BinPatch:
 	def __init__(self, source, target):
 		self.source = source
 		self.target = target
-		self.outfile = "./" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
+		self.outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
 
 		self.gen_stderr = None
 		self.gen_stderr = None
@@ -125,6 +134,12 @@ class BinPatch:
 
 class LivePatchTest:
 	def __init__(self, source, target):
+		tests_dir = os.environ.get('TESTS_DIR')
+		if not os.path.isabs(source) and tests_dir:
+			source = tests_dir + "/" + source
+		if not os.path.isabs(target) and tests_dir:
+			target = tests_dir + "/" + target
+
 		self.test = Test(source)
 		self.patch = BinPatch(source, target)
 		self.result = 0
