@@ -48,4 +48,6 @@ generator/objinfo_pb2.py:  protobuf/objinfo_pb2.py
 
 all-local: $(CP_FILES)
 
+check-recursive: all
+
 CLEANFILES = $(CP_FILES)
