@@ -1,5 +1,3 @@
-noinst_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_f
-
 sample_a_SOURCES =			\
 			sample_a.c	\
 					\
@@ -35,6 +33,8 @@ sample_f_SOURCES =			\
 					\
 			waitsig.c	\
 			waitsig.h
+
+check_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_f
 
 TESTS = sample_a_to_sample_b.py sample_a_to_sample_c.py sample_a_to_sample_f.py
 TEST_EXTENSIONS = .py
