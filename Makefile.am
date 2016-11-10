@@ -48,6 +48,13 @@ generator/objinfo_pb2.py:  protobuf/objinfo_pb2.py
 
 all-local: $(CP_FILES)
 
-check-recursive: all
-
 CLEANFILES = $(CP_FILES)
+
+TESTS = tests/sample_a_to_sample_b.py tests/sample_a_to_sample_c.py tests/sample_a_to_sample_f.py
+TEST_EXTENSIONS = .py
+PY_LOG_COMPILER = python
+AM_TESTS_ENVIRONMENT =	export NSB_GENERATOR=@NSB_GENERATOR@;	\
+			export NSB_PATCHER=@NSB_PATCHER@;	\
+			export TESTS_DIR=@TESTS_DIR@;
+
+CLEANFILES += $(TESTS:.py=.binpatch)
