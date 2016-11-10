@@ -25,7 +25,15 @@ int call_after_sig(caller_t caller)
 
 	ret = caller();
 
-	printf("caller result: %d ---> %d\n", old, ret);
-
-	return ret;
+	if (old == ret) {
+		fprintf(stderr, "wrong caller result: %d == %d\n", old, ret);
+		return 1;
+	}
+	/* TODO; there should be some better way to check that patch was
+	 * applied properly.
+	 * For example, print add the function names in tests to stdout and
+	 * then compare result with target proces output.
+	 */
+	fprintf(stdout, "changed caller result: %d ---> %d\n", old, ret);
+	return 0;
 }

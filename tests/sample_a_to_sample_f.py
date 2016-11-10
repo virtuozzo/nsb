@@ -1,4 +1,5 @@
 import testrunner
 
 lpt = testrunner.LivePatchTest("./sample_a", "./sample_f")
-lpt.run()
+ret = lpt.run()
+exit(ret)
