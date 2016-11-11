@@ -1,5 +1,5 @@
-#ifndef NSB_PATCH_H__
-#define NSB_PATCH_H__
+#ifndef __PATCHER_PATCH_H__
+#define __PATCHER_PATCH_H__
 
 #include <stdint.h>
 #include <unistd.h>
@@ -18,4 +18,4 @@ struct vma_area {
 
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile);
 
-#endif /* NSB_PATCH_H__ */
+#endif /* __PATCHER_PATCH_H__ */

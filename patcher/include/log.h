@@ -1,5 +1,5 @@
-#ifndef NSB_LOG_H__
-#define NSB_LOG_H__
+#ifndef __PATCHER_LOG_H__
+#define __PATCHER_LOG_H__
 
 #include <stdbool.h>
 #include <string.h>
@@ -66,4 +66,4 @@ extern unsigned int log_get_loglevel(void);
 #define pr_perror(fmt, ...)						\
 	pr_err(fmt ": %s\n", ##__VA_ARGS__, strerror(errno))
 
-#endif /* NSB_LOG_H__ */
+#endif /* __PATCHER_LOG_H__ */

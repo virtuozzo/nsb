@@ -1,5 +1,5 @@
-#ifndef NSB_COMPILER_H__
-#define NSB_COMPILER_H__
+#ifndef __PATCHER_COMPILER_H__
+#define __PATCHER_COMPILER_H__
 
 /*
  * Various definitions for success build,
@@ -87,4 +87,4 @@
 
 #define is_log2(v)		(((v) & ((v) - 1)) == 0)
 
-#endif /* NSB_COMPILER_H__ */
+#endif /* __PATCHER_COMPILER_H__ */

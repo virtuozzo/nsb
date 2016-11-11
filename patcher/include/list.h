@@ -1,5 +1,5 @@
-#ifndef __CR_LIST_H__
-#define __CR_LIST_H__
+#ifndef __PATCHER_LIST_H__
+#define __PATCHER_LIST_H__
 
 /*
  * Double linked lists.
@@ -421,4 +421,4 @@ static inline void hlist_move_list(struct hlist_head *old,
 	     pos && ({ n = pos->member.next; 1; });				\
 	     pos = hlist_entry_safe(n, typeof(*pos), member))
 
-#endif /* __CR_LIST_H__ */
+#endif /* __PATCHER_LIST_H__ */

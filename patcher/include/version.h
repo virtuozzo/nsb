@@ -5,4 +5,4 @@
 #define NSB_VERSION_MAJOR  1
 #define NSB_VERSION_MINOR  0
 #define NSB_GITID "f01768f"
-#endif /* NSB_VERSION_H__ */
+#endif /* __PATCHER_VERSION_H__ */

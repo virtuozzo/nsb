@@ -66,4 +66,4 @@ static inline void *xptr_pull_s(void **m, size_t s)
 
 #define xptr_pull(m, type)	xptr_pull_s(m, sizeof(type))
 
-#endif /* __CR_XMALLOC_H__ */
+#endif /* __PATCHER_XMALLOC_H__ */

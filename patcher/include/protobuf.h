@@ -1,5 +1,5 @@
-#ifndef __CR_PROTOBUF_H__
-#define __CR_PROTOBUF_H__
+#ifndef __PATCHER_PROTOBUF_H__
+#define __PATCHER_PROTOBUF_H__
 
 #include "funcpatch.pb-c.h"
 #include "binpatch.pb-c.h"
