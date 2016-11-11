@@ -18,8 +18,11 @@ nsb_SOURCES =						\
 			patcher/include/list.h		\
 			patcher/include/patch.h		\
 			patcher/include/xmalloc.h	\
+			patcher/include/protobuf.h	\
+			patcher/include/process.h	\
 							\
 			patcher/protobuf.c		\
+			patcher/process.c		\
 			patcher/log.c			\
 			patcher/main.c			\
 			patcher/patch.c
