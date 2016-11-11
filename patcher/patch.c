@@ -305,7 +305,7 @@ static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
 }
 static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
 {
-	int i, err;
+	int i, err = 0;
 	BinPatch *bp;
 	struct funcpatch_s *funcpatch;
 
@@ -404,23 +404,49 @@ err:
 	return -1;
 }
 
+static int process_add_map(struct process_ctx_s *ctx, size_t mmap_size,
+			   unsigned long hint, long *addr)
+{
+	int ret;
+
+	*addr = -ENOSYS;
+
+	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)addr,
+			     hint, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
+			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		return -1;
+	}
+
+	if (*addr < 0) {
+		errno = *(int *)*addr;
+		pr_perror("Failed to create mmap with size %zu bytes\n",
+			  mmap_size);
+		return -1;
+	}
+
+	pr_debug("Created anon map %#lx-%#lx in task %d\n",
+		 *addr, *addr + mmap_size, ctx->pid);
+
+	return 0;
+}
+
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
 	struct process_ctx_s ctx = {
 		.pid = pid,
 		.vmas = LIST_HEAD_INIT(ctx.vmas),
 	};
-	int ret;
-	long hint;
-
-	unsigned long sret = -ENOSYS;
+	int ret, err;
+	long addr, hint;
 
 	pr_debug("Patching process %d\n", pid);
 	pr_debug("====================\n");
 
-	ret = process_infect(&ctx);
-	if (ret)
-		return ret;
+	err = process_infect(&ctx);
+	if (err)
+		return err;
 
 	pr_debug("Allocating anon mapping in %d for %zu bytes\n", pid, mmap_size);
 
@@ -428,23 +454,9 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 * where old address (taken from patch) belongs */
 	hint = 0x800000;
 
-	ret = compel_syscall(ctx.ctl, __NR(mmap, false), &sret,
-			     hint, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", pid);
-		return -1;
-	}
-
-	if ((long)sret < 0) {
-		errno = (int)sret;
-		pr_perror("Failed to create mmap with size %zu bytes\n",
-			  mmap_size);
-		return -1;
-	}
-
-	pr_debug("Created anon map %#lx-%#lx in task %d\n",
-		 sret, sret + mmap_size, pid);
+	ret = process_add_map(&ctx, mmap_size, hint, &addr);
+	if (ret < 0)
+		goto out;
 
 	/*
 	 * - Use ptrace_poke_area to inject jump code into
@@ -457,12 +469,14 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 *    @bytes -- size of patch, must be 8 byte aligned
 	 */
 
-	ret = apply_binpatch(pid, sret, patchfile);
+	ret = apply_binpatch(pid, addr, patchfile);
 
 	/*
 	 * Patch itself
 	 */
 	//ptrace_poke_area(pid, patch_code, patch_address, patch_size);
 
-	return process_cure(&ctx);
+out:
+	err = process_cure(&ctx);
+	return ret ? ret : err;
 }
