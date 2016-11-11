@@ -1,5 +1,5 @@
-#ifndef __PATCHER_WAITSIG_H__
-#define __PATCHER_WAITSIG_H__
+#ifndef __PATCHER_PROCESS_H__
+#define __PATCHER_PROCESS_H__
 
 #include "protobuf.h"
 #include "list.h"
