@@ -458,23 +458,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	if (ret < 0)
 		goto out;
 
-	/*
-	 * - Use ptrace_poke_area to inject jump code into
-	 *   patchee, ie
-	 *
-	 *   int ptrace_poke_area(pid_t pid, void *src, void *addr, long bytes)
-	 *    @pid -- address of task we're patching
-	 *    @src -- patch body
-	 *    @addr -- where to put it in task space
-	 *    @bytes -- size of patch, must be 8 byte aligned
-	 */
-
 	ret = apply_binpatch(ctx, addr, patchfile);
-
-	/*
-	 * Patch itself
-	 */
-	//ptrace_poke_area(pid, patch_code, patch_address, patch_size);
 
 out:
 	err = process_cure(ctx);
