@@ -178,11 +178,18 @@ static struct patch_place_s *alloc_place(unsigned long addr, size_t size)
 	return place;
 }
 
-static unsigned long process_find_hole(unsigned long hint, size_t size)
+static unsigned long process_find_hole(struct process_ctx_s *ctx, unsigned long hint, size_t size)
 {
-	/* TODO: address has be be found by by searching a hole in the same 4GB
-	 * page, where hint belongs */
-	return 0x800000;
+	struct vma_area *vma;
+
+	list_for_each_entry(vma, &ctx->vmas, list) {
+		struct vma_area *next_vma;
+
+		next_vma = list_entry(vma->list.next, typeof(*vma), list);
+		if (next_vma->start - vma->end > size)
+			return vma->end;
+	}
+	return -ENOENT;
 }
 
 static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
@@ -195,7 +202,7 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 
 	size = round_up(size, PAGE_SIZE);
 
-	addr = process_find_hole(hint, size);
+	addr = process_find_hole(ctx, hint, size);
 	if (addr < 0) {
 		pr_err("failed to find address hole by hint %#lx\n", hint);
 		return -EFAULT;
