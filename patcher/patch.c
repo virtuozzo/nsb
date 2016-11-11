@@ -18,10 +18,18 @@ struct funcpatch_s {
 	unsigned long		 addr;
 };
 
+struct patch_place_s {
+	struct list_head	list;
+	unsigned long		start;
+	unsigned long		size;
+	unsigned long		used;
+};
+
 struct binpatch_s {
 	BinPatch		 *bp;
 	unsigned long		 addr;
 	struct list_head	functions;
+	struct list_head	places;
 };
 
 struct process_ctx_s {
@@ -191,6 +199,16 @@ static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
 	pr_debug("\n");
 }
 
+static int process_write_data(pid_t pid, void *addr, void *data, size_t size)
+{
+	return ptrace_poke_area(pid, data, addr, size);
+}
+
+static int process_read_data(pid_t pid, void *addr, void *data, size_t size)
+{
+	return ptrace_peek_area(pid, data, addr, size);
+}
+
 static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo *oi)
 {
 	unsigned char jump[8];
@@ -221,7 +239,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 				int i;
 
 				pr_debug("\t\tinfo: jmpq\n");
-				err = ptrace_peek_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = process_read_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 
@@ -237,7 +255,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = process_write_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 			}
@@ -247,7 +265,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 				int i;
 
 				pr_debug("\t\tinfo: jmpq\n");
-				err = ptrace_peek_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = process_read_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 
@@ -263,7 +281,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = process_write_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 			}
@@ -290,8 +308,8 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	pr_debug("\n");
 	pr_debug("\tplace address  : %#lx\n", addr);
 
-	err = ptrace_poke_area(ctx->pid, fp->code.data, (void *)addr,
-				round_up(fp->size, 8));
+	err = process_write_data(ctx->pid, (void *)addr, fp->code.data,
+				 round_up(fp->size, 8));
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
@@ -302,21 +320,152 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 
 	get_jump_instr(fp->start, addr, jump);
 
-	err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)fp->start, 8);
+	err = process_write_data(ctx->pid, (void *)(long)fp->start, jump, round_up(fp->size, 8));
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
 	return err;
 }
-static int apply_binpatch(struct process_ctx_s *ctx, unsigned long addr, const char *patchfile)
+
+static int process_add_map(struct process_ctx_s *ctx,
+			   unsigned long addr, size_t size)
+{
+	int ret;
+	long sret = -ENOSYS;
+
+	/* TODO: need drop PROT_WRITE at the end */
+	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)&sret,
+			     addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
+			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		return -1;
+	}
+
+	if (sret < 0) {
+		errno = sret;
+		pr_perror("Failed to create mmap with size %zu bytes\n", size);
+		return -1;
+	}
+
+	pr_debug("Created anon map %#lx-%#lx in task %d\n",
+		 sret, sret + size, ctx->pid);
+
+	return 0;
+}
+
+static struct patch_place_s *find_place(struct binpatch_s *bp, unsigned long hint)
+{
+	struct patch_place_s *place;
+
+	list_for_each_entry(place, &bp->places, list) {
+		if ((place->start & 0xffffffff00000000) == (hint & 0xffffffff00000000)) {
+			pr_debug("found place for patch: %#lx (hint: %#lx)\n",
+					place->start, hint);
+			return place;
+		}
+	}
+	return NULL;
+}
+
+static struct patch_place_s *alloc_place(unsigned long addr, size_t size)
+{
+	struct patch_place_s *place;
+
+	place = xmalloc(sizeof(*place));
+	if (!place) {
+		pr_err("failed to allocate\n");
+		return NULL;
+	}
+	place->start = addr;
+	place->size = size;
+	place->used = 0;
+
+	return place;
+}
+
+static unsigned long process_find_hole(unsigned long hint, size_t size)
+{
+	/* TODO: address has be be found by by searching a hole in the same 4GB
+	 * page, where hint belongs */
+	return 0x800000;
+}
+
+static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
+				size_t size, struct patch_place_s **place)
+{
+	int ret;
+	unsigned long addr;
+	struct binpatch_s *bp = &ctx->binpatch;
+	struct patch_place_s *p;
+
+	size = round_up(size, PAGE_SIZE);
+
+	addr = process_find_hole(hint, size);
+	if (addr < 0) {
+		pr_err("failed to find address hole by hint %#lx\n", hint);
+		return -EFAULT;
+	}
+
+	pr_debug("Found hole: %#lx-%#lx\n", addr, addr + size);
+
+	p = alloc_place(addr, size);
+	if (!p)
+		return -ENOMEM;
+
+	ret = process_add_map(ctx, p->start, p->size);
+	if (ret < 0)
+		goto destroy_place;
+
+	list_add_tail(&p->list, &bp->places);
+
+	pr_debug("created new place for patch: %#lx-%#lx (hint: %#lx)\n",
+			p->start, p->start + p->size, hint);
+
+	*place = p;
+	return 0;
+
+destroy_place:
+	free(p);
+	return ret;
+}
+
+static long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size)
+{
+	struct binpatch_s *bp = &ctx->binpatch;
+	struct patch_place_s *place;
+	long addr;
+
+	/* Aling function size by 16 bytes */
+	size = round_up(size, 16);
+
+	place = find_place(bp, hint);
+	if (!place) {
+		int ret;
+
+		ret = process_create_place(ctx, hint, size, &place);
+		if (ret)
+			return ret;
+	} else if (place->size - place->used < size) {
+		pr_err("No place left for %ld bytes in vma %#lx (free: %ld)\n",
+				size, place->start, place->size - place->used);
+		return -ENOMEM;
+	}
+
+	addr = place->start + round_up(place->used, 16);
+	place->used += size;
+	return addr;
+}
+
+static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 {
 	int i, err = 0;
 	BinPatch *bp;
 	struct funcpatch_s *funcpatch;
 	struct binpatch_s *binpatch = &ctx->binpatch;
 
-	binpatch->addr = addr;
 	INIT_LIST_HEAD(&binpatch->functions);
+	INIT_LIST_HEAD(&binpatch->places);
 
 	binpatch->bp = read_binpatch(patchfile);
 	if (!binpatch->bp)
@@ -325,16 +474,24 @@ static int apply_binpatch(struct process_ctx_s *ctx, unsigned long addr, const c
 	bp = binpatch->bp;
 
 	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+		unsigned long addr;
+
+		addr = process_get_place(ctx, fp->start, fp->size);
+		if (addr < 0) {
+			err = addr;
+			goto err;
+		}
+
 		funcpatch = xmalloc(sizeof(*funcpatch));
 		if (!funcpatch) {
 			pr_err("failed to allocate\n");
-			return -ENOMEM;
+			err = -ENOMEM;;
+			goto err;
 		}
 		funcpatch->addr = addr;
-		funcpatch->fp = bp->patches[i];
+		funcpatch->fp = fp;
 		list_add_tail(&funcpatch->list, &binpatch->functions);
-
-		addr += round_up(funcpatch->fp->size, 16);
 	}
 
 	list_for_each_entry(funcpatch, &binpatch->functions, list) {
@@ -344,14 +501,13 @@ static int apply_binpatch(struct process_ctx_s *ctx, unsigned long addr, const c
 		if (err)
 			break;
 	}
+err:
 	bin_patch__free_unpacked(bp, NULL);
-
 	return err;
 }
 
 static int process_cure(struct process_ctx_s *ctx)
 {
-
 	pr_debug("Unseize from %d\n", ctx->pid);
 	if (compel_unseize_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
 		pr_err("Can't unseize from %d\n", ctx->pid);
@@ -404,63 +560,26 @@ err:
 	return -1;
 }
 
-static int process_add_map(struct process_ctx_s *ctx, size_t mmap_size,
-			   unsigned long hint, long *addr)
-{
-	int ret;
-
-	pr_debug("Allocating anon mapping in %d for %zu bytes\n", ctx->pid, mmap_size);
-
-	*addr = -ENOSYS;
-
-	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)addr,
-			     hint, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
-			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", ctx->pid);
-		return -1;
-	}
-
-	if (*addr < 0) {
-		errno = *(int *)*addr;
-		pr_perror("Failed to create mmap with size %zu bytes\n",
-			  mmap_size);
-		return -1;
-	}
-
-	pr_debug("Created anon map %#lx-%#lx in task %d\n",
-		 *addr, *addr + mmap_size, ctx->pid);
-
-	return 0;
-}
-
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
 	int ret, err;
-	long addr, hint;
 	struct process_ctx_s *ctx = &process_context;
 
 	ctx->pid = pid;
 	INIT_LIST_HEAD(&ctx->vmas),
 
-	pr_debug("Patching process %d\n", ctx->pid);
 	pr_debug("====================\n");
+	pr_debug("Patching process %d\n", ctx->pid);
 
 	err = process_infect(ctx);
 	if (err)
 		return err;
 
-	/* TODO: Hint has to be calculated by searching a hole in 4GB page,
-	 * where old address (taken from patch) belongs */
-	hint = 0x800000;
+	ret = apply_binpatch(ctx, patchfile);
 
-	ret = process_add_map(ctx, mmap_size, hint, &addr);
-	if (ret < 0)
-		goto out;
+	/* TODO all the work has to be rolled out, if an error occured */
 
-	ret = apply_binpatch(ctx, addr, patchfile);
-
-out:
 	err = process_cure(ctx);
+
 	return ret ? ret : err;
 }
