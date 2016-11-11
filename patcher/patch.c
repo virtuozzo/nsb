@@ -10,7 +10,7 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 
-#include "protobuf.h"
+#include "include/protobuf.h"
 
 struct funcpatch_s {
 	struct list_head	list;

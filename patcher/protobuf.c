@@ -5,8 +5,7 @@
 #include <errno.h>
 
 #include "include/log.h"
-
-#include "protobuf.h"
+#include "include/protobuf.h"
 
 static ssize_t read_image(const char *path, uint8_t *buf, size_t max_len)
 {
