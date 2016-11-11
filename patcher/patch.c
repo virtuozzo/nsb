@@ -343,26 +343,36 @@ static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
 	return err;
 }
 
-int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
+struct process_ctx_s {
+	pid_t			pid;
+	struct parasite_ctl	*ctl;
+	struct list_head	vmas;
+};
+
+static int process_cure(struct process_ctx_s *ctx)
 {
-	struct parasite_ctl *ctl;
+
+	pr_debug("Unseize from %d\n", ctx->pid);
+	if (compel_unseize_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
+		pr_err("Can't unseize from %d\n", ctx->pid);
+		return -1;
+	}
+	return 0;
+}
+
+static int process_infect(struct process_ctx_s *ctx)
+{
 	struct infect_ctx *ictx;
-	LIST_HEAD(vma_list_head);
+	struct parasite_ctl *ctl;
 	unsigned long syscall_ip;
 	int ret;
-	long hint;
-
-	unsigned long sret = -ENOSYS;
-
-	pr_debug("Patching process %d\n", pid);
-	pr_debug("====================\n");
 
 	pr_debug("Stopping... %s\n",
-		 (ret = compel_stop_task(pid)) ? "FAIL" : "OK");
+		 (ret = compel_stop_task(ctx->pid)) ? "FAIL" : "OK");
 	if (ret)
 		return -1;
 
-	ctl = compel_prepare(pid);
+	ctl = compel_prepare(ctx->pid);
 	if (!ctl) {
 		pr_err("Can't create compel control\n");
 		return -1;
@@ -372,25 +382,53 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	ictx->loglevel = log_get_loglevel();
 	ictx->log_fd = log_get_fd();
 
-	if (collect_mappings(pid, &vma_list_head)) {
-		pr_err("Can't collect mappings for %d\n", pid);
-		return -1;
+	if (collect_mappings(ctx->pid, &ctx->vmas)) {
+		pr_err("Can't collect mappings for %d\n", ctx->pid);
+		goto err;
 	}
 
-	syscall_ip = find_syscall_ip(&vma_list_head);
+	syscall_ip = find_syscall_ip(&ctx->vmas);
 	if (!syscall_ip) {
-		pr_err("Can't find suitable vma for syscall %d\n", pid);
-		return -1;
+		pr_err("Can't find suitable vma for syscall %d\n", ctx->pid);
+		goto err;
 	}
 	pr_debug("syscall ip at %#lx\n", syscall_ip);
 	ictx->syscall_ip = syscall_ip;
+
+	ctx->ctl = ctl;
+
+	return 0;
+
+err:
+	process_cure(ctx);
+	return -1;
+}
+
+int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
+{
+	struct process_ctx_s ctx = {
+		.pid = pid,
+		.vmas = LIST_HEAD_INIT(ctx.vmas),
+	};
+	int ret;
+	long hint;
+
+	unsigned long sret = -ENOSYS;
+
+	pr_debug("Patching process %d\n", pid);
+	pr_debug("====================\n");
+
+	ret = process_infect(&ctx);
+	if (ret)
+		return ret;
 
 	pr_debug("Allocating anon mapping in %d for %zu bytes\n", pid, mmap_size);
 
 	/* TODO: Hint has to be calculated by searching a hole in 4GB page,
 	 * where old address (taken from patch) belongs */
 	hint = 0x800000;
-	ret = compel_syscall(ctl, __NR(mmap, false), &sret,
+
+	ret = compel_syscall(ctx.ctl, __NR(mmap, false), &sret,
 			     hint, mmap_size, PROT_READ | PROT_WRITE | PROT_EXEC,
 			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 	if (ret < 0) {
@@ -426,11 +464,5 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 */
 	//ptrace_poke_area(pid, patch_code, patch_address, patch_size);
 
-	pr_debug("Unseize from %d\n", pid);
-	if (compel_unseize_task(pid, TASK_ALIVE, TASK_ALIVE)) {
-		pr_err("Can't unseize from %d\n", pid);
-		return -1;
-	}
-
-	return 0;
+	return process_cure(&ctx);
 }
