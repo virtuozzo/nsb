@@ -1,7 +1,6 @@
 #ifndef __PATCHER_LOG_H__
 #define __PATCHER_LOG_H__
 
-#include <stdbool.h>
 #include <string.h>
 
 #define LOG_UNSET	(-1)

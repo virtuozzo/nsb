@@ -1,12 +1,7 @@
 #include <stdlib.h>
-#include <stdio.h>
-#include <sys/mman.h>
-
-#include "compel/compel/compel.h"
-#include "compel/compel/ptrace.h"
+#include <errno.h>
 
 #include "include/patch.h"
-#include "include/list.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
 

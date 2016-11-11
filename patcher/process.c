@@ -1,16 +1,22 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
 
 #include "compel/compel/compel.h"
 #include "compel/compel/ptrace.h"
 
-#include "include/patch.h"
-#include "include/list.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
 
 #include "include/process.h"
+
+extern int compel_syscall(struct parasite_ctl *ctl,
+			  int nr, unsigned long *ret,
+			  unsigned long arg1,
+			  unsigned long arg2,
+			  unsigned long arg3,
+			  unsigned long arg4,
+			  unsigned long arg5,
+			  unsigned long arg6);
 
 struct vma_area {
 	struct list_head	list;
@@ -28,15 +34,6 @@ struct patch_place_s {
 	unsigned long		size;
 	unsigned long		used;
 };
-
-extern int compel_syscall(struct parasite_ctl *ctl,
-			  int nr, unsigned long *ret,
-			  unsigned long arg1,
-			  unsigned long arg2,
-			  unsigned long arg3,
-			  unsigned long arg4,
-			  unsigned long arg5,
-			  unsigned long arg6);
 
 static int collect_mappings(pid_t pid, struct list_head *head)
 {
