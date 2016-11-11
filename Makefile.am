@@ -50,7 +50,13 @@ all-local: $(CP_FILES)
 
 CLEANFILES = $(CP_FILES)
 
-TESTS = tests/sample_a_to_sample_b.py tests/sample_a_to_sample_c.py tests/sample_a_to_sample_f.py
+check_SCRIPTS = tests/sample_a_to_sample_b.py tests/sample_a_to_sample_c.py tests/sample_a_to_sample_f.py
+$(check_SCRIPTS):
+	$(AM_V_GEN) python tests/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@))) --outfile $@
+
+CLEANFILES += $(check_SCRIPTS)
+
+TESTS = $(check_SCRIPTS)
 TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = python
 AM_TESTS_ENVIRONMENT =	export NSB_GENERATOR=@NSB_GENERATOR@;	\
