@@ -24,13 +24,18 @@ struct binpatch_s {
 	struct list_head	functions;
 };
 
-struct binpatch_s binpatch = { };
+struct process_ctx_s {
+	pid_t			pid;
+	struct parasite_ctl	*ctl;
+	struct list_head	vmas;
+	struct binpatch_s	binpatch;
+} process_context;
 
-static struct funcpatch_s *search_func_by_name(const char *name)
+static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp, const char *name)
 {
-	struct funcpatch_s *funcpatch;
+	const struct funcpatch_s *funcpatch;
 
-	list_for_each_entry(funcpatch, &binpatch.functions, list) {
+	list_for_each_entry(funcpatch, &bp->functions, list) {
 		if (!strcmp(funcpatch->fp->name, name))
 			return funcpatch;
 	}
@@ -186,7 +191,7 @@ static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
 	pr_debug("\n");
 }
 
-static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
+static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo *oi)
 {
 	unsigned char jump[8];
 	int err;
@@ -198,10 +203,10 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 	pr_debug("\t\tinfo: reftype : %d\n", oi->reftype);
 
 	if (oi->ref_addr == 0) {
-		struct funcpatch_s *funcpatch;
+		const struct funcpatch_s *funcpatch;
 
 		/* This means, that function is a new one */
-		funcpatch = search_func_by_name(oi->name);
+		funcpatch = search_func_by_name(&ctx->binpatch, oi->name);
 		if (!funcpatch) {
 			pr_debug("\t\tfailed to find function by name %s\n", oi->name);
 			return -EINVAL;
@@ -216,7 +221,7 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 				int i;
 
 				pr_debug("\t\tinfo: jmpq\n");
-				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = ptrace_peek_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 
@@ -232,7 +237,7 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 			}
@@ -242,7 +247,7 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 				int i;
 
 				pr_debug("\t\tinfo: jmpq\n");
-				err = ptrace_peek_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = ptrace_peek_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 
@@ -258,7 +263,7 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 					pr_msg(" %02x", jump[i]);
 				pr_debug("\n");
 
-				err = ptrace_poke_area(pid, (void *)jump, (void *)(long)start + oi->offset, 8);
+				err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)start + oi->offset, 8);
 				if (err < 0)
 					pr_err("failed to patch: %d\n", err);
 			}
@@ -270,7 +275,7 @@ static int apply_objinfo(pid_t pid, unsigned long start, ObjInfo *oi)
 	return 0;
 }
 
-static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
+static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPatch *fp)
 {
 	int i, err = 0;
 	unsigned char jump[8];
@@ -285,38 +290,39 @@ static int apply_funcpatch(pid_t pid, unsigned long addr, FuncPatch *fp)
 	pr_debug("\n");
 	pr_debug("\tplace address  : %#lx\n", addr);
 
-	err = ptrace_poke_area(pid, fp->code.data, (void *)addr,
+	err = ptrace_poke_area(ctx->pid, fp->code.data, (void *)addr,
 				round_up(fp->size, 8));
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
 	for (i = 0; i < fp->n_objs; i++) {
 		pr_debug("\tObject info %d:\n", i);
-		err = apply_objinfo(pid, addr, fp->objs[i]);
+		err = apply_objinfo(ctx, addr, fp->objs[i]);
 	}
 
 	get_jump_instr(fp->start, addr, jump);
 
-	err = ptrace_poke_area(pid, (void *)jump, (void *)(long)fp->start, 8);
+	err = ptrace_poke_area(ctx->pid, (void *)jump, (void *)(long)fp->start, 8);
 	if (err < 0)
 		pr_err("failed to patch: %d\n", err);
 
 	return err;
 }
-static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
+static int apply_binpatch(struct process_ctx_s *ctx, unsigned long addr, const char *patchfile)
 {
 	int i, err = 0;
 	BinPatch *bp;
 	struct funcpatch_s *funcpatch;
+	struct binpatch_s *binpatch = &ctx->binpatch;
 
-	binpatch.addr = addr;
-	INIT_LIST_HEAD(&binpatch.functions);
+	binpatch->addr = addr;
+	INIT_LIST_HEAD(&binpatch->functions);
 
-	binpatch.bp = read_binpatch(patchfile);
-	if (!binpatch.bp)
+	binpatch->bp = read_binpatch(patchfile);
+	if (!binpatch->bp)
 		return -1;
 
-	bp = binpatch.bp;
+	bp = binpatch->bp;
 
 	for (i = 0; i < bp->n_patches; i++) {
 		funcpatch = xmalloc(sizeof(*funcpatch));
@@ -326,15 +332,15 @@ static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
 		}
 		funcpatch->addr = addr;
 		funcpatch->fp = bp->patches[i];
-		list_add_tail(&funcpatch->list, &binpatch.functions);
+		list_add_tail(&funcpatch->list, &binpatch->functions);
 
 		addr += round_up(funcpatch->fp->size, 16);
 	}
 
-	list_for_each_entry(funcpatch, &binpatch.functions, list) {
+	list_for_each_entry(funcpatch, &binpatch->functions, list) {
 		pr_debug("Function patch %d:\n", i);
 
-		err = apply_funcpatch(pid, funcpatch->addr, funcpatch->fp);
+		err = apply_funcpatch(ctx, funcpatch->addr, funcpatch->fp);
 		if (err)
 			break;
 	}
@@ -342,12 +348,6 @@ static int apply_binpatch(pid_t pid, unsigned long addr, const char *patchfile)
 
 	return err;
 }
-
-struct process_ctx_s {
-	pid_t			pid;
-	struct parasite_ctl	*ctl;
-	struct list_head	vmas;
-};
 
 static int process_cure(struct process_ctx_s *ctx)
 {
@@ -409,6 +409,8 @@ static int process_add_map(struct process_ctx_s *ctx, size_t mmap_size,
 {
 	int ret;
 
+	pr_debug("Allocating anon mapping in %d for %zu bytes\n", ctx->pid, mmap_size);
+
 	*addr = -ENOSYS;
 
 	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)addr,
@@ -434,27 +436,25 @@ static int process_add_map(struct process_ctx_s *ctx, size_t mmap_size,
 
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
-	struct process_ctx_s ctx = {
-		.pid = pid,
-		.vmas = LIST_HEAD_INIT(ctx.vmas),
-	};
 	int ret, err;
 	long addr, hint;
+	struct process_ctx_s *ctx = &process_context;
 
-	pr_debug("Patching process %d\n", pid);
+	ctx->pid = pid;
+	INIT_LIST_HEAD(&ctx->vmas),
+
+	pr_debug("Patching process %d\n", ctx->pid);
 	pr_debug("====================\n");
 
-	err = process_infect(&ctx);
+	err = process_infect(ctx);
 	if (err)
 		return err;
-
-	pr_debug("Allocating anon mapping in %d for %zu bytes\n", pid, mmap_size);
 
 	/* TODO: Hint has to be calculated by searching a hole in 4GB page,
 	 * where old address (taken from patch) belongs */
 	hint = 0x800000;
 
-	ret = process_add_map(&ctx, mmap_size, hint, &addr);
+	ret = process_add_map(ctx, mmap_size, hint, &addr);
 	if (ret < 0)
 		goto out;
 
@@ -469,7 +469,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	 *    @bytes -- size of patch, must be 8 byte aligned
 	 */
 
-	ret = apply_binpatch(pid, addr, patchfile);
+	ret = apply_binpatch(ctx, addr, patchfile);
 
 	/*
 	 * Patch itself
@@ -477,6 +477,6 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	//ptrace_poke_area(pid, patch_code, patch_address, patch_size);
 
 out:
-	err = process_cure(&ctx);
+	err = process_cure(ctx);
 	return ret ? ret : err;
 }
