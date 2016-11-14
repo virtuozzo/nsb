@@ -30,5 +30,4 @@ AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/main.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
 AC_SUBST([TESTS_DIR], ${ac_pwd}/tests)
 
-LIBS=
 AC_OUTPUT

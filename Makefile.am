@@ -33,8 +33,7 @@ nsb_CPPFLAGS = -Ipatcher/compel -Iprotobuf/
 nsb_LDFLAGS = -rdynamic
 nsb_LDADD =		patcher/compel/lib/libcompel.a		\
 			patcher/compel/lib/std.built-in.o	\
-			patcher/compel/lib/fds.built-in.o	\
-			-lprotobuf-c
+			patcher/compel/lib/fds.built-in.o
 
 CP_FILES =	generator/funcpatch_pb2.py	\
 		generator/binpatch_pb2.py	\

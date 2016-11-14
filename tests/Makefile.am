@@ -1,3 +1,5 @@
+LIBS =
+
 sample_a_SOURCES =			\
 			sample_a.c	\
 					\
