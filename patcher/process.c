@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#include "compel/compel/compel.h"
-#include "compel/compel/ptrace.h"
+#include <compel/compel.h>
+#include <compel/ptrace.h>
 
 #include "include/log.h"
 #include "include/xmalloc.h"
@@ -299,7 +299,7 @@ int process_infect(struct process_ctx_s *ctx)
 	}
 
 	ictx = compel_infect_ctx(ctl);
-	ictx->loglevel = log_get_loglevel();
+//	ictx->loglevel = log_get_loglevel();
 	ictx->log_fd = log_get_fd();
 
 	if (collect_mappings(ctx->pid, &ctx->vmas)) {
