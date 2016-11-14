@@ -15,40 +15,40 @@ class BinFile:
 		self.filename = filename
 		self.functions = {}
 		self.objects = {}
+		self.elf_data = None
 
-	def __readelf_symbols__(self):
+	def __readelf__(self):
 		import subprocess
 		p = subprocess.Popen(['readelf', '-s', self.filename],
 					stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
 		return out
 
+	def __parse__(self):
+		if self.elf_data is None:
+			self.elf_data = self.__readelf__()
+
+		symbols = self.elf_data.split('\n')
+		for s in symbols:
+			tokens = s.split()
+			if len(tokens) > 8:
+				tokens[7] = ' '.join(tokens[7::])
+				tokens = tokens[:8]
+			es = ElfSym(*tokens)
+			if es.size == 0:
+				continue
+
+			if es.type == "FUNC":
+				self.functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
+			elif es.type == "OBJECT":
+				self.objects[es.name] = es
+
 	def functions_dict(self):
 		if not self.functions:
-			out = self.__readelf_symbols__()
-			symbols = out.split('\n')
-			for s in symbols:
-				tokens = s.split()
-				if len(tokens) > 8:
-					tokens[7] = ' '.join(tokens[7::])
-					tokens = tokens[:8]
-				es = ElfSym(*tokens)
-				if es.size == "0" or es.type != "FUNC":
-					continue
-				#self.functions[es.name] = FuncInfo(es.value, es.size)
-				self.functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
+			self.__parse__()
 		return self.functions
 
 	def objects_dict(self):
 		if not self.objects:
-			out = self.__readelf_symbols__()
-			symbols = out.split('\n')
-			for s in symbols:
-				tokens = s.split()
-				if len(tokens) > 8:
-					tokens[7] = ' '.join(tokens[7::])
-					tokens = tokens[:8]
-				es = ElfSym(*tokens)
-				if es.type == "OBJECT":
-					self.objects[es.name] = es
+			self.__parse__()
 		return self.objects
