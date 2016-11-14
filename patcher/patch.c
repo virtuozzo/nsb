@@ -6,60 +6,9 @@
 #include "include/xmalloc.h"
 
 #include "include/process.h"
+#include "include/x86_64.h"
 
 struct process_ctx_s process_context;
-
-static void get_call_instr(unsigned long cmd_addr, unsigned long jmp_addr,
-			   unsigned char *data)
-{
-	unsigned char *instr = &data[0];
-	unsigned int *addr = (unsigned int *)&data[1];
-	long off;
-	int i;
-
-	pr_debug("\tcall: cmd address : %#lx\n", cmd_addr);
-	pr_debug("\tcall: jmp address : %#lx\n", jmp_addr);
-
-	/* Relative callq */
-	*instr = 0xe8;
-	/* 5 bytes is relative jump command size */
-	off = jmp_addr - cmd_addr - 5;
-
-	pr_debug("\tcall: offset      : %#lx\n", off);
-
-	*addr = off;
-
-	pr_debug("\tcall :");
-	for (i = 0; i < 5; i++)
-		pr_msg(" %02x", data[i]);
-	pr_debug("\n");
-}
-
-static void get_jump_instr(unsigned long cmd_addr, unsigned long jmp_addr,
-			  unsigned char *data)
-{
-	unsigned char *instr = &data[0];
-	unsigned int *addr = (unsigned int *)&data[1];
-	long off;
-	int i;
-
-	pr_debug("\tjump: cmd address : %#lx\n", cmd_addr);
-	pr_debug("\tjump: jmp address : %#lx\n", jmp_addr);
-
-	/* Relative jump */
-	*instr = 0xe9;
-	/* 5 bytes is relative jump command size */
-	off = jmp_addr - cmd_addr - 5;
-
-	pr_debug("\tjump: offset      : %#lx\n", off);
-
-	*addr = off;
-
-	pr_debug("\tjump :");
-	for (i = 0; i < 5; i++)
-		pr_msg(" %02x", data[i]);
-	pr_debug("\n");
-}
 
 static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp, const char *name)
 {
@@ -74,8 +23,11 @@ static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp
 
 static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo *oi)
 {
-	unsigned char jump[8];
+	unsigned char instruction[X86_MAX_SIZE];
+	unsigned char code[X86_MAX_SIZE];
+	ssize_t size;
 	int err;
+	unsigned long where = start + oi->offset;
 
 	pr_debug("\t\tinfo: name    : %s\n", oi->name);
 	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
@@ -96,62 +48,23 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		oi->ref_addr = funcpatch->addr;
 	}
 
-	switch (oi->reftype) {
-		case OBJ_INFO__OBJ_TYPE__CALL:
-			{
-				int i;
+	size = x86_create_instruction(instruction, oi->reftype,
+				      where, oi->ref_addr);
+	if (size < 0)
+		return size;
 
-				pr_debug("\t\tinfo: jmpq\n");
-				err = process_read_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
-				if (err < 0)
-					pr_err("failed to patch: %d\n", err);
+	err = process_read_data(ctx->pid, (void *)where, code, round_up(size, 8));
+	if (err < 0) {
+		pr_err("failed to read process address %ld: %d\n", where, err);
+		return err;
+	}
 
-				pr_debug("\t\told code :");
-				for (i = 0; i < 8; i++)
-					pr_msg(" %02x", jump[i]);
-				pr_debug("\n");
+	memcpy(code, instruction, size);
 
-				get_call_instr(start + oi->offset, oi->ref_addr, jump);
-
-				pr_debug("\t\tnew code :");
-				for (i = 0; i < 8; i++)
-					pr_msg(" %02x", jump[i]);
-				pr_debug("\n");
-
-				err = process_write_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
-				if (err < 0)
-					pr_err("failed to patch: %d\n", err);
-			}
-			break;
-		case OBJ_INFO__OBJ_TYPE__JMPQ:
-			{
-				int i;
-
-				pr_debug("\t\tinfo: jmpq\n");
-				err = process_read_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
-				if (err < 0)
-					pr_err("failed to patch: %d\n", err);
-
-				pr_debug("\t\told code :");
-				for (i = 0; i < 8; i++)
-					pr_msg(" %02x", jump[i]);
-				pr_debug("\n");
-
-				get_jump_instr(start + oi->offset, oi->ref_addr, jump);
-
-				pr_debug("\t\tnew code :");
-				for (i = 0; i < 8; i++)
-					pr_msg(" %02x", jump[i]);
-				pr_debug("\n");
-
-				err = process_write_data(ctx->pid, (void *)(long)start + oi->offset, (void *)jump, 8);
-				if (err < 0)
-					pr_err("failed to patch: %d\n", err);
-			}
-			break;
-		default:
-			pr_debug("\t\tinfo: unknown\n");
-			return -1;
+	err = process_write_data(ctx->pid, (void *)where, code, round_up(size, 8));
+	if (err < 0) {
+		pr_err("failed to write process address %ld: %d\n", where, err);
+		return err;
 	}
 	return 0;
 }
@@ -159,7 +72,8 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPatch *fp)
 {
 	int i, err = 0;
-	unsigned char jump[8];
+	unsigned char jump[X86_MAX_SIZE];
+	ssize_t size;
 
 	pr_debug("\tpatch: name : %s\n", fp->name);
 	pr_debug("\tpatch: start: %#x\n", fp->start);
@@ -173,15 +87,20 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 
 	err = process_write_data(ctx->pid, (void *)addr, fp->code.data,
 				 round_up(fp->size, 8));
-	if (err < 0)
+	if (err < 0) {
 		pr_err("failed to patch: %d\n", err);
+		return err;
+	}
 
 	for (i = 0; i < fp->n_objs; i++) {
 		pr_debug("\tObject info %d:\n", i);
 		err = apply_objinfo(ctx, addr, fp->objs[i]);
 	}
 
-	get_jump_instr(fp->start, addr, jump);
+	size = x86_create_instruction(jump, OBJ_INFO__OBJ_TYPE__JMPQ,
+				      fp->start, addr);
+	if (size < 0)
+		return size;
 
 	err = process_write_data(ctx->pid, (void *)(long)fp->start, jump, round_up(fp->size, 8));
 	if (err < 0)
