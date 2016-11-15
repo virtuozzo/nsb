@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/user.h>
 
 #include <compel/compel.h>
 #include <compel/ptrace.h>
