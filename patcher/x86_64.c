@@ -4,6 +4,7 @@
 
 #define X64_CALLQ	0xe8
 #define X64_JMPQ	0xe9
+#define X64_JMP		0xeb
 
 static int ip_change_relative(unsigned char *buf, unsigned char opcode,
 			      unsigned long cur_pos, unsigned long tgt_pos,
@@ -35,6 +36,8 @@ int x86_create_instruction(unsigned char *buf, int type,
 			return ip_change_relative(buf, X64_CALLQ, cur_pos, tgt_pos, 5);
 		case OBJ_INFO__OBJ_TYPE__JMPQ:
 			return ip_change_relative(buf, X64_JMPQ, cur_pos, tgt_pos, 5);
+		case OBJ_INFO__OBJ_TYPE__JMP:
+			return ip_change_relative(buf, X64_JMP, cur_pos, tgt_pos, 2);
 	}
 	pr_debug("%s: unknown object type: %d\n", __func__, type);
 	return -1;

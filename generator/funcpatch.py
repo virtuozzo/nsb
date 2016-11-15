@@ -32,6 +32,9 @@ class JmpqCommand(CommandType):
 	def __init__(self):
 		CommandType.__init__(self, 3, "jmpq")
 
+class JmpCommand(CommandType):
+	def __init__(self):
+		CommandType.__init__(self, 4, "jmp")
 
 class CodeLineInfo:
 	def __init__(self, dumpline, func_start):
@@ -66,6 +69,8 @@ class CodeLineInfo:
 				self.command_type = JmpqCommand()
 			elif "call" in self.dumpline.code:
 				self.command_type = CallCommand()
+			elif "jmp" in self.dumpline.code:
+				self.command_type = CallCommand()
 			else:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
@@ -91,6 +96,8 @@ class CodeLineInfo:
 			image.reftype = objinfo_pb2.ObjInfo.CALL
 		elif self.command_type.num == 3:
 			image.reftype = objinfo_pb2.ObjInfo.JMPQ
+		elif self.command_type.num == 4:
+			image.reftype = objinfo_pb2.ObjInfo.JMP
 		else:
 			print "Unsupported reftype: %s" % self.command_type.num 
 		return image

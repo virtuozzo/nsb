@@ -6,6 +6,7 @@ message ObjInfo {
 	enum ObjType {
 		CALL		= 0;
 		JMPQ		= 1;
+		JMP		= 2;
 	}
 	required ObjType reftype	= 5;
 }
