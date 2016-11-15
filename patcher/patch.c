@@ -30,10 +30,10 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 	unsigned long where = start + oi->offset;
 
 	pr_debug("\t\tinfo: name    : %s\n", oi->name);
+	pr_debug("\t\tinfo: op      : %#x\n", oi->op);
 	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
 	pr_debug("\t\tinfo: ref_addr: %d\n", oi->ref_addr);
 	pr_debug("\t\tinfo: external: %d\n", oi->external);
-	pr_debug("\t\tinfo: reftype : %d\n", oi->reftype);
 
 	if (oi->ref_addr == 0) {
 		const struct funcpatch_s *funcpatch;
@@ -48,7 +48,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		oi->ref_addr = funcpatch->addr;
 	}
 
-	size = x86_create_instruction(instruction, oi->reftype,
+	size = x86_create_instruction(instruction, oi->op,
 				      where, oi->ref_addr);
 	if (size < 0)
 		return size;
@@ -98,8 +98,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	}
 
 	if (!fp->new_) {
-		size = x86_create_instruction(jump, OBJ_INFO__OBJ_TYPE__JMPQ,
-					      fp->start, addr);
+		size = x86_create_instruction(jump, 0xe9, fp->start, addr);
 		if (size < 0)
 			return size;
 

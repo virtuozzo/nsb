@@ -1,12 +1,8 @@
 message ObjInfo {
-	required string name		= 1;
-	required int32	offset		= 2;
-	required int32  ref_addr	= 3;
-	required bool	external	= 4;
-	enum ObjType {
-		CALL		= 0;
-		JMPQ		= 1;
-		JMP		= 2;
-	}
-	required ObjType reftype	= 5;
+	required string name            = 1;
+	required int32	op		= 2;
+	required bool	size		= 3;
+	required int32	offset		= 4;
+	required int32  ref_addr	= 5;
+	required bool	external	= 6;
 }

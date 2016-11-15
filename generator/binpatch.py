@@ -56,20 +56,19 @@ class BinPatch:
 			p.show()
 			p.analize()
 			for ci in p.code_info:
-				if ci.command_type.name == "call" or ci.command_type.name == "jmp":
+				if ci.command_info.is_jump:
 					if ci.access_name in self.common_func:
 						ci.access_addr = self.bf_old.functions_dict()[ci.access_name].start 
-						print "Call/jmpq to COMMON function: '%s', '%s', '0x%x'" % (ci.access_name, ci.access_plt, ci.access_addr)
+						print "%s to COMMON function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
 					elif ci.access_name in self.modified_func:
-						print "Call/jmpq to MODIFIED function: '%s', '%s', '0x%x'" % (ci.access_name, ci.access_plt, ci.access_addr)
+						print "%s to MODIFIED function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
 					else:
-						print "Call/jmpq to NEW function: '%s', '%s'" % (ci.access_name, ci.access_plt)
+						print "%s to NEW function: '%s', '%s'" % (ci.command_info.name, ci.access_name, ci.access_plt)
 						ci.show()
 						if ci.access_plt:
-							print "New call/jmpq to PLT entry.\nUnsupported"
+							print "New PLT entry.\nUnsupported"
 							return
-
-				elif ci.command_type.name == "var":
+				else:
 					if ci.access_name in self.common_obj:
 						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 						ci.access_addr = self.bf_old.objects_dict()[ci.access_name].start 

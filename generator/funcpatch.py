@@ -5,43 +5,53 @@ from collections import namedtuple
 import funcpatch_pb2
 import objinfo_pb2
 
-class CommandType:
-	def __init__(self, num, name):
-		self.num = num
+class CmdInfo:
+	def __init__(self, name, op, size, is_jump):
 		self.name = name
+		self.op = op
+		self.size = size
+		self.is_jump = is_jump
 
 	def __str__(self):
 		return self.name
 
 
-class MathCommand(CommandType):
+class JumpCmdInfo(CmdInfo):
+	def __init__(self, name, op, size):
+		CmdInfo.__init__(self, name, op, size, True)
+
+
+class JumpByteCmd(JumpCmdInfo):
+	def __init__(self, name, op):
+		JumpCmdInfo.__init__(self, name, op, 2)
+
+
+class JumpQuadCmd(JumpCmdInfo):
+	def __init__(self, name, op):
+		JumpCmdInfo.__init__(self, name, op, 5)
+
+
+class JmpqCmd(JumpQuadCmd):
 	def __init__(self):
-		CommandType.__init__(self, 0, "math")
+		JumpQuadCmd.__init__(self, "jmpq", 0xe9)
 
 
-class CallCommand(CommandType):
+class CallqCmd(JumpQuadCmd):
 	def __init__(self):
-		CommandType.__init__(self, 1, "call")
+		JumpQuadCmd.__init__(self, "call", 0xe8)
 
 
-class VarCommand(CommandType):
+class JmpCmd(JumpByteCmd):
 	def __init__(self):
-		CommandType.__init__(self, 2, "var")
+		JumpByteCmd.__init__(self, "jmp", 0xeb)
 
-class JmpqCommand(CommandType):
-	def __init__(self):
-		CommandType.__init__(self, 3, "jmpq")
-
-class JmpCommand(CommandType):
-	def __init__(self):
-		CommandType.__init__(self, 4, "jmp")
 
 class CodeLineInfo:
 	def __init__(self, dumpline, func_start):
 		self.dumpline = dumpline
 		self.addr = int(self.dumpline.addr, 16)
 		self.offset = self.addr - func_start
-		self.command_type = MathCommand()
+		self.command_info = None
 		self.access_addr = 0
 		self.access_name = None
 		self.access_plt = False
@@ -66,40 +76,36 @@ class CodeLineInfo:
 					exit()
 
 			if "jmpq" in self.dumpline.code:
-				self.command_type = JmpqCommand()
-			elif "call" in self.dumpline.code:
-				self.command_type = CallCommand()
+				self.command_info = JmpqCmd()
+			elif "callq" in self.dumpline.code:
+				self.command_info = CallqCmd()
 			elif "jmp" in self.dumpline.code:
-				self.command_type = CallCommand()
+				self.command_info = CallCmd()
 			else:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
 		elif self.dumpline.hint:
-			split = filter(None, re.split('<(.+)>', self.dumpline.hint))
-			self.access_addr = split[0].strip()
-			self.access_name = split[1].strip()
-			self.command_type = VarCommand()
+			print "Unsupported variable command: %s" % self.dumpline.code
+			raise
+#			split = filter(None, re.split('<(.+)>', self.dumpline.hint))
+#			self.access_addr = split[0].strip()
+#			self.access_name = split[1].strip()
+#			self.command_info = VarCmd()
 
 
 	def show(self):
-		if self.command_type != MathCommand():
-			print "%s: '%s', '%s', %s, %d" % (self.command_type, self.access_name, self.access_addr, self.access_addr, self.offset)
+		if self.command_info:
+			print "%s: '%s', '%s', %s, %d" % (self.command_info, self.access_name, self.access_addr, self.access_addr, self.offset)
 
 	def get_patch(self):
 		print "CodeLineInfo: get_patch for %s" % self.dumpline.line
 		image = objinfo_pb2.ObjInfo()
 		image.name = self.access_name
 		image.offset = self.offset
-		image.external = self.access_plt
+		image.op = self.command_info.op
+		image.size = self.command_info.size
 		image.ref_addr = self.access_addr
-		if self.command_type.num == 1:
-			image.reftype = objinfo_pb2.ObjInfo.CALL
-		elif self.command_type.num == 3:
-			image.reftype = objinfo_pb2.ObjInfo.JMPQ
-		elif self.command_type.num == 4:
-			image.reftype = objinfo_pb2.ObjInfo.JMP
-		else:
-			print "Unsupported reftype: %s" % self.command_type.num 
+		image.external = self.access_plt
 		return image
 
 
@@ -142,7 +148,7 @@ class FuncPatch:
 			info = CodeLineInfo(l, self.function.start)
 #			info.show()
 			# skip pure math commands
-			if info.command_type.num:
+			if info.command_info:
 				self.code_info.append(info)
 
 	def get_patch(self, code):

@@ -7,7 +7,7 @@
  */
 #define X86_MAX_SIZE	16
 
-int x86_create_instruction(unsigned char *buf, int type,
+int x86_create_instruction(unsigned char *buf, unsigned char op,
 			   unsigned long cur_pos, unsigned long tgt_pos);
 
 #endif

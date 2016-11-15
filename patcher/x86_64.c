@@ -1,12 +1,14 @@
+#include <errno.h>
+
 #include "include/log.h"
 #include "include/protobuf.h"
 #include "include/x86_64.h"
 
-#define X64_CALLQ	0xe8
-#define X64_JMPQ	0xe9
-#define X64_JMP		0xeb
+#define OP_CALLQ	0xe8
+#define OP_JMPQ		0xe9
+#define OP_JMP		0xeb
 
-static int ip_change_relative(unsigned char *buf, unsigned char opcode,
+int ip_change_relative(unsigned char *buf, unsigned char opcode,
 			      unsigned long cur_pos, unsigned long tgt_pos,
 			      size_t cmd_size)
 {
@@ -28,17 +30,22 @@ static int ip_change_relative(unsigned char *buf, unsigned char opcode,
 	return cmd_size;
 }
 
-int x86_create_instruction(unsigned char *buf, int type,
+int x86_create_instruction(unsigned char *buf, unsigned char op,
 			   unsigned long cur_pos, unsigned long tgt_pos)
 {
-	switch (type) {
-		case OBJ_INFO__OBJ_TYPE__CALL:
-			return ip_change_relative(buf, X64_CALLQ, cur_pos, tgt_pos, 5);
-		case OBJ_INFO__OBJ_TYPE__JMPQ:
-			return ip_change_relative(buf, X64_JMPQ, cur_pos, tgt_pos, 5);
-		case OBJ_INFO__OBJ_TYPE__JMP:
-			return ip_change_relative(buf, X64_JMP, cur_pos, tgt_pos, 2);
+	size_t op_size;
+
+	switch (op) {
+		case OP_CALLQ:
+		case OP_JMPQ:
+			op_size = 5;
+			break;
+		case OP_JMP:
+			op_size = 2;
+			break;
+		default:
+			pr_err("unknown command code: %#x\n", op);
+			return -EINVAL;
 	}
-	pr_debug("%s: unknown object type: %d\n", __func__, type);
-	return -1;
+	return ip_change_relative(buf, op, cur_pos, tgt_pos, op_size);
 }
