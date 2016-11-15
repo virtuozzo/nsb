@@ -97,15 +97,16 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 		err = apply_objinfo(ctx, addr, fp->objs[i]);
 	}
 
-	size = x86_create_instruction(jump, OBJ_INFO__OBJ_TYPE__JMPQ,
-				      fp->start, addr);
-	if (size < 0)
-		return size;
+	if (!fp->new_) {
+		size = x86_create_instruction(jump, OBJ_INFO__OBJ_TYPE__JMPQ,
+					      fp->start, addr);
+		if (size < 0)
+			return size;
 
-	err = process_write_data(ctx->pid, (void *)(long)fp->start, jump, round_up(fp->size, 8));
-	if (err < 0)
-		pr_err("failed to patch: %d\n", err);
-
+		err = process_write_data(ctx->pid, (void *)(long)fp->start, jump, round_up(fp->size, 8));
+		if (err < 0)
+			pr_err("failed to patch: %d\n", err);
+	}
 	return err;
 }
 
