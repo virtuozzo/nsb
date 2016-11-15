@@ -80,7 +80,7 @@ class CodeLineInfo:
 			elif "callq" in self.dumpline.code:
 				self.command_info = CallqCmd()
 			elif "jmp" in self.dumpline.code:
-				self.command_info = CallCmd()
+				self.command_info = JmpCmd()
 			else:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
