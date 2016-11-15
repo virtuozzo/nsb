@@ -68,6 +68,16 @@ class MovCmd(CmdInfo):
 		CmdInfo.__init__(self, "mov", op, len(code_bytes), False)
 
 
+class MovlCmd(CmdInfo):
+	def __init__(self, code):
+		code_bytes = code.split()
+		if code_bytes[0] == 'c7':
+			op = int(code_bytes[0] + code_bytes[1], 16)
+		else:
+			raise
+		CmdInfo.__init__(self, "movl", op, len(code_bytes), False)
+
+
 class CodeLineInfo:
 	def __init__(self, dumpline, func_start):
 		self.dumpline = dumpline
@@ -120,6 +130,8 @@ class CodeLineInfo:
 			try:
 				if "mov " in self.dumpline.code:
 					self.command_info = MovCmd(self.dumpline.bytes)
+				elif "movl " in self.dumpline.code:
+					self.command_info = MovlCmd(self.dumpline.bytes)
 				else:
 					raise
 			except:
