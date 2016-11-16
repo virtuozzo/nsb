@@ -4,10 +4,12 @@
 #include "include/log.h"
 #include "include/x86_64.h"
 
-#define OP_CALLQ	0xe8
-#define OP_JMPQ		0xe9
-#define OP_JMP		0xeb
-#define OP_MAX		0x100
+#define OP_CALLQ		0xe8
+#define OP_JMPQ			0xe9
+#define OP_JMP			0xeb
+#define OP_MOV_RM_32		0x89
+#define OP_MOV_MR_32		0x8b
+#define OP_MAX			0x100
 
 struct x86_op_info_s {
 	unsigned char instr_size;
@@ -24,6 +26,14 @@ struct x86_op_info_s {
 	[OP_JMP] = {
 		.instr_size = 2,
 		.cmd_size = 1,
+	},
+	[OP_MOV_RM_32] = {
+		.instr_size = 6,
+		.cmd_size = 2,
+	},
+	[OP_MOV_MR_32] = {
+		.instr_size = 6,
+		.cmd_size = 2,
 	},
 };
 
