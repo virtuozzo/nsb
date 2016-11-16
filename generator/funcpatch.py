@@ -6,9 +6,10 @@ import funcpatch_pb2
 import objinfo_pb2
 
 class CmdInfo:
-	def __init__(self, name, op, op_size, addr_size, is_jump):
+	def __init__(self, name, op, prefix_size, op_size, addr_size, is_jump):
 		self.name = name
 		self.op = op
+		self.prefix_size = prefix_size
 		self.op_size = op_size
 		self.addr_size = addr_size
 		self.is_jump = is_jump
@@ -18,74 +19,75 @@ class CmdInfo:
 
 
 class JumpCmdInfo(CmdInfo):
-	def __init__(self, name, op, op_size, addr_size):
-		CmdInfo.__init__(self, name, op, op_size, addr_size, True)
+	def __init__(self, name, op, prefix_size, op_size, addr_size):
+		CmdInfo.__init__(self, name, op, prefix_size, op_size, addr_size, True)
 
 
 class JumpByteCmd(JumpCmdInfo):
-	def __init__(self, name, op):
-		JumpCmdInfo.__init__(self, name, op, 1, 1)
+	def __init__(self, name, op, prefix_size):
+		JumpCmdInfo.__init__(self, name, op, prefix_size, 1, 1)
 
 
 class JumpQuadCmd(JumpCmdInfo):
-	def __init__(self, name, op):
-		JumpCmdInfo.__init__(self, name, op, 1, 4)
+	def __init__(self, name, op, prefix_size):
+		JumpCmdInfo.__init__(self, name, op, prefix_size, 1, 4)
 
 
 class JmpqCmd(JumpQuadCmd):
-	def __init__(self):
-		JumpQuadCmd.__init__(self, "jmpq", 0xe9)
+	def __init__(self, prefix_size):
+		JumpQuadCmd.__init__(self, "jmpq", 0xe9, prefix_size)
 
 
 class CallqCmd(JumpQuadCmd):
-	def __init__(self):
-		JumpQuadCmd.__init__(self, "call", 0xe8)
+	def __init__(self, prefix_size):
+		JumpQuadCmd.__init__(self, "call", 0xe8, prefix_size)
 
 
 class JmpCmd(JumpByteCmd):
-	def __init__(self):
-		JumpByteCmd.__init__(self, "jmp", 0xeb)
+	def __init__(self, prefix_size):
+		JumpByteCmd.__init__(self, "jmp", 0xeb, prefix_size)
 
 
 class JeCmd(JumpByteCmd):
-	def __init__(self):
-		JumpByteCmd.__init__(self, "je", 0x74)
+	def __init__(self, prefix_size):
+		JumpByteCmd.__init__(self, "je", 0x74, prefix_size)
 
 
 class JneCmd(JumpByteCmd):
-	def __init__(self):
-		JumpByteCmd.__init__(self, "jne", 0x75)
+	def __init__(self, prefix_size):
+		JumpByteCmd.__init__(self, "jne", 0x75, prefix_size)
 
 
 class VarCmdInfo(CmdInfo):
-	def __init__(self, name, op, op_size, addr_size):
-		CmdInfo.__init__(self, name, op, op_size, addr_size, False)
+	def __init__(self, name, op, prefix_size, op_size, addr_size):
+		CmdInfo.__init__(self, name, op, prefix_size, op_size, addr_size, False)
 
 class VarQuadCmd(VarCmdInfo):
-	def __init__(self, name, op, op_size):
-		VarCmdInfo.__init__(self, name, op, op_size, 4)
+	def __init__(self, name, op, prefix_size, op_size):
+		VarCmdInfo.__init__(self, name, op, prefix_size, op_size, 4)
 
 
 class MovCmd(VarQuadCmd):
-	def __init__(self, code):
+	def __init__(self, code, prefix_size):
 		code_bytes = code.split()
-		if code_bytes[0] == '8b' or code_bytes[0] == '89':
-			op = int(code_bytes[0] + code_bytes[1], 16)
+		if code_bytes[prefix_size] == '8b' or code_bytes[prefix_size] == '89':
 			op_size = 2
+			op = int(''.join(code_bytes[:op_size + prefix_size]), 16)
 		else:
 			raise
-		VarQuadCmd.__init__(self, "mov", op, op_size)
+		VarQuadCmd.__init__(self, "mov", op, prefix_size, op_size)
 
 
 class MovlCmd(VarQuadCmd):
-	def __init__(self, code):
+	def __init__(self, code, prefix_size):
 		code_bytes = code.split()
-		if code_bytes[0] == 'c7':
-			op = int(code_bytes[0] + code_bytes[1], 16)
+		if code_bytes[prefix_size] == 'c7':
 			op_size = 2
+			op = int(''.join(code_bytes[:op_size + prefix_size]), 16)
 		else:
 			raise
-		VarQuadCmd.__init__(self, "movl", op, op_size)
+		VarQuadCmd.__init__(self, "movl", op, prefix_size, op_size)
+
 
 
 class CodeLineInfo:
@@ -102,6 +104,12 @@ class CodeLineInfo:
 
 	def __analize__(self):
 		self.dumpline.show()
+
+		prefix_size = 0
+		code_bytes = self.dumpline.bytes.split()
+		if 0x40 <= int(code_bytes[0], 16) <= 0x4f:
+			prefix_size = 1
+
 		if self.dumpline.name:
 			split = self.dumpline.name.split('@')
 			self.access_name = split[0];
@@ -125,15 +133,15 @@ class CodeLineInfo:
 					exit()
 
 			if "jmpq" in self.dumpline.code:
-				self.command_info = JmpqCmd()
+				self.command_info = JmpqCmd(prefix_size)
 			elif "callq" in self.dumpline.code:
-				self.command_info = CallqCmd()
+				self.command_info = CallqCmd(prefix_size)
 			elif "jmp" in self.dumpline.code:
-				self.command_info = JmpCmd()
+				self.command_info = JmpCmd(prefix_size)
 			elif "jne " in self.dumpline.code:
-				self.command_info = JneCmd()
+				self.command_info = JneCmd(prefix_size)
 			elif "je " in self.dumpline.code:
-				self.command_info = JeCmd()
+				self.command_info = JeCmd(prefix_size)
 			else:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
@@ -146,13 +154,14 @@ class CodeLineInfo:
 			print "self.dumpline.bytes: '%s'" % self.dumpline.bytes
 			try:
 				if "mov " in self.dumpline.code:
-					self.command_info = MovCmd(self.dumpline.bytes)
+					self.command_info = MovCmd(self.dumpline.bytes, prefix_size)
 				elif "movl " in self.dumpline.code:
-					self.command_info = MovlCmd(self.dumpline.bytes)
+					self.command_info = MovlCmd(self.dumpline.bytes, prefix_size)
 				else:
 					raise
 			except:
                                print "Unsupported variable command: %s" % self.dumpline.line
+			       print self.dumpline.bytes
                                raise
 
 	def show(self):
@@ -164,7 +173,8 @@ class CodeLineInfo:
 		image = objinfo_pb2.ObjInfo()
 		image.name = self.access_name
 		image.offset = self.offset
-		image.op_size = self.command_info.op_size
+		image.op_size = self.command_info.op_size + self.command_info.prefix_size
+		print "image.op_size: %d" % image.op_size
 		image.addr_size = self.command_info.addr_size
 		image.ref_addr = self.access_addr
 		return image
