@@ -83,7 +83,7 @@ class BinPatch:
 							return
 				else:
 					if ci.access_name in self.common_obj:
-						ci.access_addr = self.bf_old.objects_dict()[ci.access_name].value 
+						ci.access_addr = int(self.bf_old.objects_dict()[ci.access_name].value, 16)
 						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 					else:
 						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
