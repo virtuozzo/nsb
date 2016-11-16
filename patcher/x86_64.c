@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <errno.h>
 
 #include "include/log.h"
@@ -42,11 +43,11 @@ static struct x86_op_info_s *x86_get_op_info(unsigned char op)
 	return info;
 }
 
-static long ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
-			  char addr_size)
+static int ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
+			 char addr_size, int *buf)
 {
 	int i;
-	unsigned long offset;
+	long offset;
 	unsigned long mask = 0;
 
 	for (i = 0; i < addr_size; i++) {
@@ -54,7 +55,7 @@ static long ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
 	}
 
 	offset = tgt_pos - next_ip;
-	if (offset & ~mask) {
+	if (abs(offset) & ~mask) {
 		pr_err("%s: offset is beyond command size: %#lx > %#lx\n",
 				__func__, offset, mask);
 		return -EINVAL;
@@ -63,21 +64,22 @@ static long ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
 	pr_debug("%s: addr_size : %d\n", __func__, addr_size);
 	pr_debug("%s: next_ip : %#lx\n", __func__, next_ip);
 	pr_debug("%s: tgt_pos : %#lx\n", __func__, tgt_pos);
-	pr_debug("%s: offset  : %#lx\n", __func__, offset);
+	pr_debug("%s: offset  : %#x\n", __func__, (int)offset);
 
-	return offset;
+	*buf = offset;
+
+	return 0;
 }
 
 static int ip_change_relative(unsigned char *addr,
 			      unsigned long next_ip, unsigned long tgt_pos,
 			      size_t addr_size)
 {
-	long offset;
+	int offset;
 	int i;
 
-	offset = ip_gen_offset(next_ip, tgt_pos, addr_size);
-	if (offset < 0)
-		return offset;
+	if (ip_gen_offset(next_ip, tgt_pos, addr_size, &offset))
+		return -1;
 
 	memcpy(addr, (void *)&offset, addr_size);
 
