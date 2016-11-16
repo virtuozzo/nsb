@@ -46,6 +46,16 @@ class JmpCmd(JumpByteCmd):
 		JumpByteCmd.__init__(self, "jmp", 0xeb)
 
 
+class JeCmd(JumpByteCmd):
+	def __init__(self):
+		JumpByteCmd.__init__(self, "je", 0x74)
+
+
+class JneCmd(JumpByteCmd):
+	def __init__(self):
+		JumpByteCmd.__init__(self, "jne", 0x75)
+
+
 class MovCmd(CmdInfo):
 	def __init__(self, code):
 		code_bytes = code.split()
@@ -93,6 +103,10 @@ class CodeLineInfo:
 				self.command_info = CallqCmd()
 			elif "jmp" in self.dumpline.code:
 				self.command_info = JmpCmd()
+			elif "jne " in self.dumpline.code:
+				self.command_info = JneCmd()
+			elif "je " in self.dumpline.code:
+				self.command_info = JeCmd()
 			else:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
