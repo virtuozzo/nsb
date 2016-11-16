@@ -20,12 +20,25 @@ class BinFile:
 		self.dyn_objects = {}
 		self.elf_data = None
 
-	def __readelf__(self):
+	def __exec__(self, cmd):
 		import subprocess
-		p = subprocess.Popen(['readelf', '-s', self.filename],
+		p = subprocess.Popen(cmd.split(),
 					stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
 		return out
+
+	def __readelf__(self):
+		return self.__exec__("readelf -s %s" % self.filename)
+
+	def __get_plt_info(self):
+		text = self.__exec__("objdump -d -j.plt %s" % self.filename)
+		entries = re.findall('[0-9A-Fa-f]{16}.+<.+plt>', text)
+		PltEntry = namedtuple("PltEntry", "addr name")
+		for e in entries:
+			pe = PltEntry(*filter(None, re.split(' ?\t?<(.+)@.+>', e)));
+			print pe
+			if pe.name in self.dyn_functions:
+				self.dyn_functions[pe.name].start = int(pe.addr, 16)
 
 	def __parse__(self):
 		if self.elf_data is None:
@@ -68,6 +81,9 @@ class BinFile:
 					self.functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
 				elif es.type == "OBJECT":
 					self.objects[es.name] = es
+
+		if self.dyn_functions:
+			self.__get_plt_info()
 
 	def functions_dict(self):
 		if not self.functions:
