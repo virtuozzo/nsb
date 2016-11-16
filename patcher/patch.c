@@ -29,10 +29,10 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 	unsigned long where = start + oi->offset;
 
 	pr_debug("\t\tinfo: name    : %s\n", oi->name);
-	pr_debug("\t\tinfo: op      : %#x\n", oi->op);
+	pr_debug("\t\tinfo: op_size : %#x\n", oi->op_size);
+	pr_debug("\t\tinfo: addr_size : %#x\n", oi->addr_size);
 	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
 	pr_debug("\t\tinfo: ref_addr: %#x\n", oi->ref_addr);
-	pr_debug("\t\tinfo: external: %d\n", oi->external);
 
 	if (oi->ref_addr == 0) {
 		const struct funcpatch_s *funcpatch;

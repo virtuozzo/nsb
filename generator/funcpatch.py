@@ -6,10 +6,11 @@ import funcpatch_pb2
 import objinfo_pb2
 
 class CmdInfo:
-	def __init__(self, name, op, size, is_jump):
+	def __init__(self, name, op, op_size, addr_size, is_jump):
 		self.name = name
 		self.op = op
-		self.size = size
+		self.op_size = op_size
+		self.addr_size = addr_size
 		self.is_jump = is_jump
 
 	def __str__(self):
@@ -17,18 +18,18 @@ class CmdInfo:
 
 
 class JumpCmdInfo(CmdInfo):
-	def __init__(self, name, op, size):
-		CmdInfo.__init__(self, name, op, size, True)
+	def __init__(self, name, op, op_size, addr_size):
+		CmdInfo.__init__(self, name, op, op_size, addr_size, True)
 
 
 class JumpByteCmd(JumpCmdInfo):
 	def __init__(self, name, op):
-		JumpCmdInfo.__init__(self, name, op, 2)
+		JumpCmdInfo.__init__(self, name, op, 1, 1)
 
 
 class JumpQuadCmd(JumpCmdInfo):
 	def __init__(self, name, op):
-		JumpCmdInfo.__init__(self, name, op, 5)
+		JumpCmdInfo.__init__(self, name, op, 1, 4)
 
 
 class JmpqCmd(JumpQuadCmd):
@@ -59,13 +60,12 @@ class JneCmd(JumpByteCmd):
 class MovCmd(CmdInfo):
 	def __init__(self, code):
 		code_bytes = code.split()
-		if code_bytes[0] == '8b':
+		if code_bytes[0] == '8b' or code_bytes[0] == '89':
 			op = int(code_bytes[0] + code_bytes[1], 16)
-		elif code_bytes[0] == '89':
-			op = int(code_bytes[0] + code_bytes[1], 16)
+			op_size = 2
 		else:
 			raise
-		CmdInfo.__init__(self, "mov", op, len(code_bytes), False)
+		CmdInfo.__init__(self, "mov", op, op_size, 4, False)
 
 
 class MovlCmd(CmdInfo):
@@ -73,9 +73,10 @@ class MovlCmd(CmdInfo):
 		code_bytes = code.split()
 		if code_bytes[0] == 'c7':
 			op = int(code_bytes[0] + code_bytes[1], 16)
+			op_size = 2
 		else:
 			raise
-		CmdInfo.__init__(self, "movl", op, len(code_bytes), False)
+		CmdInfo.__init__(self, "movl", op, op_size, 4, False)
 
 
 class CodeLineInfo:
@@ -147,10 +148,9 @@ class CodeLineInfo:
 		image = objinfo_pb2.ObjInfo()
 		image.name = self.access_name
 		image.offset = self.offset
-		image.op = self.command_info.op
-		image.size = self.command_info.size
+		image.op_size = self.command_info.op_size
+		image.addr_size = self.command_info.addr_size
 		image.ref_addr = self.access_addr
-		image.external = self.access_plt
 		return image
 
 

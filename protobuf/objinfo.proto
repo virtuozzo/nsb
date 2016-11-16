@@ -1,8 +1,7 @@
 message ObjInfo {
-	required string name            = 1;
-	required int32	op		= 2;
-	required bool	size		= 3;
-	required int32	offset		= 4;
-	required int32  ref_addr	= 5;
-	required bool	external	= 6;
+	required string name            = 1;	// Object name
+	required int32	op_size		= 2;	// Size of op, including prefixes
+	required int32	addr_size	= 3;	// Size of address
+	required int32	offset		= 4;	// Instruction offset within function
+	required int32  ref_addr	= 5;	// Instruction reference to address. If 0, then object has to be searched.
 }
