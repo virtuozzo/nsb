@@ -31,7 +31,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 	pr_debug("\t\tinfo: name    : %s\n", oi->name);
 	pr_debug("\t\tinfo: op      : %#x\n", oi->op);
 	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
-	pr_debug("\t\tinfo: ref_addr: %d\n", oi->ref_addr);
+	pr_debug("\t\tinfo: ref_addr: %#x\n", oi->ref_addr);
 	pr_debug("\t\tinfo: external: %d\n", oi->external);
 
 	if (oi->ref_addr == 0) {
