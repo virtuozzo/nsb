@@ -89,21 +89,27 @@ static int ip_change_relative(unsigned char *addr,
 	return 0;
 }
 
-int x86_create_instruction(unsigned char *buf, unsigned char op,
+int x86_modify_instruction(unsigned char *buf,
 			   unsigned long cur_pos, unsigned long tgt_pos)
 {
 	unsigned char *addr;
 	size_t addr_size;
 	struct x86_op_info_s *info;
 
-	info = x86_get_op_info(op);
+	info = x86_get_op_info(buf[0]);
 	if (!info)
 		return -EINVAL;
 
 	addr_size = info->instr_size - info->cmd_size;
 	addr = buf + info->cmd_size;
-	*buf = op;
 	if (ip_change_relative(addr, cur_pos + info->instr_size, tgt_pos, addr_size))
 		return -1;
 	return info->instr_size;
+}
+
+int x86_create_instruction(unsigned char *buf, unsigned char op,
+			   unsigned long cur_pos, unsigned long tgt_pos)
+{
+	*buf = op;
+	return x86_modify_instruction(buf, cur_pos, tgt_pos);
 }
