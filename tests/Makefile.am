@@ -48,4 +48,16 @@ sample_h_SOURCES =			\
 			waitsig.c	\
 			waitsig.h
 
-check_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_f sample_g sample_h
+sample_j_SOURCES =			\
+			waitsig_new.c	\
+			waitsig.h	\
+					\
+			sample_j.c
+
+sample_i_SOURCES =			\
+			waitsig_new.c	\
+			waitsig.h	\
+					\
+			sample_i.c
+
+check_PROGRAMS = sample_a sample_b sample_c sample_d sample_e sample_f sample_g sample_h sample_j sample_i
