@@ -55,7 +55,8 @@ check_SCRIPTS = 					\
 			tests/sample_a_to_sample_b.py	\
 			tests/sample_a_to_sample_c.py	\
 			tests/sample_a_to_sample_f.py	\
-			tests/sample_d_to_sample_g.py
+			tests/sample_d_to_sample_g.py	\
+			tests/sample_e_to_sample_h.py
 
 $(check_SCRIPTS):
 	$(AM_V_GEN) python tests/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@))) --outfile $@
