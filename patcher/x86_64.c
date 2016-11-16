@@ -4,55 +4,6 @@
 #include "include/log.h"
 #include "include/x86_64.h"
 
-#define OP_CALLQ		0xe8
-#define OP_JMPQ			0xe9
-#define OP_JMP			0xeb
-#define OP_MOV_RM_32		0x89
-#define OP_MOV_MR_32		0x8b
-#define OP_MAX			0x100
-
-struct x86_op_info_s {
-	unsigned char instr_size;
-	unsigned char cmd_size;
-} x86_ops[] = {
-	[OP_CALLQ] = {
-		.instr_size = 5,
-		.cmd_size = 1,
-	},
-	[OP_JMPQ] = {
-		.instr_size = 5,
-		.cmd_size = 1,
-	},
-	[OP_JMP] = {
-		.instr_size = 2,
-		.cmd_size = 1,
-	},
-	[OP_MOV_RM_32] = {
-		.instr_size = 6,
-		.cmd_size = 2,
-	},
-	[OP_MOV_MR_32] = {
-		.instr_size = 6,
-		.cmd_size = 2,
-	},
-};
-
-static struct x86_op_info_s *x86_get_op_info(unsigned char op)
-{
-	struct x86_op_info_s *info;
-
-	if (op >= OP_MAX) {
-		pr_err("%s: invalid opcode: %#x\n", __func__, op);
-		return NULL;
-	}
-	info = &x86_ops[op];
-	if (!info->instr_size) {
-		pr_err("%s: unknown opcode: %#x\n", __func__, op);
-		return NULL;
-	}
-	return info;
-}
-
 static int ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
 			 char addr_size, int *buf)
 {
@@ -101,27 +52,21 @@ static int ip_change_relative(unsigned char *addr,
 	return 0;
 }
 
-int x86_modify_instruction(unsigned char *buf,
+int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
 			   unsigned long cur_pos, unsigned long tgt_pos)
 {
 	unsigned char *addr;
-	size_t addr_size;
-	struct x86_op_info_s *info;
+	size_t instr_size = op_size + addr_size;
 
-	info = x86_get_op_info(buf[0]);
-	if (!info)
-		return -EINVAL;
-
-	addr_size = info->instr_size - info->cmd_size;
-	addr = buf + info->cmd_size;
-	if (ip_change_relative(addr, cur_pos + info->instr_size, tgt_pos, addr_size))
+	addr = buf + op_size;
+	if (ip_change_relative(addr, cur_pos + instr_size, tgt_pos, addr_size))
 		return -1;
-	return info->instr_size;
+	return instr_size;
 }
 
-int x86_create_instruction(unsigned char *buf, unsigned char op,
-			   unsigned long cur_pos, unsigned long tgt_pos)
+int x86_jmpq_instruction(unsigned char *buf,
+			 unsigned long cur_pos, unsigned long tgt_pos)
 {
-	*buf = op;
-	return x86_modify_instruction(buf, cur_pos, tgt_pos);
+	*buf = 0xe9;
+	return x86_modify_instruction(buf, 1, 4, cur_pos, tgt_pos);
 }

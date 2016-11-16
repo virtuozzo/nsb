@@ -53,7 +53,8 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		return err;
 	}
 
-	size = x86_modify_instruction(code, where, oi->ref_addr);
+	size = x86_modify_instruction(code, oi->op_size, oi->addr_size,
+				      where, oi->ref_addr);
 	if (size < 0)
 		return size;
 
@@ -96,7 +97,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	}
 
 	if (!fp->new_) {
-		size = x86_create_instruction(jump, 0xe9, fp->start, addr);
+		size = x86_jmpq_instruction(jump, fp->start, addr);
 		if (size < 0)
 			return size;
 
