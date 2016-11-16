@@ -28,11 +28,11 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 	int err;
 	unsigned long where = start + oi->offset;
 
-	pr_debug("\t\tinfo: name    : %s\n", oi->name);
-	pr_debug("\t\tinfo: op_size : %#x\n", oi->op_size);
-	pr_debug("\t\tinfo: addr_size : %#x\n", oi->addr_size);
-	pr_debug("\t\tinfo: offset  : %#x\n", oi->offset);
-	pr_debug("\t\tinfo: ref_addr: %#x\n", oi->ref_addr);
+	pr_debug("\t\tinfo: name     : %s\n", oi->name);
+	pr_debug("\t\tinfo: op_size  : %#x\n", oi->op_size);
+	pr_debug("\t\tinfo: addr_size: %#x\n", oi->addr_size);
+	pr_debug("\t\tinfo: offset   : %#x\n", oi->offset);
+	pr_debug("\t\tinfo: ref_addr : %#x\n", oi->ref_addr);
 
 	if (oi->ref_addr == 0) {
 		const struct funcpatch_s *funcpatch;
@@ -97,6 +97,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	}
 
 	if (!fp->new_) {
+		pr_debug("\tredirect to %#lx (overwrite %#x)\n", addr, fp->start);
 		size = x86_jmpq_instruction(jump, fp->start, addr);
 		if (size < 0)
 			return size;
@@ -146,7 +147,7 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 	}
 
 	list_for_each_entry(funcpatch, &binpatch->functions, list) {
-		pr_debug("Function patch %d:\n", i);
+		pr_debug("Function patch \"%s\"\n", funcpatch->fp->name);
 
 		err = apply_funcpatch(ctx, funcpatch->addr, funcpatch->fp);
 		if (err)
