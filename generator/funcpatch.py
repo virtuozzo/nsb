@@ -57,7 +57,16 @@ class JneCmd(JumpByteCmd):
 		JumpByteCmd.__init__(self, "jne", 0x75)
 
 
-class MovCmd(CmdInfo):
+class VarCmdInfo(CmdInfo):
+	def __init__(self, name, op, op_size, addr_size):
+		CmdInfo.__init__(self, name, op, op_size, addr_size, False)
+
+class VarQuadCmd(VarCmdInfo):
+	def __init__(self, name, op, op_size):
+		VarCmdInfo.__init__(self, name, op, op_size, 4)
+
+
+class MovCmd(VarQuadCmd):
 	def __init__(self, code):
 		code_bytes = code.split()
 		if code_bytes[0] == '8b' or code_bytes[0] == '89':
@@ -65,10 +74,10 @@ class MovCmd(CmdInfo):
 			op_size = 2
 		else:
 			raise
-		CmdInfo.__init__(self, "mov", op, op_size, 4, False)
+		VarQuadCmd.__init__(self, "mov", op, op_size)
 
 
-class MovlCmd(CmdInfo):
+class MovlCmd(VarQuadCmd):
 	def __init__(self, code):
 		code_bytes = code.split()
 		if code_bytes[0] == 'c7':
@@ -76,7 +85,7 @@ class MovlCmd(CmdInfo):
 			op_size = 2
 		else:
 			raise
-		CmdInfo.__init__(self, "movl", op, op_size, 4, False)
+		VarQuadCmd.__init__(self, "movl", op, op_size)
 
 
 class CodeLineInfo:
