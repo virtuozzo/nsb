@@ -72,6 +72,9 @@ class BinPatch:
 						print "%s to COMMON function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
 					elif ci.access_name in self.modified_func:
 						print "%s to MODIFIED function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
+					elif ci.access_name in self.common_dyn_func:
+						ci.access_addr = self.bf_old.dyn_functions_dict()[ci.access_name].start 
+						print "%s to COMMON PLT function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
 					else:
 						print "%s to NEW function: '%s', '%s'" % (ci.command_info.name, ci.access_name, ci.access_plt)
 						ci.show()
@@ -80,11 +83,11 @@ class BinPatch:
 							return
 				else:
 					if ci.access_name in self.common_obj:
+						ci.access_addr = self.bf_old.objects_dict()[ci.access_name].value 
 						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
-						ci.access_addr = self.bf_old.objects_dict()[ci.access_name].start 
 					else:
+						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 						ci.show()
-#						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 						print "Unsupported"
 						return
 		self.applicable = True
