@@ -89,10 +89,11 @@ class MovlCmd(VarQuadCmd):
 
 
 class CodeLineInfo:
-	def __init__(self, dumpline, func_start):
+	def __init__(self, dumpline, func_name, func_start):
 		self.dumpline = dumpline
 		self.addr = int(self.dumpline.addr, 16)
 		self.offset = self.addr - func_start
+		self.func_name = func_name
 		self.command_info = None
 		self.access_addr = 0
 		self.access_name = None
@@ -104,6 +105,12 @@ class CodeLineInfo:
 		if self.dumpline.name:
 			split = self.dumpline.name.split('@')
 			self.access_name = split[0];
+			if '+' in self.access_name:
+				func_name = self.dumpline.name.split('+')[0]
+				if func_name == self.func_name:
+					print "Local jump. Skip"
+					return
+
 			if len(split) > 1:
 				if split[1] == "plt":
 					self.access_plt = True
@@ -199,7 +206,7 @@ class FuncPatch:
 	def analize(self):
 		print "\tAnalize: %s" % self.functype.name
 		for l in self.function.lines:
-			info = CodeLineInfo(l, self.function.start)
+			info = CodeLineInfo(l, self.function.funcname, self.function.start)
 #			info.show()
 			# skip pure math commands
 			if info.command_info:
