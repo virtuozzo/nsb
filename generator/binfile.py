@@ -28,6 +28,8 @@ class BinFile:
 		if self.elf_data is None:
 			self.elf_data = self.__readelf__()
 
+		functions = {}
+		objects = {}
 		symbols = self.elf_data.split('\n')
 		for s in symbols:
 			tokens = s.split()
@@ -39,16 +41,17 @@ class BinFile:
 				continue
 
 			if es.type == "FUNC":
-				self.functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
+				functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
 			elif es.type == "OBJECT":
-				self.objects[es.name] = es
+				objects[es.name] = es
+		return [ functions, objects ]
 
 	def functions_dict(self):
 		if not self.functions:
-			self.__parse__()
+			self.functions, self.objects = self.__parse__()
 		return self.functions
 
 	def objects_dict(self):
 		if not self.objects:
-			self.__parse__()
+			self.functions, self.objects = self.__parse__()
 		return self.objects
