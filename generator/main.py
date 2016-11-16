@@ -31,6 +31,12 @@ print "Common objects: %s" % binpatch.common_obj
 print "Removed objects: %s" % binpatch.removed_obj
 print "New objects: %s " % binpatch.new_obj
 
+print "Common dynamic functions: %s" % binpatch.common_dyn_func
+print "New dynamic functions: %s " % binpatch.new_dyn_func
+
+print "Common dynamic objects: %s" % binpatch.common_dyn_obj
+print "New dynamic objects: %s " % binpatch.new_dyn_obj
+
 for nf in binpatch.new_func:
 	print "---------------------------------"
 	ns = binpatch.bf_new.functions_dict()[nf].start

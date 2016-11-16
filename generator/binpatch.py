@@ -27,6 +27,8 @@ class BinPatch:
 		if self.bf_old:
 			old_func = self.bf_old.functions_dict()
 			old_obj = self.bf_old.objects_dict()
+			old_dyn_func = self.bf_old.dyn_functions_dict()
+			old_dyn_obj = self.bf_old.dyn_objects_dict()
 
 		new_func = self.bf_new.functions_dict()
 		self.common_func = list(set(old_func.keys()) & set(new_func.keys()))
@@ -37,6 +39,14 @@ class BinPatch:
 		self.common_obj = list(set(old_obj.keys()) & set(new_obj.keys()))
 		self.removed_obj = list(set(old_obj.keys()) - set(new_obj.keys()))
 		self.new_obj = list(set(new_obj.keys()) - set(old_obj.keys()))
+
+		new_dyn_func = self.bf_new.dyn_functions_dict()
+		self.common_dyn_func = list(set(old_dyn_func.keys()) & set(new_dyn_func.keys()))
+		self.new_dyn_func = list(set(new_dyn_func.keys()) - set(old_dyn_func.keys()))
+
+		new_dyn_obj = self.bf_new.dyn_objects_dict()
+		self.common_dyn_obj = list(set(old_dyn_obj.keys()) & set(new_dyn_obj.keys()))
+		self.new_dyn_obj = list(set(new_dyn_obj.keys()) - set(old_dyn_obj.keys()))
 
 	def analize(self):
 		if not self.patches_list:
