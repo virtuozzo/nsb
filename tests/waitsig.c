@@ -25,15 +25,13 @@ int call_after_sig(caller_t caller)
 
 	ret = caller();
 
-	if (old == ret) {
-		fprintf(stderr, "wrong caller result: %d == %d\n", old, ret);
+	if (old == ret)
 		return 1;
-	}
+
 	/* TODO; there should be some better way to check that patch was
 	 * applied properly.
-	 * For example, print add the function names in tests to stdout and
-	 * then compare result with target proces output.
+	 * However, code is changing in case of printing some text: mov command
+	 * uses different addresses.
 	 */
-	fprintf(stdout, "changed caller result: %d ---> %d\n", old, ret);
 	return 0;
 }
