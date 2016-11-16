@@ -91,6 +91,8 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	for (i = 0; i < fp->n_objs; i++) {
 		pr_debug("\tObject info %d:\n", i);
 		err = apply_objinfo(ctx, addr, fp->objs[i]);
+		if (err)
+			return err;
 	}
 
 	if (!fp->new_) {
