@@ -46,6 +46,18 @@ class JmpCmd(JumpByteCmd):
 		JumpByteCmd.__init__(self, "jmp", 0xeb)
 
 
+class MovCmd(CmdInfo):
+	def __init__(self, code):
+		code_bytes = code.split()
+		if code_bytes[0] == '8b':
+			op = int(code_bytes[0] + code_bytes[1], 16)
+		elif code_bytes[0] == '89':
+			op = int(code_bytes[0] + code_bytes[1], 16)
+		else:
+			raise
+		CmdInfo.__init__(self, "mov", op, len(code_bytes), False)
+
+
 class CodeLineInfo:
 	def __init__(self, dumpline, func_start):
 		self.dumpline = dumpline
@@ -85,13 +97,20 @@ class CodeLineInfo:
 				print "Unsupported redirect command: %s" % self.dumpline.code
 				raise
 		elif self.dumpline.hint:
-			print "Unsupported variable command: %s" % self.dumpline.code
-			raise
-#			split = filter(None, re.split('<(.+)>', self.dumpline.hint))
-#			self.access_addr = split[0].strip()
-#			self.access_name = split[1].strip()
-#			self.command_info = VarCmd()
-
+			split = filter(None, re.split('<(.+)>', self.dumpline.hint))
+			self.access_addr = int(split[0].strip(), 16)
+			self.access_name = split[1].strip()
+			print "self.access_addr: %#x" % self.access_addr
+			print "self.access_name: %s" % self.access_name
+			print "self.dumpline.bytes: '%s'" % self.dumpline.bytes
+			try:
+				if "mov " in self.dumpline.code:
+					self.command_info = MovCmd(self.dumpline.bytes)
+				else:
+					raise
+			except:
+                               print "Unsupported variable command: %s" % self.dumpline.line
+                               raise
 
 	def show(self):
 		if self.command_info:
