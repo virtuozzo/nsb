@@ -23,7 +23,6 @@ static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp
 
 static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo *oi)
 {
-	unsigned char instruction[X86_MAX_SIZE];
 	unsigned char code[X86_MAX_SIZE];
 	ssize_t size;
 	int err;
@@ -48,20 +47,17 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		oi->ref_addr = funcpatch->addr;
 	}
 
-	size = x86_create_instruction(instruction, oi->op,
-				      where, oi->ref_addr);
-	if (size < 0)
-		return size;
-
-	err = process_read_data(ctx->pid, (void *)where, code, round_up(size, 8));
+	err = process_read_data(ctx->pid, (void *)where, code, round_up(sizeof(code), 8));
 	if (err < 0) {
 		pr_err("failed to read process address %ld: %d\n", where, err);
 		return err;
 	}
 
-	memcpy(code, instruction, size);
+	size = x86_modify_instruction(code, where, oi->ref_addr);
+	if (size < 0)
+		return size;
 
-	err = process_write_data(ctx->pid, (void *)where, code, round_up(size, 8));
+	err = process_write_data(ctx->pid, (void *)where, code, round_up(sizeof(code), 8));
 	if (err < 0) {
 		pr_err("failed to write process address %ld: %d\n", where, err);
 		return err;
