@@ -116,7 +116,7 @@ class BinPatch:
 		else:
 			filename = self.patchdir + "/" + self.name + ".patch"
 
-		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
+		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
 
 		image = self.get_patch()
 
