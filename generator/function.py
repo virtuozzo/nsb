@@ -80,8 +80,8 @@ class ElfFunction:
 	def __init__(self, filename, funcname, start, size):
 		self.filename = filename
 		self.funcname = funcname
-		self.start = int(start, 16)
-		self.size = int(size, 10)
+		self.start = start
+		self.size = size
 		self.end = self.start + self.size
 		self.data = None
 		self.lines = []

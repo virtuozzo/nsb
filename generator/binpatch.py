@@ -83,7 +83,7 @@ class BinPatch:
 							return
 				else:
 					if ci.access_name in self.common_obj:
-						ci.access_addr = int(self.bf_old.objects_dict()[ci.access_name].value, 16)
+						ci.access_addr = self.bf_old.objects_dict()[ci.access_name].value
 						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
 					elif ci.access_name in self.common_func:
 						ci.access_addr = self.bf_old.functions_dict()[ci.access_name].start

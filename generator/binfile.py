@@ -3,8 +3,7 @@ from function import ElfFunction
 import os
 import re
 
-ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
-ElfSym.__new__.__defaults__ = (None,) * len(ElfSym._fields)
+import elffile
 
 FuncInfo = namedtuple("FuncInfo", "start lenght")
 
@@ -27,9 +26,6 @@ class BinFile:
 		out, err = p.communicate()
 		return out
 
-	def __readelf__(self):
-		return self.__exec__("readelf -s %s" % self.filename)
-
 	def __get_plt_info(self):
 		text = self.__exec__("objdump -d -j.plt %s" % self.filename)
 		entries = re.findall('[0-9A-Fa-f]{16}.+<.+plt>', text)
@@ -40,50 +36,41 @@ class BinFile:
 			if pe.name in self.dyn_functions:
 				self.dyn_functions[pe.name].start = int(pe.addr, 16)
 
+	def __add_function__(self, func):
+		if '@' in func.name:
+			name = re.search('^[^@]+', func.name).group(0)
+			if func.ndx != "SHN_UNDEF":
+				print "Function with '@' and defined: %s" % s
+				raise
+			self.dyn_functions[name] = ElfFunction(self.filename, name, func.value, func.size)
+		elif func.size:
+			self.functions[func.name] = ElfFunction(self.filename, func.name, func.value, func.size)
+
+	def __add_object__(self, obj):
+		if '@' in obj.name:
+			name = re.search('^[^@]+', obj.name).group(0)
+			self.dyn_objects[name] = obj
+		else:
+			self.objects[obj.name] = obj
+
 	def __parse__(self):
-		if self.elf_data is None:
-			self.elf_data = self.__readelf__()
+		elf = elffile.ElfFile(self.filename)
+		symbols = elf.symbols()
 
-		functions = {}
-		objects = {}
-		dyn_functions = {}
-		dyn_objects = {}
-		symbols = self.elf_data.split('\n')
 		for s in symbols:
-			tokens = s.split()
-			if len(tokens) > 8:
-				tokens[7] = ' '.join(tokens[7::])
-				tokens = tokens[:8]
-			es = ElfSym(*tokens)
-
-			if es.name is None:
-				continue
-			if es.size == 0:
+			if s.name is None:
 				continue
 
-			# Filter out plt symbols from .symtab entries
-			# They will be taken .dynsym and there they
-			# have only one '@' symbol in it
-			if "@@" in es.name:
-				continue;
-
-			if '@' in es.name:
-				name = re.search('^[^@]+', es.name).group(0)
-				if es.type == "FUNC":
-					if es.ndx != "UND":
-						print "Function with '@' and defined: %s" % s
-						raise
-					self.dyn_functions[name] = ElfFunction(self.filename, name, es.value, es.size)
-				elif es.type == "OBJECT":
-					self.dyn_objects[name] = es
+			if s.type == "STT_FUNC":
+				self.__add_function__(s)
+			elif s.type == "STT_OBJECT":
+				self.__add_object__(s)
 			else:
-				if es.type == "FUNC":
-					self.functions[es.name] = ElfFunction(self.filename, es.name, es.value, es.size)
-				elif es.type == "OBJECT":
-					self.objects[es.name] = es
+				print "Unknown ELF symbol type: %s\n" % s.type
 
 		if self.dyn_functions:
 			self.__get_plt_info()
+
 
 	def functions_dict(self):
 		if not self.functions:
