@@ -3,8 +3,7 @@
 #include <stdio.h>
 
 typedef int (*caller_t)(void);
-
-extern caller_t test_func;
+extern int test_func(void);
 
 int signalled;
 
@@ -13,11 +12,11 @@ static void sighandler(int dummy)
 	signalled = 1;
 }
 
-static int call_after_sig(caller_t caller)
+static int __attribute__ ((noinline)) call_after_sig(void)
 {
 	int ret, old;
 
-	old = caller();
+	old = test_func();
 
 	signal(SIGINT, sighandler);
 
@@ -25,20 +24,12 @@ static int call_after_sig(caller_t caller)
 		sleep(1);
 	}
 
-	ret = caller();
+	ret = test_func();
 
-	if (old == ret)
-		return 1;
-
-	/* TODO; there should be some better way to check that patch was
-	 * applied properly.
-	 * However, code is changing in case of printing some text: mov command
-	 * uses different addresses.
-	 */
-	return 0;
+	return old == ret;
 }
 
 int main(int argc, char **argv)
 {
-	return call_after_sig(test_func);
+	return call_after_sig();
 }
