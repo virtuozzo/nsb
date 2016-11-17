@@ -8,6 +8,8 @@ AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 AM_PROG_CC_C_O
 
+AC_PATH_PROG([M4], [m4])
+
 AC_GNU_SOURCE
 AC_CONFIG_FILES([
 		 Makefile
@@ -33,6 +35,8 @@ AC_CHECK_LIB(
 		[],
 		[AC_MSG_ERROR([*** libcompel not found.])
 ])
+
+AC_PYTHON_MODULE(elftools.elf.elffile)
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/main.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
