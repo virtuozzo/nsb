@@ -25,7 +25,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 {
 	unsigned char code[X86_MAX_SIZE];
 	ssize_t size;
-	int err;
+	int err, i;
 	unsigned long where = start + oi->offset;
 
 	pr_debug("\t\tinfo: name     : %s\n", oi->name);
@@ -53,10 +53,20 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		return err;
 	}
 
+	pr_debug("\t\tinfo: old code :");
+	for (i = 0; i < X86_MAX_SIZE; i++)
+		pr_msg(" %02x", code[i]);
+	pr_debug("\n");
+
 	size = x86_modify_instruction(code, oi->op_size, oi->addr_size,
 				      where, oi->ref_addr);
 	if (size < 0)
 		return size;
+
+	pr_debug("\t\tinfo: new code :");
+	for (i = 0; i < X86_MAX_SIZE; i++)
+		pr_msg(" %02x", code[i]);
+	pr_debug("\n");
 
 	err = process_write_data(ctx->pid, (void *)where, code, round_up(sizeof(code), 8));
 	if (err < 0) {
