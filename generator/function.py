@@ -60,10 +60,6 @@ class DumpLine:
 			# This can be due to different adrress offsets.
 			# Let's compare disassemble if exists
 			# print "================= start ==================="
-			if a.code and b.code and a.code == b.code:
-				#print "================= stop (code match) ==================="
-				return True
-
 			if a.name and b.name and a.name == b.name:
 				# print "================= stop (name match) ==================="
 				return True
