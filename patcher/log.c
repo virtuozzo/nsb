@@ -64,7 +64,7 @@ unsigned int log_get_loglevel(void)
 	return current_loglevel;
 }
 
-static void __print_on_level(unsigned int loglevel, const char *format, va_list params)
+void __print_on_level(unsigned int loglevel, const char *format, va_list params)
 {
 	int fd, size, ret, off = 0;
 	int __errno = errno;

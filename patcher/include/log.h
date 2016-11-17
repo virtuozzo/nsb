@@ -1,6 +1,7 @@
 #ifndef __PATCHER_LOG_H__
 #define __PATCHER_LOG_H__
 
+#include <stdarg.h>
 #include <string.h>
 
 #define LOG_UNSET	(-1)
@@ -14,6 +15,7 @@
 
 extern void print_on_level(unsigned int loglevel, const char *format, ...)
 	__attribute__ ((__format__ (__printf__, 2, 3)));
+extern void __print_on_level(unsigned int loglevel, const char *format, va_list params);
 
 extern int log_get_fd(void);
 extern int log_init(const char *output);

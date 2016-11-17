@@ -3,6 +3,8 @@
 #include <string.h>
 #include <getopt.h>
 
+#include <compel/compel.h>
+
 #include "include/version.h"
 #include "include/patch.h"
 #include "include/log.h"
@@ -104,6 +106,8 @@ int main(int argc, char *argv[])
 
 	log_set_loglevel(o.verbosity);
 	log_init(NULL);
+
+	compel_log_init(__print_on_level, o.verbosity);
 
 	if (strcmp(o.command, "patch")) {
 		pr_msg("Error: unknown command: %s\n", argv[optind]);
