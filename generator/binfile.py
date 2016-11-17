@@ -54,8 +54,9 @@ class BinFile:
 			self.objects[obj.name] = obj
 
 	def __parse__(self):
-		elf = elffile.ElfFile(self.filename)
-		symbols = elf.symbols()
+		with open(self.filename, 'rb') as stream:
+			elf = elffile.ElfFile(stream)
+			symbols = elf.symbols()
 
 		for s in symbols:
 			if s.name is None:
