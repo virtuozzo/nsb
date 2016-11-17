@@ -14,6 +14,9 @@ def thread_run(path, pipe):
 		pipe.send(out)
 		pipe.send(err)
 		pipe.send(p.returncode)
+	except OSError as e:
+		print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
+		return 1
 	except:
 		print "Unexpected error:", sys.exc_info()[0]
 		return 1
@@ -83,6 +86,14 @@ class Test:
 			print "Unexpected error:", sys.exc_info()[0]
 		return self.returncode
 
+	def is_running(self):
+		try:
+			os.kill(self.pid, 0)
+		except OSError:
+			return False
+		return True
+
+
 
 class BinPatch:
 	def __init__(self, source, target):
@@ -120,9 +131,13 @@ class BinPatch:
 		print "self.gen_result: %d" % self.gen_result
 		return self.gen_result
 
-	def apply(self, pid):
+	def apply(self, test):
 		try:
-			cmd = "%s patch -v 4 -p %d -f %s" % (self.patcher, pid, self.outfile)
+			if not test.is_running():
+				print "Tests with pid %d is not running" % test.pid
+				return 1
+
+			cmd = "%s patch -v 4 -p %d -f %s" % (self.patcher, test.pid, self.outfile)
 			p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.apply_stdout, self.apply_stderr = p.communicate()
 			print self.apply_stdout
@@ -153,7 +168,7 @@ class LivePatchTest:
 			print "Failed to start process %s\n" % self.test.path
 			return 1
 
-		if self.patch.apply(self.test.pid) != 0:
+		if self.patch.apply(self.test) != 0:
 			print "Failed to apply binary patch\n"
 			self.result = 1
 
