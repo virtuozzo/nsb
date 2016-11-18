@@ -85,3 +85,8 @@ class BinFile:
 			stream.seek(vaddr - self.__text_load_addr__())
 			return stream.read(size)
 
+	def read_rodata(self):
+		rodata = self.sections['.rodata']
+		with open(self.filename, 'rb') as stream:
+			stream.seek(rodata.offset)
+			return stream.read(rodata.size)
