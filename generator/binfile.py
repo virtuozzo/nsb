@@ -19,6 +19,7 @@ class BinFile:
 		self.dyn_objects = {}
 		self.elf_data = None
 		self.sections = None
+		self.__parse__()
 
 	def __exec__(self, cmd):
 		import subprocess
@@ -78,27 +79,6 @@ class BinFile:
 	def __text_load_addr__(self):
 		section = self.sections['.text']
 		return section.addr - section.offset
-
-	def functions_dict(self):
-		if not self.functions:
-			self.__parse__()
-		return self.functions
-
-	def objects_dict(self):
-		if not self.objects:
-			self.__parse__()
-		return self.objects
-
-	def dyn_functions_dict(self):
-		if not self.dyn_functions:
-			self.__parse__()
-		return self.dyn_functions
-
-
-	def dyn_objects_dict(self):
-		if not self.dyn_objects:
-			self.__parse__()
-		return self.dyn_objects
 
 	def function_code(self, vaddr, size):
 		with open(self.filename, 'rb') as stream:

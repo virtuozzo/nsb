@@ -39,16 +39,16 @@ print "New dynamic objects: %s " % binpatch.new_dyn_obj
 
 for nf in binpatch.new_func:
 	print "---------------------------------"
-	ns = binpatch.bf_new.functions_dict()[nf].start
+	ns = binpatch.bf_new.functions[nf].start
 	print "New function %s start: %s" % (nf, ns)
 
 for rf in binpatch.removed_func:
-	rs = binpatch.bf_old.functions_dict()[rf].start
+	rs = binpatch.bf_old.functions[rf].start
 	print "Removed function %s start: %s" % (rf, rs)
 
 #######################
 
-if binpatch.bf_old.functions_dict() == binpatch.bf_new.functions_dict():
+if binpatch.bf_old.functions == binpatch.bf_new.functions:
 	print "Binaries function attribues are equal\n"
 else:
 	print "Binaries function attribues differ\n"
@@ -56,18 +56,18 @@ else:
 new_functions = []
 
 for name in binpatch.common_func:
-	a = bfa.functions_dict()[name]
-	b = bfb.functions_dict()[name]
+	a = bfa.functions[name]
+	b = bfb.functions[name]
 	patch = ElfFunction.patch(a, b)
 	if patch:
 		binpatch.patches_list.append(patch)
 
 for name in binpatch.new_func:
-	b = bfb.functions_dict()[name]
+	b = bfb.functions[name]
 	patch = ElfFunction.patch(None, b)
 	if patch:
 		binpatch.patches_list.append(patch)
-	new_functions.append(bfb.functions_dict()[name])
+	new_functions.append(bfb.functions[name])
 
 
 #print "\n*************************************************"
