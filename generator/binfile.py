@@ -18,6 +18,7 @@ class BinFile:
 		self.dyn_functions = {}
 		self.dyn_objects = {}
 		self.elf_data = None
+		self.sections = None
 
 	def __exec__(self, cmd):
 		import subprocess
@@ -57,6 +58,7 @@ class BinFile:
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
 			symbols = elf.symbols()
+			self.sections = elf.get_sections()
 
 		for s in symbols:
 			if s.name is None:
@@ -72,6 +74,10 @@ class BinFile:
 		if self.dyn_functions:
 			self.__get_plt_info()
 
+
+	def __text_load_addr__(self):
+		section = self.sections['.text']
+		return section.addr - section.offset
 
 	def functions_dict(self):
 		if not self.functions:
@@ -93,3 +99,9 @@ class BinFile:
 		if not self.dyn_objects:
 			self.__parse__()
 		return self.dyn_objects
+
+	def function_code(self, vaddr, size):
+		with open(self.filename, 'rb') as stream:
+			stream.seek(vaddr - self.__text_load_addr__())
+			return stream.read(size)
+

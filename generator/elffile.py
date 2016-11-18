@@ -2,9 +2,11 @@ from collections import namedtuple
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.elffile import SymbolTableSection
+from elftools.elf.descriptions import describe_p_flags
+from elftools.elf.constants import P_FLAGS
 
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
-ElfSym.__new__.__defaults__ = (None,) * len(ElfSym._fields)
+ElfSection = namedtuple("ElfSection", "name offset addr size")
 
 class ElfFile:
 	def __init__(self, stream):
@@ -30,3 +32,11 @@ class ElfFile:
 				symbols.append(symbol)
 
 		return symbols
+
+	def get_sections(self):
+		sections = {}
+		for i in range(self.elf.num_sections()):
+			s = self.elf.get_section(i)
+			sections[s.name] = ElfSection(s.name, s['sh_offset'],
+						      s['sh_addr'], s['sh_size'])
+		return sections

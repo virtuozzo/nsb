@@ -99,12 +99,9 @@ class BinPatch:
 		image = binpatch_pb2.BinPatch()
 		image.name = self.name
 
-		src = os.open(self.bf_new.filename, os.O_RDONLY)
-
 		for patch in self.patches_list:
-			pos = os.lseek(src, patch.function.file_offset, os.SEEK_SET)
-			code = os.read(src, patch.function.size)
-
+			code = self.bf_new.function_code(patch.function.start,
+							 patch.function.size)
 			fpatch = patch.get_patch(code)
 			image.patches.extend([fpatch])
 

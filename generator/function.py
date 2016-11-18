@@ -86,9 +86,6 @@ class ElfFunction:
 		self.data = None
 		self.lines = []
 		self.text = None
-		# TODO That's bad, very bad.
-		# File offset must be taken from .text header
-		self.file_offset = self.start - 0x400000
 		self.__parse__()
 
 

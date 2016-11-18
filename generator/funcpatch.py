@@ -201,7 +201,6 @@ class FuncPatch:
 		print "Patch:"
 		print "\tName    : %s" % self.function.funcname
 		print "\tStart   : 0x%x" % self.function.start
-		print "\tFile off: 0x%x" % self.function.file_offset
 		print "\tSize    : 0x%x" % self.function.size
 		print "\tType    : %s" % self.functype.name
 		if len(self.new):
