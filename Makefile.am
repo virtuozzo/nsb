@@ -33,7 +33,7 @@ nsb_CFLAGS = -I$(top_srcdir)/protobuf/
 nsb_LDFLAGS = -rdynamic
 
 
-check_SCRIPTS = 					\
+TESTS = 					\
 			tests/static_a_to_static_b.py	\
 			tests/static_a_to_static_c.py	\
 			tests/static_a_to_static_f.py	\
@@ -42,16 +42,14 @@ check_SCRIPTS = 					\
 			tests/static_j_to_static_i.py	\
 			tests/static_i_to_static_j.py
 
-$(check_SCRIPTS):
-	$(AM_V_GEN) python tests/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@))) --outfile $@
+$(TESTS): $(TESTS_DIR)/testgen.py
+	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@)))  --outfile $@
 
-CLEANFILES = $(check_SCRIPTS)
 
-TESTS = $(check_SCRIPTS)
 TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = python
 AM_TESTS_ENVIRONMENT =	export NSB_GENERATOR=@NSB_GENERATOR@;	\
 			export NSB_PATCHER=@NSB_PATCHER@;	\
 			export TESTS_DIR=@TESTS_DIR@;
 
-CLEANFILES += $(TESTS:.py=.binpatch)
+CLEANFILES = $(TESTS) $(TESTS:.py=.binpatch)
