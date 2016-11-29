@@ -121,8 +121,11 @@ class BinPatch:
 			self.gen_stdout, self.gen_stderr = p.communicate()
 			print self.gen_stdout
 			self.gen_result = p.returncode
+		except OSError as e:
+			print "Unexpected generate OSError: %s, %s" % (e.filename, e.strerror)
+			return 1
 		except:
-			print "Unexpected error:", sys.exc_info()[0]
+			print "Unexpected generate error:", sys.exc_info()[0]
 		print "self.gen_result: %d" % self.gen_result
 		return self.gen_result
 
@@ -137,22 +140,36 @@ class BinPatch:
 			self.apply_stdout, self.apply_stderr = p.communicate()
 			print self.apply_stdout
 			self.apply_result = p.returncode
+		except OSError as e:
+			print "Unexpected apply OSError: %s, %s" % (e.filename, e.strerror)
+			return 1
 		except:
-			print "Unexpected error:", sys.exc_info()[0]
+			print "Unexpected apply error:", sys.exc_info()[0]
 		return self.apply_result
 
 
 class LivePatchTest:
-	def __init__(self, source, target):
-		tests_dir = os.environ.get('TESTS_DIR')
-		if not os.path.isabs(source) and tests_dir:
-			source = tests_dir + "/" + source
-		if not os.path.isabs(target) and tests_dir:
-			target = tests_dir + "/" + target
-
+	def __init__(self, source, target, src_res, tgt_res):
+		self.path = source
 		self.test = Test(source)
 		self.patch = BinPatch(source, target)
-		self.result = 0
+		self.src_res = src_res
+		self.tgt_res = tgt_res
+		self.lp_failed = False
+
+	def test_result(self):
+		if self.lp_failed:
+			return 1
+
+		if self.test.returncode != self.tgt_res:
+			print "************ Error ************"
+			print "Process %s (pid %d): exited with %d (expected: %d)" % (self.path, self.test.pid, self.test.returncode, self.tgt_res)
+			print "stdout:\n%s" % self.test.stdout
+			print "stderr:\n%s" % self.test.stderr
+			return 1
+
+		print "************ Pass *************"
+		return 0
 
 	def run(self):
 		if self.patch.generate() != 0:
@@ -164,10 +181,10 @@ class LivePatchTest:
 			return 1
 
 		if self.patch.apply(self.test) != 0:
-			print "Failed to apply binary patch\n"
-			self.result = 1
+			print "Failed to apply binary patch:\n%s" % self.patch.apply_stderr
+			self.lp_failed = True
 
 		if self.test.stop() != 0:
-			self.result = 1
+			self.lp_failed = True
 
-		return self.result
+		return self.test_result()

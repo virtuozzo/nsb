@@ -1,18 +1,19 @@
-#include <stdlib.h>
-#include <stdio.h>
-
-#include "waitsig.h"
-
 static int var;
 
-int __attribute__ ((noinline)) func_j(void)
+int __attribute__ ((noinline)) func_j(int dry_run)
 {
-	if (var)
-		return var + 2;
-	return var + 5;
+	if (dry_run)
+		return 'j';
+
+	if (!var) {
+		var = 'j';
+		return 0;
+	} else if (var == 'j')
+		return -1;
+	return 'j';
 }
 
-int __attribute__ ((noinline)) test_func(void)
+int __attribute__ ((noinline)) caller(int dry_run)
 {
-	return func_j();
+	return func_j(dry_run);
 }

@@ -3,6 +3,13 @@ SUBDIRS = protobuf tests
 AM_CFLAGS = -Wall -Wformat-security -Werror -DCONFIG_X86_64 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 AM_MAKEFLAGS = --no-print-directory
 
+# These exports are required for tests generation and tests running
+# For tests running they can be set via AM_TESTS_ENVIRONMENT.
+# But how to set them for tests generation?
+export NSB_GENERATOR=$(top_srcdir)/generator/main.py
+export NSB_PATCHER=$(top_srcdir)/nsb
+export TESTS_DIR=$(top_srcdir)/tests
+
 bin_PROGRAMS = nsb
 
 nsb_SOURCES =						\
@@ -48,8 +55,5 @@ $(TESTS): $(TESTS_DIR)/testgen.py
 
 TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = python
-AM_TESTS_ENVIRONMENT =	export NSB_GENERATOR=@NSB_GENERATOR@;	\
-			export NSB_PATCHER=@NSB_PATCHER@;	\
-			export TESTS_DIR=@TESTS_DIR@;
 
 CLEANFILES = $(TESTS) $(TESTS:.py=.binpatch)

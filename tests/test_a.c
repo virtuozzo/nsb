@@ -1,16 +1,9 @@
-#include "waitsig.h"
-
-int __attribute__ ((noinline)) func_a(void)
+int __attribute__ ((noinline)) return_number(void)
 {
 	return 2;
 }
 
-int __attribute__ ((noinline)) caller(void)
+int __attribute__ ((noinline)) caller(int dry_run)
 {
-	return func_a();
-}
-
-int main(int argc, char **argv)
-{
-	return call_after_sig(caller);
+	return return_number();
 }
