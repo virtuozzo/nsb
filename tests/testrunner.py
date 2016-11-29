@@ -3,64 +3,52 @@ import os
 import subprocess
 import signal
 import multiprocessing
-from multiprocessing import Process, Pipe
 from collections import namedtuple
-
-def thread_run(path, pipe):
-	try:
-		p = subprocess.Popen(path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		pipe.send(p.pid)
-		out, err = p.communicate()
-		pipe.send(out)
-		pipe.send(err)
-		pipe.send(p.returncode)
-	except OSError as e:
-		print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
-		return 1
-	except:
-		print "Unexpected error:", sys.exc_info()[0]
-		return 1
-	return 0
 
 
 class Test:
 	def __init__(self, path):
 		self.path = path
-		self.pipe = None
 		self.pid = None
 		self.stdout = None
 		self.stderr = None
 		self.returncode = None
 		self.__state__ = "init"
 
-	def __thread_run__(self, pipe):
-		p = subprocess.Popen([self.path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		pipe.send(p.pid)
-		out, err = p.communicate()
-		pipe.send(out)
-		pipe.send(err)
-		pipe.send(p.returncode)
-
 	def start(self):
 		try:
 			if self.__state__ != "init":
 				print "Test is not new. State: %s" % self.__state__
 				raise
+			self.p = subprocess.Popen(self.path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			self.pid = self.p.pid
+			self.__state__ = "started"
+		except NameError as e:
+			print "Unexpected NameError: %s" % e
+		except OSError as e:
+			print "Unexpected start OSError: '%s', %s" % (' '.join(args), e.strerror)
+		except:
+			print "Unexpected start error:", sys.exc_info()[0]
+		return self.pid
 
-			read_end, write_end = multiprocessing.Pipe(False)
-			self.pipe = read_end
-
-			p = Process(target=thread_run, args=(self.path, write_end))
-			p.start()
-			if not p.is_alive:
-				print "Failed to fork a child"
+	def wait(self):
+		try:
+			if self.__state__ != "started":
+				print "Process is not started. State: %s" % self.__state__
 				raise
 
-			self.pid = self.pipe.recv()
-			self.__state__ = "started"
+			self.returncode = self.p.wait()
+			self.stdout, self.stderr = self.p.communicate()
+			self.__state__ = "stopped"
+
+		except OSError as e:
+			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
+			return 1
 		except:
-			print "Unexpected error:", sys.exc_info()[0]
-		return self.pid
+			print "Failed to wait process %d\n" % self.pid
+			print "Unexpected wait error:", sys.exc_info()[0]
+			return self.returncode
+		return 0
 
 	def stop(self):
 		try:
@@ -69,22 +57,14 @@ class Test:
 				return
 
 			os.kill(self.pid, signal.SIGINT)
-			self.stdout = self.pipe.recv()
-			self.stderr = self.pipe.recv()
-			self.returncode = self.pipe.recv()
-			self.__state__ = "stopped"
-
-			if self.returncode:
-				print "************ Error ************"
-				print "Process %s (pid %d): exited with %d" % (self.path, self.pid, self.returncode)
-				print "stdout:\n%s" % self.stdout
-				print "stderr:\n%s" % self.stderr
-			else:
-				print "************ Pass *************"
+		except OSError as e:
+			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
+			return 1
 		except:
 			print "Failed to stop process %d\n" % self.pid
-			print "Unexpected error:", sys.exc_info()[0]
-		return self.returncode
+			print "Unexpected stop error:", sys.exc_info()[0]
+			return 1
+		return self.wait()
 
 	def is_running(self):
 		try:
