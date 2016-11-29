@@ -29,7 +29,7 @@ nsb_SOURCES =						\
 			patcher/main.c			\
 			patcher/patch.c
 
-nsb_CPPFLAGS = -Iprotobuf/ -I/usr/local/lib
+nsb_CFLAGS = -I$(top_srcdir)/protobuf/
 nsb_LDFLAGS = -rdynamic
 
 
