@@ -9,7 +9,6 @@ from collections import namedtuple
 class Test:
 	def __init__(self, path):
 		self.path = path
-		self.pid = None
 		self.stdout = None
 		self.stderr = None
 		self.returncode = None
@@ -25,7 +24,6 @@ class Test:
 				print "Test is not new. State: %s" % self.__state__
 				raise
 			self.p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			self.pid = self.p.pid
 			self.__state__ = "started"
 		except NameError as e:
 			print "Unexpected NameError: %s" % e
@@ -33,7 +31,7 @@ class Test:
 			print "Unexpected start OSError: '%s', %s" % (' '.join(args), e.strerror)
 		except:
 			print "Unexpected start error:", sys.exc_info()[0]
-		return self.pid
+		return self.p.pid
 
 	def wait(self):
 		try:
@@ -49,7 +47,7 @@ class Test:
 			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
 			return 1
 		except:
-			print "Failed to wait process %d\n" % self.pid
+			print "Failed to wait process %d\n" % self.p.pid
 			print "Unexpected wait error:", sys.exc_info()[0]
 			return self.returncode
 		return 0
@@ -60,12 +58,12 @@ class Test:
 				print "Process is not started. State: %s" % self.__state__
 				return
 
-			os.kill(self.pid, signal.SIGINT)
+			os.kill(self.p.pid, signal.SIGINT)
 		except OSError as e:
 			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
 			return 1
 		except:
-			print "Failed to stop process %d\n" % self.pid
+			print "Failed to stop process %d\n" % self.p.pid
 			print "Unexpected stop error:", sys.exc_info()[0]
 			return 1
 		return self.wait()
@@ -76,18 +74,17 @@ class Test:
 			raise
 
 		if self.wait() != 0:
-			print "Failed to wait process %d\n" % self.pid
+			print "Failed to wait process %d\n" % self.p.pid
 			raise
 
 		return self.returncode
 
 	def is_running(self):
 		try:
-			os.kill(self.pid, 0)
+			os.kill(self.p.pid, 0)
 		except OSError:
 			return False
 		return True
-
 
 
 class BinPatch:
@@ -132,10 +129,10 @@ class BinPatch:
 	def apply(self, test):
 		try:
 			if not test.is_running():
-				print "Tests with pid %d is not running" % test.pid
+				print "Tests with pid %d is not running" % test.p.pid
 				return 1
 
-			cmd = "%s patch -v 4 -p %d -f %s" % (self.patcher, test.pid, self.outfile)
+			cmd = "%s patch -v 4 -p %d -f %s" % (self.patcher, test.p.pid, self.outfile)
 			p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.apply_stdout, self.apply_stderr = p.communicate()
 			print self.apply_stdout
@@ -163,7 +160,7 @@ class LivePatchTest:
 
 		if self.test.returncode != self.tgt_res:
 			print "************ Error ************"
-			print "Process %s (pid %d): exited with %d (expected: %d)" % (self.path, self.test.pid, self.test.returncode, self.tgt_res)
+			print "Process %s (pid %d): exited with %d (expected: %d)" % (self.path, self.test.p.pid, self.test.returncode, self.tgt_res)
 			print "stdout:\n%s" % self.test.stdout
 			print "stderr:\n%s" % self.test.stderr
 			return 1
