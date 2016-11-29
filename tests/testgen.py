@@ -15,5 +15,5 @@ code = "import os\n" +								\
 	"exit(testrunner.LivePatchTest('%s', '%s').run())\n" %			\
 	(args.source, args.target)
 
-f = os.open(args.outfile, os.O_WRONLY | os.O_CREAT)
+f = os.open(args.outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)
