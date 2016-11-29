@@ -111,10 +111,13 @@ class BinPatch:
 			print "NSB_PATCHER environment variable must be set"
 			raise
 
+	def __run_cmd__(self, cmd):
+		print "Execute: %s" % cmd
+		return subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 	def generate(self):
 		try:
-			cmd = "python %s %s %s --outfile %s" % (self.generator, self.source, self.target, self.outfile)
-			p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			p = self.__run_cmd__("python %s %s %s --outfile %s" % (self.generator, self.source, self.target, self.outfile))
 			self.gen_stdout, self.gen_stderr = p.communicate()
 			print self.gen_stdout
 			self.gen_result = p.returncode
@@ -132,8 +135,7 @@ class BinPatch:
 				print "Tests with pid %d is not running" % test.p.pid
 				return 1
 
-			cmd = "%s patch -v 4 -p %d -f %s" % (self.patcher, test.p.pid, self.outfile)
-			p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			p = self.__run_cmd__("%s patch -v 4 -f %s -p %d" % (self.patcher, self.outfile, test.p.pid))
 			self.apply_stdout, self.apply_stderr = p.communicate()
 			print self.apply_stdout
 			self.apply_result = p.returncode
