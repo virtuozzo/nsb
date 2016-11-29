@@ -52,13 +52,13 @@ all-local: $(CP_FILES)
 CLEANFILES = $(CP_FILES)
 
 check_SCRIPTS = 					\
-			tests/sample_a_to_sample_b.py	\
-			tests/sample_a_to_sample_c.py	\
-			tests/sample_a_to_sample_f.py	\
-			tests/sample_d_to_sample_g.py	\
-			tests/sample_e_to_sample_h.py	\
-			tests/sample_j_to_sample_i.py	\
-			tests/sample_i_to_sample_j.py
+			tests/static_a_to_static_b.py	\
+			tests/static_a_to_static_c.py	\
+			tests/static_a_to_static_f.py	\
+			tests/static_d_to_static_g.py	\
+			tests/static_e_to_static_h.py	\
+			tests/static_j_to_static_i.py	\
+			tests/static_i_to_static_j.py
 
 $(check_SCRIPTS):
 	$(AM_V_GEN) python tests/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@))) --outfile $@
