@@ -261,8 +261,8 @@ long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t siz
 
 int process_cure(struct process_ctx_s *ctx)
 {
-	pr_debug("Unseize from %d\n", ctx->pid);
-	if (compel_unseize_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
+	pr_debug("Resume from %d\n", ctx->pid);
+	if (compel_resume_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
 		pr_err("Can't unseize from %d\n", ctx->pid);
 		return -1;
 	}
@@ -288,10 +288,10 @@ int process_infect(struct process_ctx_s *ctx)
 	unsigned long syscall_ip;
 	int ret;
 
-	pr_debug("Stopping... %s\n",
-		 (ret = compel_stop_task(ctx->pid)) ? "FAIL" : "OK");
-	if (ret)
-		return -1;
+	ret = compel_stop_task(ctx->pid);
+	pr_debug("Stopping... %s\n", (ret != TASK_ALIVE) ? "FAIL" : "OK");
+	if (ret != TASK_ALIVE)
+		return ret;
 
 	ctl = compel_prepare(ctx->pid);
 	if (!ctl) {
