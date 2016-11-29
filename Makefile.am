@@ -32,24 +32,6 @@ nsb_SOURCES =						\
 nsb_CPPFLAGS = -Iprotobuf/ -I/usr/local/lib
 nsb_LDFLAGS = -rdynamic
 
-CP_FILES =	generator/funcpatch_pb2.py	\
-		generator/binpatch_pb2.py	\
-		generator/objinfo_pb2.py
-
-AM_V_CP = $(am__v_CP_@AM_V@)
-am__v_CP_ = $(am__v_CP_@AM_DEFAULT_V@)
-am__v_CP_0 = @echo "  CP      " $@;
-
-generator/funcpatch_pb2.py:  protobuf/funcpatch_pb2.py
-	$(AM_V_CP) cp $< $@
-generator/binpatch_pb2.py:  protobuf/binpatch_pb2.py
-	$(AM_V_CP) cp $< $@
-generator/objinfo_pb2.py:  protobuf/objinfo_pb2.py
-	$(AM_V_CP) cp $< $@
-
-all-local: $(CP_FILES)
-
-CLEANFILES = $(CP_FILES)
 
 check_SCRIPTS = 					\
 			tests/static_a_to_static_b.py	\
@@ -63,7 +45,7 @@ check_SCRIPTS = 					\
 $(check_SCRIPTS):
 	$(AM_V_GEN) python tests/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@))) --outfile $@
 
-CLEANFILES += $(check_SCRIPTS)
+CLEANFILES = $(check_SCRIPTS)
 
 TESTS = $(check_SCRIPTS)
 TEST_EXTENSIONS = .py
