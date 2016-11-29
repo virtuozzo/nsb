@@ -15,12 +15,16 @@ class Test:
 		self.returncode = None
 		self.__state__ = "init"
 
-	def start(self):
+	def start(self, wait=True):
+		args = [self.path]
+		if wait:
+			args.append("wait");
+
 		try:
 			if self.__state__ != "init":
 				print "Test is not new. State: %s" % self.__state__
 				raise
-			self.p = subprocess.Popen(self.path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			self.p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.pid = self.p.pid
 			self.__state__ = "started"
 		except NameError as e:
@@ -65,6 +69,17 @@ class Test:
 			print "Unexpected stop error:", sys.exc_info()[0]
 			return 1
 		return self.wait()
+
+	def run(self):
+		if self.start(wait=False) is None:
+			print "Failed to start process %s\n" % self.path
+			raise
+
+		if self.wait() != 0:
+			print "Failed to wait process %d\n" % self.pid
+			raise
+
+		return self.returncode
 
 	def is_running(self):
 		try:
