@@ -1,9 +1,9 @@
-int __attribute__ ((noinline)) func_b(void)
+int __attribute__ ((noinline)) func_c(void)
 {
-	return 5;
+	return 'c';
 }
 
 int __attribute__ ((noinline)) caller(int dry_run)
 {
-	return func_b();
+	return func_c();
 }

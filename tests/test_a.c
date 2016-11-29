@@ -1,6 +1,6 @@
 int __attribute__ ((noinline)) return_number(void)
 {
-	return 2;
+	return 'a';
 }
 
 int __attribute__ ((noinline)) caller(int dry_run)
