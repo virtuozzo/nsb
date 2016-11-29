@@ -36,190 +36,6 @@ struct patch_place_s {
 	unsigned long		used;
 };
 
-#define PROC_CAP_SIZE	2
-
-struct proc_status_creds {
-	struct seize_task_status s;
-
-	unsigned int		uids[4];
-	unsigned int		gids[4];
-
-	uint32_t		last_filter;
-
-	/*
-	 * Keep them at the end of structure
-	 * for fast comparison reason.
-	 */
-	uint32_t		cap_inh[PROC_CAP_SIZE];
-	uint32_t		cap_prm[PROC_CAP_SIZE];
-	uint32_t		cap_eff[PROC_CAP_SIZE];
-	uint32_t		cap_bnd[PROC_CAP_SIZE];
-};
-
-static int ids_parse(char *str, unsigned int *arr)
-{
-	char *end;
-
-	arr[0] = strtol(str, &end, 10);
-	arr[1] = strtol(end + 1, &end, 10);
-	arr[2] = strtol(end + 1, &end, 10);
-	arr[3] = strtol(end + 1, &end, 10);
-	if (*end)
-		return -1;
-	else
-		return 0;
-}
-
-static int cap_parse(char *str, unsigned int *res)
-{
-	int i, ret;
-
-	for (i = 0; i < PROC_CAP_SIZE; i++) {
-		ret = sscanf(str, "%08x", &res[PROC_CAP_SIZE - 1 - i]);
-		if (ret != 1)
-			return -1;
-		str += 8;
-	}
-
-	return 0;
-}
-
-static int parse_pid_status(pid_t pid, struct seize_task_status *ss)
-{
-	struct proc_status_creds *cr = container_of(ss, struct proc_status_creds, s);
-	bool parsed_seccomp = false;
-	char path[64], buf[512];
-	int done = 0;
-	int ret = -1;
-	char *str;
-	FILE *f;
-
-	snprintf(path, sizeof(path), "/proc/%d/status", pid);
-	f = fopen(path, "r");
-	if (!f) {
-		pr_perror("Can't open %s", path);
-		return -1;
-	}
-
-	cr->s.sigpnd = 0;
-	cr->s.shdpnd = 0;
-
-	while (done < 12) {
-		str = fgets(buf, sizeof(buf), f);
-		if (str) {
-			char *newline = strrchr(str, '\n');
-			if (newline)
-				*newline = '\0';
-		} else
-			break;
-
-		if (!strncmp(str, "State:", 6)) {
-			cr->s.state = str[7];
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "PPid:", 5)) {
-			if (sscanf(str, "PPid:\t%d", &cr->s.ppid) != 1) {
-				pr_err("Unable to parse: %s\n", str);
-				goto err_parse;
-			}
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "Uid:", 4)) {
-			if (ids_parse(str + 5, cr->uids))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "Gid:", 4)) {
-			if (ids_parse(str + 5, cr->gids))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "CapInh:", 7)) {
-			if (cap_parse(str + 8, cr->cap_inh))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "CapEff:", 7)) {
-			if (cap_parse(str + 8, cr->cap_eff))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "CapPrm:", 7)) {
-			if (cap_parse(str + 8, cr->cap_prm))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "CapBnd:", 7)) {
-			if (cap_parse(str + 8, cr->cap_bnd))
-				goto err_parse;
-
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "Seccomp:", 8)) {
-			if (sscanf(str + 9, "%d", &cr->s.seccomp_mode) != 1) {
-				goto err_parse;
-			}
-
-			parsed_seccomp = true;
-			done++;
-			continue;
-		}
-
-		if (!strncmp(str, "ShdPnd:", 7)) {
-			unsigned long long sigpnd;
-
-			if (sscanf(str + 7, "%llx", &sigpnd) != 1)
-				goto err_parse;
-			cr->s.shdpnd |= sigpnd;
-
-			done++;
-			continue;
-		}
-		if (!strncmp(str, "SigPnd:", 7)) {
-			unsigned long long sigpnd;
-
-			if (sscanf(str + 7, "%llx", &sigpnd) != 1)
-				goto err_parse;
-			cr->s.sigpnd |= sigpnd;
-
-			done++;
-			continue;
-		}
-	}
-
-	/* seccomp is optional */
-	if (done >= 11 || (done == 10 && !parsed_seccomp))
-		ret = 0;
-
-err_parse:
-	if (ret)
-		pr_err("Error parsing proc status file: done %d parsed_seccomp %d\n",
-		       done, parsed_seccomp);
-	fclose(f);
-	return ret;
-}
-
 static int collect_mappings(pid_t pid, struct list_head *head)
 {
 	unsigned long start, end, pgoff;
@@ -467,7 +283,6 @@ static unsigned long find_syscall_ip(struct list_head *head)
 
 int process_infect(struct process_ctx_s *ctx)
 {
-	struct proc_status_creds creds = { };
 	struct infect_ctx *ictx;
 	struct parasite_ctl *ctl;
 	unsigned long syscall_ip;
@@ -476,10 +291,6 @@ int process_infect(struct process_ctx_s *ctx)
 	pr_debug("Stopping... %s\n",
 		 (ret = compel_stop_task(ctx->pid)) ? "FAIL" : "OK");
 	if (ret)
-		return -1;
-
-	ret = compel_wait_task(ctx->pid, -1, parse_pid_status, &creds.s);
-	if (ret < 0)
 		return -1;
 
 	ctl = compel_prepare(ctx->pid);
