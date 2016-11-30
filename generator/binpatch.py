@@ -53,6 +53,38 @@ class BinPatch:
 		self.common_dyn_obj = list(set(old_dyn_obj.keys()) & set(new_dyn_obj.keys()))
 		self.new_dyn_obj = list(set(new_dyn_obj.keys()) - set(old_dyn_obj.keys()))
 
+	def __static_code_is_applicable__(self, p):
+		p.analize()
+		for ci in p.code_info:
+			if ci.command_info.is_jump:
+				if ci.access_name in self.common_func:
+					ci.access_addr = self.bf_old.functions[ci.access_name].start 
+					print "%s to COMMON function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
+				elif ci.access_name in self.modified_func:
+					print "%s to MODIFIED function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
+				elif ci.access_name in self.common_dyn_func:
+					ci.access_addr = self.bf_old.dyn_functions[ci.access_name].start 
+					print "%s to COMMON PLT function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
+				else:
+					print "%s to NEW function: '%s', '%s'" % (ci.command_info.name, ci.access_name, ci.access_plt)
+					ci.show()
+					if ci.access_plt:
+						print "New PLT entry.\nUnsupported"
+						return False
+			else:
+				if ci.access_name in self.common_obj:
+					ci.access_addr = self.bf_old.objects[ci.access_name].value
+					print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
+				elif ci.access_name in self.common_func:
+					ci.access_addr = self.bf_old.functions[ci.access_name].start
+					print "Access to COMMON function: '%s', '%s'" % (ci.access_addr, ci.access_name)
+				else:
+					print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
+					ci.show()
+					print "Unsupported"
+					return False
+		return True
+
 	def analize(self):
 		if not self.patches_list:
 			print "Nothing to patch"
@@ -69,36 +101,9 @@ class BinPatch:
 		for p in self.patches_list:
 			print "*************************************************\n"
 			p.show()
-			p.analize()
-			for ci in p.code_info:
-				if ci.command_info.is_jump:
-					if ci.access_name in self.common_func:
-						ci.access_addr = self.bf_old.functions[ci.access_name].start 
-						print "%s to COMMON function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-					elif ci.access_name in self.modified_func:
-						print "%s to MODIFIED function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-					elif ci.access_name in self.common_dyn_func:
-						ci.access_addr = self.bf_old.dyn_functions[ci.access_name].start 
-						print "%s to COMMON PLT function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-					else:
-						print "%s to NEW function: '%s', '%s'" % (ci.command_info.name, ci.access_name, ci.access_plt)
-						ci.show()
-						if ci.access_plt:
-							print "New PLT entry.\nUnsupported"
-							return
-				else:
-					if ci.access_name in self.common_obj:
-						ci.access_addr = self.bf_old.objects[ci.access_name].value
-						print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
-					elif ci.access_name in self.common_func:
-						ci.access_addr = self.bf_old.functions[ci.access_name].start
-						print "Access to COMMON function: '%s', '%s'" % (ci.access_addr, ci.access_name)
-					else:
-						print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
-						ci.show()
-						print "Unsupported"
-						return
-		self.applicable = True
+			self.applicable = self.__static_code_is_applicable__(p)
+			if not self.applicable:
+				return
 
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
