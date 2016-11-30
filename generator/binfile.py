@@ -19,6 +19,7 @@ class BinFile:
 		self.dyn_objects = {}
 		self.elf_data = None
 		self.sections = None
+		self.symbols = None
 		self.__parse__()
 
 	def __exec__(self, cmd):
@@ -58,10 +59,14 @@ class BinFile:
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
-			symbols = elf.get_symbols()
+			self.symbols = elf.get_symbols()
 			self.sections = elf.get_sections()
 
-		for k, s in symbols.iteritems():
+		if self.symbols is None:
+			print "  No symbols found. Perhaps this ELF has been stripped?"
+			exit(1)
+
+		for k, s in self.symbols.iteritems():
 			if s.name is None:
 				continue
 
