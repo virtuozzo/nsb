@@ -12,7 +12,7 @@ class BinFile:
 		if not os.access(filename, os.R_OK):
 			print "File %s doesn't exist" % filename
 			exit(1)
-		self.filename = filename
+		self.filename = os.path.realpath(filename)
 		self.functions = {}
 		self.objects = {}
 		self.dyn_functions = {}
