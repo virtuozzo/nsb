@@ -5,6 +5,7 @@ from elftools.elf.elffile import SymbolTableSection
 from elftools.elf.descriptions import describe_p_flags
 from elftools.elf.constants import P_FLAGS
 
+ElfHeader = namedtuple("ElfHeader", "type machine")
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
 ElfSection = namedtuple("ElfSection", "name offset addr size")
 
@@ -13,6 +14,9 @@ class ElfFile:
 		self.stream = stream
 		self.elf = ELFFile(self.stream)
 
+	def get_header(self):
+		return ElfHeader(self.elf['e_type'],
+				 self.elf['e_machine'])
 	def __section_symbols__(self, section_name):
 		symbols = {}
 

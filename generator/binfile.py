@@ -59,8 +59,14 @@ class BinFile:
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
+			self.header = elf.get_header()
 			self.symbols = elf.get_symbols()
 			self.sections = elf.get_sections()
+
+		if self.header.type != 'ET_EXEC':
+			print "Wrong object file type: %s" % self.header.type
+			print "Only executables are supported"
+			raise
 
 		if self.symbols is None:
 			print "  No symbols found. Perhaps this ELF has been stripped?"
