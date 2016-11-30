@@ -58,10 +58,10 @@ class BinFile:
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
-			symbols = elf.symbols()
+			symbols = elf.get_symbols()
 			self.sections = elf.get_sections()
 
-		for s in symbols:
+		for k, s in symbols.iteritems():
 			if s.name is None:
 				continue
 
@@ -69,8 +69,6 @@ class BinFile:
 				self.__add_function__(s)
 			elif s.type == "STT_OBJECT":
 				self.__add_object__(s)
-			else:
-				print "Unknown ELF symbol type: %s\n" % s.type
 
 		if self.dyn_functions:
 			self.__get_plt_info()

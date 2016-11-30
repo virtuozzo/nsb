@@ -33,6 +33,26 @@ class ElfFile:
 
 		return symbols
 
+	def __section_symbols__(self, section_name):
+		symbols = {}
+
+		section = self.elf.get_section_by_name(section_name)
+		if section is None:
+			return None
+
+		for num in range(0, section.num_symbols()):
+			s = section.get_symbol(num)
+			symbols[num] = ElfSym(num, s['st_value'],
+					s['st_size'], s['st_info'].type,
+					s['st_info'].bind,
+					s['st_other'].visibility,
+					s['st_shndx'], s.name)
+
+		return symbols
+
+	def get_symbols(self):
+		return self.__section_symbols__('.symtab')
+
 	def get_sections(self):
 		sections = {}
 		for i in range(self.elf.num_sections()):
