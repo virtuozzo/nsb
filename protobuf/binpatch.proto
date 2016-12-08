@@ -3,5 +3,6 @@ import "funcpatch.proto";
 message BinPatch {
 	required string		old_path	= 1;
 	required string		new_path	= 2;
-	repeated FuncPatch	patches		= 3;
+	required string		object_type	= 3;
+	repeated FuncPatch	patches		= 4;
 }
