@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 from funcpatch import FuncPatch
 from binfile import BinFile
-from binpatch import StaticBinPatch
+from binpatch import StaticBinPatch, SharedBinPatch
 from function import ElfFunction, DumpLine
 
 
@@ -20,7 +20,11 @@ bfb = BinFile(args.elfb)
 print args.patchdir
 print args.outfile
 
-binpatch = StaticBinPatch(bfa, bfb, args.patchdir, args.outfile)
+if bfa.header.type == 'ET_DYN':
+	binpatch = SharedBinPatch(bfa, bfb, args.patchdir, args.outfile)
+else:
+	binpatch = StaticBinPatch(bfa, bfb, args.patchdir, args.outfile)
+
 binpatch.create()
 
 print "Common functions: %s" % binpatch.common_func
@@ -58,13 +62,13 @@ new_functions = []
 for name in binpatch.common_func:
 	a = bfa.functions[name]
 	b = bfb.functions[name]
-	patch = ElfFunction.patch(a, b)
+	patch = ElfFunction.patch(a, b, bfb.header.type)
 	if patch:
 		binpatch.patches_list.append(patch)
 
 for name in binpatch.new_func:
 	b = bfb.functions[name]
-	patch = ElfFunction.patch(None, b)
+	patch = ElfFunction.patch(None, b, bfb.header.type)
 	if patch:
 		binpatch.patches_list.append(patch)
 	new_functions.append(bfb.functions[name])

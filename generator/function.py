@@ -131,13 +131,16 @@ class ElfFunction:
 		return diff_lines
 
 	@staticmethod
-	def patch(func_a, func_b):
+	def patch(func_a, func_b, file_type):
 		if func_a:
 			functype = ModifiedFuncType();
 		else:
 			functype = NewFuncType();
 
 		patch = FuncPatch(func_a, func_b, functype);
+
+		if file_type == 'ET_DYN':
+			return patch
 
 		if func_a:
 			if func_a.size == func_b.size:

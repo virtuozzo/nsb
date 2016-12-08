@@ -213,3 +213,11 @@ class StaticBinPatch(BinPatch):
 					print "Unsupported"
 					return False
 		return True
+
+
+class SharedBinPatch(BinPatch):
+	def __init__(self, bf_old, bf_new, patchdir, patchfile):
+		BinPatch.__init__(self, bf_old, bf_new, patchdir, patchfile)
+
+	def __applicable__(self, p):
+		return True

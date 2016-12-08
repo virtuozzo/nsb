@@ -84,9 +84,9 @@ class BinFile:
 			rela_dyn = elf.get_rela_dyn(self.dyn_symbols)
 			self.rela_plt = dict(rela_plt, **rela_dyn)
 
-		if self.header.type != 'ET_EXEC':
+		if self.header.type != 'ET_DYN' and self.header.type != 'ET_EXEC':
 			print "Wrong object file type: %s" % self.header.type
-			print "Only executables are supported"
+			print "Only shared libraries and executables are supported"
 			raise
 
 		if self.symbols is None:
