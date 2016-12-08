@@ -44,6 +44,27 @@ AC_CHECK_LIB(
 		[AC_MSG_ERROR([*** libdl not found.])
 ])
 
+AC_CHECK_LIB(
+		[unwind],
+		[_ULx86_64_create_addr_space],
+		[],
+		[AC_MSG_ERROR([*** libunwind not found.])
+])
+
+AC_CHECK_LIB(
+		[unwind-x86_64],
+		[_Ux86_64_get_reg],
+		[],
+		[AC_MSG_ERROR([*** libunwind-x86_64 not found.])
+])
+
+AC_CHECK_LIB(
+		[unwind-ptrace],
+		[_UPT_accessors],
+		[],
+		[AC_MSG_ERROR([*** libunwind-x86_64 not found.])
+])
+
 AC_PYTHON_MODULE(elftools.elf.elffile)
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/main.py)
