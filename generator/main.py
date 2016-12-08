@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 from funcpatch import FuncPatch
 from binfile import BinFile
-from binpatch import BinPatch
+from binpatch import StaticBinPatch
 from function import ElfFunction, DumpLine
 
 
@@ -20,7 +20,7 @@ bfb = BinFile(args.elfb)
 print args.patchdir
 print args.outfile
 
-binpatch = BinPatch(bfa, bfb, args.patchdir, args.outfile)
+binpatch = StaticBinPatch(bfa, bfb, args.patchdir, args.outfile)
 binpatch.create()
 
 print "Common functions: %s" % binpatch.common_func
