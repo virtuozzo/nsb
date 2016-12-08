@@ -7,7 +7,7 @@ from elftools.elf.constants import P_FLAGS
 
 ElfHeader = namedtuple("ElfHeader", "type machine")
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
-ElfSection = namedtuple("ElfSection", "name offset addr size")
+ElfSection = namedtuple("ElfSection", "offset addr size")
 ElfRelaPlt = namedtuple("ElfRelaPlt", "offset info_type addend")
 
 
@@ -46,7 +46,7 @@ class ElfFile:
 		sections = {}
 		for i in range(self.elf.num_sections()):
 			s = self.elf.get_section(i)
-			sections[s.name] = ElfSection(s.name, s['sh_offset'],
+			sections[s.name] = ElfSection(s['sh_offset'],
 						      s['sh_addr'], s['sh_size'])
 		return sections
 
