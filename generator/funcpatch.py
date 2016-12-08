@@ -169,14 +169,19 @@ class CodeLineInfo:
 			print "%s: '%s', '%s', %s, %d" % (self.command_info, self.access_name, self.access_addr, self.access_addr, self.offset)
 
 	def get_patch(self):
-		print "CodeLineInfo: get_patch for %s" % self.dumpline.line
 		image = objinfo_pb2.ObjInfo()
 		image.name = self.access_name
 		image.offset = self.offset
 		image.op_size = self.command_info.op_size + self.command_info.prefix_size
-		print "image.op_size: %d" % image.op_size
 		image.addr_size = self.command_info.addr_size
 		image.ref_addr = self.access_addr
+
+		print "    Reference to %s:" % image.name
+		print "      Offset   : %#x" % image.offset
+		print "      Op_size  : %#x" % image.op_size
+		print "      Addr_size: %#x" % image.addr_size
+		print "      Ref_addr : %#x" % image.ref_addr
+
 		return image
 
 
@@ -233,6 +238,13 @@ class FuncPatch:
 		image.code = code
 		image.dyn = dyn
 		image.plt = plt
+
+		print "  Function %s:" % image.name
+		print "    Addr    : %#x" % image.addr
+		print "    Size    : %#x" % image.size
+		print "    New     : %s" % image.new
+		print "    Dyn     : %s" % image.dyn
+		print "    Plt     : %s" % image.plt
 
 		for i in self.code_info:
 			ci = i.get_patch()
