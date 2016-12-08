@@ -83,7 +83,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	ssize_t size;
 
 	pr_debug("\tpatch: name : %s\n", fp->name);
-	pr_debug("\tpatch: start: %#x\n", fp->start);
+	pr_debug("\tpatch: addr : %#lx\n", fp->addr);
 	pr_debug("\tpatch: size : %d\n", fp->size);
 	pr_debug("\tpatch: new  : %d\n", fp->new_);
 	pr_debug("\tpatch: code :");
@@ -107,12 +107,12 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	}
 
 	if (!fp->new_) {
-		pr_debug("\tredirect to %#lx (overwrite %#x)\n", addr, fp->start);
-		size = x86_jmpq_instruction(jump, fp->start, addr);
+		pr_debug("\tredirect to %#lx (overwrite %#lx)\n", addr, fp->addr);
+		size = x86_jmpq_instruction(jump, fp->addr, addr);
 		if (size < 0)
 			return size;
 
-		err = process_write_data(ctx->pid, (void *)(long)fp->start, jump, round_up(fp->size, 8));
+		err = process_write_data(ctx->pid, (void *)fp->addr, jump, round_up(fp->size, 8));
 		if (err < 0)
 			pr_err("failed to patch: %d\n", err);
 	}
@@ -142,7 +142,7 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 		FuncPatch *fp = bp->patches[i];
 		unsigned long addr;
 
-		addr = process_get_place(ctx, fp->start, fp->size);
+		addr = process_get_place(ctx, fp->addr, fp->size);
 		if (addr < 0) {
 			err = addr;
 			goto err;

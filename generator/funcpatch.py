@@ -225,7 +225,7 @@ class FuncPatch:
 	def get_patch(self, code):
 		image = funcpatch_pb2.FuncPatch()
 		image.name = self.func_b.funcname
-		image.start = self.func_b.start
+		image.addr = self.func_b.start
 		image.size = self.func_b.size
 		image.new = False
 		if self.functype.name == "new":
