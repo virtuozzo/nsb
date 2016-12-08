@@ -8,6 +8,7 @@ from elftools.elf.constants import P_FLAGS
 ElfHeader = namedtuple("ElfHeader", "type machine")
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
 ElfSection = namedtuple("ElfSection", "offset addr size")
+ElfSegment = namedtuple("ElfSegment", "type offset vaddr paddr mem_sz flags align file_sz")
 ElfRelaPlt = namedtuple("ElfRelaPlt", "offset info_type addend")
 
 
@@ -49,6 +50,16 @@ class ElfFile:
 			sections[s.name] = ElfSection(s['sh_offset'],
 						      s['sh_addr'], s['sh_size'])
 		return sections
+
+	def get_segments(self):
+		segments = []
+		for s in self.elf.iter_segments():
+			segment = ElfSegment(s['p_type'], s['p_offset'],
+					s['p_vaddr'], s['p_paddr'],
+					s['p_memsz'], s['p_flags'],
+					s['p_align'], s['p_filesz'])
+			segments.append(segment)
+		return segments
 
 	def get_rela_plt(self, symbols):
 		rela_plt = {}

@@ -1,0 +1,10 @@
+message ElfSegment {
+	required string		type	= 1;
+	required int32		offset	= 2;
+	required int32		vaddr	= 3;
+	required int32		paddr	= 4;
+	required int32		mem_sz	= 5;
+	required int32		flags	= 6;
+	required int32		align	= 7;
+	required int32		file_sz	= 8;
+}

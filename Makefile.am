@@ -21,6 +21,8 @@ nsb_SOURCES =						\
 			protobuf/objinfo.pb-c.h		\
 			protobuf/relaplt.pb-c.c		\
 			protobuf/relaplt.pb-c.h		\
+			protobuf/segment.pb-c.c		\
+			protobuf/segment.pb-c.h		\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\
