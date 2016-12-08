@@ -2,12 +2,14 @@ from collections import namedtuple
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.elffile import SymbolTableSection
-from elftools.elf.descriptions import describe_p_flags
+from elftools.elf.descriptions import describe_p_flags, describe_reloc_type
 from elftools.elf.constants import P_FLAGS
 
 ElfHeader = namedtuple("ElfHeader", "type machine")
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
 ElfSection = namedtuple("ElfSection", "name offset addr size")
+ElfRelaPlt = namedtuple("ElfRelaPlt", "offset info_type addend")
+
 
 class ElfFile:
 	def __init__(self, stream):
@@ -47,3 +49,24 @@ class ElfFile:
 			sections[s.name] = ElfSection(s.name, s['sh_offset'],
 						      s['sh_addr'], s['sh_size'])
 		return sections
+
+	def get_rela_plt(self, symbols):
+		rela_plt = {}
+		section = self.elf.get_section_by_name('.rela.plt')
+		for rel in section.iter_relocations():
+			s = symbols[rel['r_info_sym']]
+			rela_plt[s.name] = ElfRelaPlt(rel['r_offset'],
+						describe_reloc_type(rel['r_info_type'], self.elf),
+						s.value)
+			print rela_plt
+		return rela_plt
+
+	def get_rela_dyn(self, symbols):
+		rela_dyn = {}
+		section = self.elf.get_section_by_name('.rela.dyn')
+		for rel in section.iter_relocations():
+			s = symbols[rel['r_info_sym']]
+			rela_dyn[s.name] = ElfRelaPlt(rel['r_offset'],
+						describe_reloc_type(rel['r_info_type'], self.elf),
+						s.value)
+		return rela_dyn

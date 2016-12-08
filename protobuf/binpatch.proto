@@ -1,8 +1,10 @@
 import "funcpatch.proto";
+import "relaplt.proto";
 
 message BinPatch {
 	required string		old_path	= 1;
 	required string		new_path	= 2;
 	required string		object_type	= 3;
 	repeated FuncPatch	patches		= 4;
+	repeated RelaPlt	relocations	= 5;
 }

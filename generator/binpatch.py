@@ -122,6 +122,30 @@ class BinPatch:
 			fpatch = patch.get_patch(code)
 			image.patches.extend([fpatch])
 
+		print "\nimage.new_relocations:"
+		for name, rp in self.bf_new.rela_plt.iteritems():
+			if self.bf_new.dynsym_by_name(name).bind == "STB_WEAK":
+				continue
+			if rp.info_type == "R_X86_64_RELATIVE":
+				continue
+			rpi = image.relocations.add()
+			rpi.name = name
+			rpi.info_type = rp.info_type
+			rpi.offset = rp.offset
+			rpi.addend = rp.addend
+			rpi.hint = 0
+			rpi.path = ""
+			if rp.info_type != "R_X86_64_GLOB_DAT":
+				try:
+					rpo = self.bf_old.rela_plt[name]
+					if rpo.addend:
+						rpi.hint = rpo.addend
+						rpi.path = self.bf_old.filename
+				except:
+					pass
+			print "  %s: type: %s, offset: %#x, addend: %#x, hint: %#x, path: %s" % \
+				(rpi.name, rpi.info_type, rpi.offset, rpi.addend, rpi.hint, rpi.path)
+
 		return image
 
 	def write(self):

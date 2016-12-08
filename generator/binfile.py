@@ -21,6 +21,7 @@ class BinFile:
 		self.sections = None
 		self.symbols = None
 		self.dyn_symbols = None
+		self.rela_plt = None
 		self.__parse__()
 
 	def __exec__(self, cmd):
@@ -68,6 +69,9 @@ class BinFile:
 			return True
 		return False
 
+	def is_plt_symbol(self, name):
+		return name in self.rela_plt.keys()
+
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
@@ -75,6 +79,9 @@ class BinFile:
 			self.symbols = elf.get_symbols()
 			self.dyn_symbols = elf.get_dyn_symbols()
 			self.sections = elf.get_sections()
+			rela_plt = elf.get_rela_plt(self.dyn_symbols)
+			rela_dyn = elf.get_rela_dyn(self.dyn_symbols)
+			self.rela_plt = dict(rela_plt, **rela_dyn)
 
 		if self.header.type != 'ET_EXEC':
 			print "Wrong object file type: %s" % self.header.type

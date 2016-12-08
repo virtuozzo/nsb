@@ -19,6 +19,8 @@ nsb_SOURCES =						\
 			protobuf/binpatch.pb-c.h	\
 			protobuf/objinfo.pb-c.c		\
 			protobuf/objinfo.pb-c.h		\
+			protobuf/relaplt.pb-c.c		\
+			protobuf/relaplt.pb-c.h		\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\
