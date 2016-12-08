@@ -135,6 +135,9 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 
 	bp = binpatch->bp;
 
+	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
+	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
+
 	for (i = 0; i < bp->n_patches; i++) {
 		FuncPatch *fp = bp->patches[i];
 		unsigned long addr;

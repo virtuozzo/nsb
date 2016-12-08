@@ -1,6 +1,7 @@
 import "funcpatch.proto";
 
 message BinPatch {
-	required string		name = 1;
-	repeated FuncPatch	patches = 2;
+	required string		old_path	= 1;
+	required string		new_path	= 2;
+	repeated FuncPatch	patches		= 3;
 }

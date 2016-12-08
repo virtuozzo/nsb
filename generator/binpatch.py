@@ -107,7 +107,12 @@ class BinPatch:
 
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
-		image.name = self.name
+
+		image.old_path = self.bf_old.filename
+		image.new_path = self.bf_new.filename
+
+		print "image.old_path   : %s" % image.old_path
+		print "image.new_path   : %s" % image.new_path
 
 		for patch in self.patches_list:
 			code = self.bf_new.function_code(patch.function.start,
