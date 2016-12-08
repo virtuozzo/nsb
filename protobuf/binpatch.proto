@@ -1,6 +1,7 @@
 import "segment.proto";
 import "funcpatch.proto";
 import "relaplt.proto";
+import "datasym.proto";
 
 message BinPatch {
 	required string		old_path	= 1;
@@ -9,4 +10,5 @@ message BinPatch {
 	repeated FuncPatch	patches		= 4;
 	repeated RelaPlt	relocations	= 5;
 	repeated ElfSegment	new_segments	= 6;
+	repeated DataSym	local_vars	= 7;
 }

@@ -134,6 +134,24 @@ class BinPatch:
 			print "  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x" %  \
 				(si.type, si.offset, si.vaddr, si.paddr, si.mem_sz, si.flags, si.align, si.file_sz)
 
+		print "\nimage.datasym:"
+		for name in self.common_obj:
+			if self.bf_old.objects[name].size != self.bf_new.objects[name].size:
+				print "Object %s has different size: %d != %d" % (name, self.bf_old.objects[name].size, self.bf_new.objects[name].size)
+				raise
+			if self.bf_old.objects[name].size == 0:
+				continue
+
+			if "." in name:
+				continue
+
+			li = image.local_vars.add()
+			li.name = name
+			li.size = self.bf_new.objects[name].size
+			li.offset = self.bf_new.objects[name].value
+			li.ref = self.bf_old.objects[name].value
+			print "  %s: size: %d, offset: %#x, ref: %#x" % (li.name, li.size, li.offset, li.ref)
+
 		return image
 
 	def write(self):
