@@ -7,4 +7,6 @@ message FuncPatch {
 	required bool		new	= 4;
 	required bytes		code	= 5;
 	repeated ObjInfo	objs	= 6;
+	required bool		dyn	= 7;
+	required bool		plt	= 8;
 }

@@ -222,7 +222,7 @@ class FuncPatch:
 			if info.command_info:
 				self.code_info.append(info)
 
-	def get_patch(self, code):
+	def get_patch(self, code, dyn, plt):
 		image = funcpatch_pb2.FuncPatch()
 		image.name = self.func_b.funcname
 		image.addr = self.func_b.start
@@ -231,6 +231,9 @@ class FuncPatch:
 		if self.functype.name == "new":
 			image.new = True
 		image.code = code
+		image.dyn = dyn
+		image.plt = plt
+
 		for i in self.code_info:
 			ci = i.get_patch()
 			image.objs.extend([ci])
