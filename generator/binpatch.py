@@ -26,6 +26,12 @@ class BinPatch:
 		self.name = os.path.basename(self.bf_old.filename)
 
 	def create(self):
+		if self.bf_old.header.type != self.bf_new.header.type:
+			print "Binaries have different object types: %s != %s" %	\
+				(self.bf_old.header.type, self.bf_new.header.type)
+			print "Not supported."
+			raise
+
 		if self.bf_old:
 			old_func = self.bf_old.functions
 			old_obj = self.bf_old.objects
