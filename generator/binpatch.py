@@ -93,10 +93,10 @@ class BinPatch:
 		# This has to be done differently. Function object has to be
 		# marked as modified instead of redundant "modified" list.
 		for p in self.patches_list:
-			if p.function.funcname in self.common_func:
-				self.common_func.remove(p.function.funcname)
-				self.modified_func.append(p.function.funcname)
-				print "Modified function: %s" % p.function.funcname
+			if p.func_b.funcname in self.common_func:
+				self.common_func.remove(p.func_b.funcname)
+				self.modified_func.append(p.func_b.funcname)
+				print "Modified function: %s" % p.func_b.funcname
 
 		for p in self.patches_list:
 			print "*************************************************\n"
@@ -117,8 +117,8 @@ class BinPatch:
 		print "image.object_type: %s" % image.object_type
 
 		for patch in self.patches_list:
-			code = self.bf_new.function_code(patch.function.start,
-							 patch.function.size)
+			code = self.bf_new.function_code(patch.func_b.start,
+							 patch.func_b.size)
 			fpatch = patch.get_patch(code)
 			image.patches.extend([fpatch])
 

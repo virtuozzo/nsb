@@ -181,8 +181,9 @@ class CodeLineInfo:
 
 
 class FuncPatch:
-	def __init__(self, function, functype):
-		self.function = function
+	def __init__(self, func_a, func_b, functype):
+		self.func_a = func_a
+		self.func_b = func_b
 		self.old = []
 		self.new = []
 		self.calls = []
@@ -199,9 +200,9 @@ class FuncPatch:
 
 	def show(self):
 		print "Patch:"
-		print "\tName    : %s" % self.function.funcname
-		print "\tStart   : 0x%x" % self.function.start
-		print "\tSize    : 0x%x" % self.function.size
+		print "\tName    : %s" % self.func_b.funcname
+		print "\tStart   : 0x%x" % self.func_b.start
+		print "\tSize    : 0x%x" % self.func_b.size
 		print "\tType    : %s" % self.functype.name
 		if len(self.new):
 			print "\tLines: %d" % len(self.new)
@@ -209,13 +210,13 @@ class FuncPatch:
 				print "\t\t<<<< %s | %s | %s | %s | %s" % (o.addr, o.bytes, o.code, o.name, o.hint)
 				print "\t\t>>>> %s | %s | %s | %s | %s" % (n.addr, n.bytes, n.code, n.name, n.hint)
 #		else:
-#			for n in self.function.lines:
+#			for n in self.func_b.lines:
 #				print "\t\t>>>> %s | %s | %s | %s | %s" % (n.addr, n.bytes, n.code, n.name, n.hint)
 
 	def analize(self):
 		print "\tAnalize: %s" % self.functype.name
-		for l in self.function.lines:
-			info = CodeLineInfo(l, self.function.funcname, self.function.start)
+		for l in self.func_b.lines:
+			info = CodeLineInfo(l, self.func_b.funcname, self.func_b.start)
 #			info.show()
 			# skip pure math commands
 			if info.command_info:
@@ -223,9 +224,9 @@ class FuncPatch:
 
 	def get_patch(self, code):
 		image = funcpatch_pb2.FuncPatch()
-		image.name = self.function.funcname
-		image.start = self.function.start
-		image.size = self.function.size
+		image.name = self.func_b.funcname
+		image.start = self.func_b.start
+		image.size = self.func_b.size
 		image.new = False
 		if self.functype.name == "new":
 			image.new = True
@@ -236,7 +237,7 @@ class FuncPatch:
 		return image
 
 	def write(self, patchdir, code):
-		filename = patchdir + "/" + self.function.funcname + ".patch"
+		filename = patchdir + "/" + self.func_b.funcname + ".patch"
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY)
 
 		image = self.get_patch()

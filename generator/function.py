@@ -133,9 +133,11 @@ class ElfFunction:
 	@staticmethod
 	def patch(func_a, func_b):
 		if func_a:
-			patch = FuncPatch(func_b, ModifiedFuncType());
+			functype = ModifiedFuncType();
 		else:
-			patch = FuncPatch(func_b, NewFuncType());
+			functype = NewFuncType();
+
+		patch = FuncPatch(func_a, func_b, functype);
 
 		if func_a:
 			if func_a.size == func_b.size:
