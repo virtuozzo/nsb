@@ -20,6 +20,7 @@ class BinFile:
 		self.elf_data = None
 		self.sections = None
 		self.symbols = None
+		self.dyn_symbols = None
 		self.__parse__()
 
 	def __exec__(self, cmd):
@@ -56,11 +57,23 @@ class BinFile:
 		else:
 			self.objects[obj.name] = obj
 
+	def dynsym_by_name(self, name):
+		for key, s in self.dyn_symbols.iteritems():
+			if s.name == name:
+				return s
+		return None
+
+	def is_dyn_symbol(self, name):
+		if self.dynsym_by_name(name):
+			return True
+		return False
+
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
 			self.header = elf.get_header()
 			self.symbols = elf.get_symbols()
+			self.dyn_symbols = elf.get_dyn_symbols()
 			self.sections = elf.get_sections()
 
 		if self.header.type != 'ET_EXEC':

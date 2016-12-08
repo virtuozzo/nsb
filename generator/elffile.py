@@ -37,6 +37,9 @@ class ElfFile:
 	def get_symbols(self):
 		return self.__section_symbols__('.symtab')
 
+	def get_dyn_symbols(self):
+		return self.__section_symbols__('.dynsym')
+
 	def get_sections(self):
 		sections = {}
 		for i in range(self.elf.num_sections()):
