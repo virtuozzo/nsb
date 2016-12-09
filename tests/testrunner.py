@@ -86,6 +86,17 @@ class Test:
 			return False
 		return True
 
+	def check_result(self, expected):
+		if self.returncode != expected:
+			print "************ Error ************"
+			print "Test %s (pid %d): exited with %d (expected: %d)" % (self.path, self.p.pid, self.returncode, expected)
+			print "stdout:\n%s" % self.stdout
+			print "stderr:\n%s" % self.stderr
+			return 1
+
+		print "************ Pass *************"
+		return 0
+
 
 class BinPatch:
 	def __init__(self, source, target):
@@ -132,7 +143,7 @@ class BinPatch:
 	def apply(self, test):
 		try:
 			if not test.is_running():
-				print "Tests with pid %d is not running" % test.p.pid
+				print "Test with pid %d is not running" % test.p.pid
 				return 1
 
 			p = self.__run_cmd__("%s patch -v 4 -f %s -p %d" % (self.patcher, self.outfile, test.p.pid))
@@ -160,15 +171,7 @@ class LivePatchTest:
 		if self.lp_failed:
 			return 1
 
-		if self.test.returncode != self.tgt_res:
-			print "************ Error ************"
-			print "Process %s (pid %d): exited with %d (expected: %d)" % (self.path, self.test.p.pid, self.test.returncode, self.tgt_res)
-			print "stdout:\n%s" % self.test.stdout
-			print "stderr:\n%s" % self.test.stderr
-			return 1
-
-		print "************ Pass *************"
-		return 0
+		return self.test.check_result(self.tgt_res)
 
 	def run(self):
 		if self.patch.generate() != 0:
