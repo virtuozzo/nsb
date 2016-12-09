@@ -12,6 +12,12 @@ args = parser.parse_args()
 source = args.source
 target = args.target
 
+src_type = re.search('[^_]+', os.path.basename(source)).group(0)
+tgt_type = re.search('[^_]+', os.path.basename(target)).group(0)
+if src_type != tgt_type:
+	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
+	raise
+
 outfile = args.outfile
 if outfile is None:
 	outfile = "%s_to_%s.py" % (source, target)
