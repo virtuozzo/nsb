@@ -41,7 +41,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		/* This means, that function is a new one */
 		funcpatch = search_func_by_name(&ctx->binpatch, oi->name);
 		if (!funcpatch) {
-			pr_debug("\t\tfailed to find function by name %s\n", oi->name);
+			pr_err("\t\tfailed to find function by name %s\n", oi->name);
 			return -EINVAL;
 		}
 		pr_debug("\t\tfunction address : %#lx\n", funcpatch->addr);
