@@ -48,7 +48,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		oi->ref_addr = funcpatch->addr;
 	}
 
-	err = process_read_data(ctx->pid, (void *)where, code, round_up(sizeof(code), 8));
+	err = process_read_data(ctx->pid, where, code, round_up(sizeof(code), 8));
 	if (err < 0) {
 		pr_err("failed to read process address %ld: %d\n", where, err);
 		return err;
@@ -69,7 +69,7 @@ static int apply_objinfo(struct process_ctx_s *ctx, unsigned long start, ObjInfo
 		pr_msg(" %02x", code[i]);
 	pr_debug("\n");
 
-	err = process_write_data(ctx->pid, (void *)where, code, round_up(sizeof(code), 8));
+	err = process_write_data(ctx->pid, where, code, round_up(sizeof(code), 8));
 	if (err < 0) {
 		pr_err("failed to write process address %ld: %d\n", where, err);
 		return err;
@@ -93,7 +93,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	pr_debug("\n");
 	pr_debug("\tplace address  : %#lx\n", addr);
 
-	err = process_write_data(ctx->pid, (void *)addr, fp->code.data,
+	err = process_write_data(ctx->pid, addr, fp->code.data,
 				 round_up(fp->size, 8));
 	if (err < 0) {
 		pr_err("failed to patch: %d\n", err);
@@ -113,7 +113,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 		if (size < 0)
 			return size;
 
-		err = process_write_data(ctx->pid, (void *)fp->addr, jump, round_up(size, 8));
+		err = process_write_data(ctx->pid, fp->addr, jump, round_up(size, 8));
 		if (err < 0)
 			pr_err("failed to patch: %d\n", err);
 	}

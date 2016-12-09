@@ -27,14 +27,14 @@ struct patch_place_s {
 	unsigned long		used;
 };
 
-int process_write_data(pid_t pid, void *addr, void *data, size_t size)
+int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
 {
-	return ptrace_poke_area(pid, data, addr, size);
+	return ptrace_poke_area(pid, (void *)data, (void *)addr, size);
 }
 
-int process_read_data(pid_t pid, void *addr, void *data, size_t size)
+int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size)
 {
-	return ptrace_peek_area(pid, data, addr, size);
+	return ptrace_peek_area(pid, data, (void *)addr, size);
 }
 
 int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
