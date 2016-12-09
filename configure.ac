@@ -36,6 +36,13 @@ AC_CHECK_LIB(
 		[AC_MSG_ERROR([*** libcompel not found.])
 ])
 
+AC_CHECK_LIB(
+		[dl],
+		[dlopen],
+		[],
+		[AC_MSG_ERROR([*** libdl not found.])
+])
+
 AC_PYTHON_MODULE(elftools.elf.elffile)
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/main.py)

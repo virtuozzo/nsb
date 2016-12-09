@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <errno.h>
+#include <dlfcn.h>
 
 #include "include/patch.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
 #include "include/vma.h"
+#include "include/elf.h"
 
 #include "include/process.h"
 #include "include/x86_64.h"
@@ -157,6 +159,369 @@ static int apply_exec_binpatch(struct process_ctx_s *ctx, struct binpatch_s *bin
 	return err;
 }
 
+static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
+{
+	int i, err;
+	void *handle;
+	LIST_HEAD(vmas);
+
+	pr_debug("Loading %s:\n", bp->new_path);
+
+	handle = dlopen(bp->new_path, RTLD_NOW);
+	if (!handle) {
+		pr_err("failed to dlopen %s: %s\n",bp->new_path, dlerror());
+		return 1;
+	}
+
+	if (collect_vmas(getpid(), &vmas)) {
+		pr_err("Can't collect local mappings\n");
+		goto err;
+	}
+
+	for (i = 0; i < bp->n_relocations; i++) {
+		RelaPlt *rp = bp->relocations[i];
+		unsigned long addr;
+		const struct vma_area *vma;
+
+		if (rp->addend) {
+			// Local symbol. Skip.
+			continue;
+		}
+
+		if (rp->hint) {
+			// Already discovered symbol in previous version of the
+			// library. Skip.
+			continue;
+		}
+
+		pr_debug("searching symbol '%s':\n", rp->name);
+
+		addr = (unsigned long)dlsym(handle, rp->name);
+		if (!addr) {
+			pr_err("failed to find symbol %s: %s\n", rp->name, dlerror());
+			return 1;
+		}
+		pr_debug("%s address: %#lx\n", rp->name, addr);
+
+		vma = find_vma_by_addr(&vmas, addr);
+		if (!vma) {
+			pr_err("failed to find local vma with address %#lx\n", addr);
+			goto err;
+		}
+
+		rp->hint = addr - vma->start;
+		rp->path = vma->path;
+
+		pr_debug("library: %s\n", rp->path);
+		pr_debug("hint: %#lx\n", rp->hint);
+	}
+	// TODO: need to:
+	// 1) get all external symbol addresses
+	// 2) get libraries by addresses.
+	// 3) make sure, that all these libraries are mapped within the process by names
+	// 4) make sure, that inodes of external libraries in nsb are equal to corresponding in the process.
+	// 5) discover symbols offsets within mappings.
+	// 6) use them to patch the new library.
+	err = 0;
+err:
+	dlclose(handle);
+	return err;
+}
+
+static int apply_rela_plt(struct process_ctx_s *ctx, uint64_t load_addr, const BinPatch *bp)
+{
+	int i;
+	int err;
+
+	pr_debug("Applying PLT relocations:\n");
+	pr_debug("load address: %#lx\n", load_addr);
+
+	for (i = 0; i < bp->n_relocations; i++) {
+		RelaPlt *rp = bp->relocations[i];
+		uint64_t rel_addr;
+		uint64_t func_addr;
+
+		pr_debug("%d) %s: type: %s, offset: %#x, addend: %#x, hint: %#lx, path: %s\n",
+			 i, rp->name, rp->info_type, rp->offset, rp->addend, rp->hint, rp->path);
+
+		rel_addr = load_addr + rp->offset;
+
+		if (rp->addend) {
+			func_addr = load_addr + rp->addend;
+		} else {
+			const struct vma_area *vma;
+
+			vma = find_vma_by_path(&ctx->vmas, rp->path);
+			if (!vma) {
+				pr_err("failed to find %s map\n", rp->path);
+				return -EINVAL;
+			}
+			pr_debug("    %s start: %#lx\n", rp->path, vma->start);
+			func_addr = vma->start + rp->hint;
+		}
+		pr_debug("    Writing %s address %#lx to %#lx\n", rp->name,
+				func_addr, rel_addr);
+		err = process_write_data(ctx->pid, rel_addr, &func_addr, sizeof(func_addr));
+		if (err) {
+			pr_err("failed to write to addr %#lx in process %d\n", rel_addr, ctx->pid);
+			return err;
+		}
+	}
+	return 0;
+}
+
+static long find_old_elf_base(struct process_ctx_s *ctx, const BinPatch *bp)
+{
+	const struct vma_area *vma;
+
+	vma = find_vma_by_path(&ctx->vmas, bp->old_path);
+	if (!vma)
+		return -ENOENT;
+
+	pr_debug("Address for old %s map: %#lx\n", bp->old_path, vma->start);
+	return vma->start;
+}
+
+static RelaPlt *get_real_plt_by_name(const BinPatch *bp, const char *name)
+{
+	int i;
+
+	for (i = 0; i < bp->n_relocations; i++) {
+		RelaPlt *rp = bp->relocations[i];
+
+		if (!strcmp(rp->name, name))
+			return rp;
+	}
+	return NULL;
+}
+
+static int fix_plt_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
+{
+	RelaPlt *rp;
+	uint64_t old_addr, new_addr;
+	int err;
+
+	pr_debug("%s: \"%s\"\n", __func__, fp->name);
+
+	rp = get_real_plt_by_name(bp, fp->name);
+	if (!rp) {
+		pr_err("failed to find function %s in .rela.plt\n", fp->name);
+		return 1;
+	}
+
+	old_addr = ctx->old_base + rp->hint;
+	new_addr = ctx->new_base + rp->offset;
+
+	pr_debug("    old plt address: %#lx\n", old_addr);
+	pr_debug("    new plt address: %#lx\n", new_addr);
+
+	err = process_read_data(ctx->pid, new_addr, &new_addr, sizeof(new_addr));
+	if (err)
+		return err;
+
+	pr_debug("    new func address: %#lx\n", new_addr);
+
+	pr_debug("\toverwrite .got.plt entry at %#lx with %#lx\n", old_addr, new_addr);
+
+	err = process_write_data(ctx->pid, old_addr, (void *)&new_addr, 8);
+	if (err < 0) {
+		pr_err("failed to patch: %d\n", err);
+		return err;
+	}
+	return 0;
+}
+
+static int fix_dyn_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
+{
+	int i;
+	unsigned char jump[X86_MAX_SIZE];
+	unsigned long old_addr, new_addr;
+	ssize_t size;
+	int err;
+
+	pr_debug("%s: \"%s\"\n", __func__, fp->name);
+	pr_debug("\tfpatch: name: %s\n", fp->name);
+	pr_debug("\tfpatch: addr: %#lx\n", fp->addr);
+	pr_debug("\tfpatch: size : %d\n", fp->size);
+	pr_debug("\tfpatch: new  : %d\n", fp->new_);
+	pr_debug("\tfpatch: code :");
+	for (i = 0; i < fp->size; i++)
+		pr_msg(" %02x", fp->code.data[i]);
+	pr_debug("\n");
+	pr_debug("\tfpatch: dyn  : %d\n", fp->dyn);
+	pr_debug("\tfpatch: plt  : %d\n", fp->plt);
+
+	if (!fp->has_old_addr) {
+		pr_debug("\tNew function. Nothing to patch\n");
+		return 0;
+	}
+
+	pr_debug("\tfpatch: old address  : %#x\n", fp->old_addr);
+	old_addr = ctx->old_base + fp->old_addr;
+	new_addr = ctx->new_base + fp->addr;
+
+	pr_debug("%s: real old function address: %#lx\n", __func__, old_addr);
+	pr_debug("%s: real new function address: %#lx\n", __func__, new_addr);
+
+	pr_debug("\tredirect to %#lx (overwrite %#lx)\n", new_addr, old_addr);
+	size = x86_jmpq_instruction(jump, old_addr, new_addr);
+	if (size < 0)
+		return size;
+
+	err = process_write_data(ctx->pid, old_addr, jump, round_up(size, 8));
+	if (err < 0) {
+		pr_err("failed to patch: %d\n", err);
+		return err;
+	}
+	return 0;
+}
+
+static int process_copy_lw(pid_t pid, unsigned long dest, unsigned long src)
+{
+	int err;
+	char buf[8];
+
+	err = process_read_data(pid, src, buf, 8);
+	if (err) {
+		pr_err("failed to read from %lx\n", src);
+		return err;
+	}
+	err = process_write_data(pid, dest, buf, 8);
+	if (err) {
+		pr_err("failed to write to %lx\n", dest);
+		return err;
+	}
+	return 0;
+}
+
+static int process_copy_data(pid_t pid, unsigned long dst, unsigned long src, size_t size)
+{
+	int iter = size / 8;
+	int remain = size % 8;
+	int err, i;
+
+	for (i = 0; i < iter; i++) {
+		err = process_copy_lw(pid, src, dst);
+		if (err) {
+			pr_err("failed to copy from %#lx to %#lx\n", src, dst);
+			return err;
+		}
+		src += 8;
+		dst += 8;
+	}
+	if (remain) {
+		char buf[8], tmp[8];
+
+		err = process_read_data(pid, dst, buf, 8);
+		if (err) {
+			pr_err("failed to read from %lx\n", dst);
+			return err;
+		}
+
+		err = process_read_data(pid, src, tmp, 8);
+		if (err) {
+			pr_err("failed to read from %lx\n", src);
+			return err;
+		}
+		memcpy(buf, tmp, remain);
+		err = process_write_data(pid, dst, buf, 8);
+		if (err) {
+			pr_err("failed to write to %lx\n", dst);
+			return err;
+		}
+	}
+	return 0;
+}
+
+static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
+{
+	int i;
+
+	// TODO: either all (!) functions have to be redirected from old library to new one,
+	// or at least all the functions, accessing local data.
+	// Otherwise some of the functions in the old library can modify old copy of the data, 
+	// while some of the functions in the new library will modify new copy.
+	pr_debug("Copy local data:\n");
+	for (i = 0; i < bp->n_local_vars; i++) {
+		DataSym *ds = bp->local_vars[i];
+		unsigned long from, to;
+		int err;
+
+		from = ctx->old_base + ds->ref;
+		to = ctx->new_base + ds->offset;
+
+		pr_debug("Copy %s (size: %d) from %#lx to %#lx\n", ds->name,
+				ds->size, from, to);
+		err = process_copy_data(ctx->pid, to, from, ds->size);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
+static int apply_dyn_binpatch(struct process_ctx_s *ctx, BinPatch *bp)
+{
+	int err, i;
+	int64_t hint, load_addr;
+
+	err = discover_plt_hints(ctx, bp);
+	if (err)
+		return err;
+
+	hint = find_old_elf_base(ctx, bp);
+	if (!hint)
+		return -EINVAL;
+
+	load_addr = load_elf_segments(ctx, bp, hint);
+	if (load_addr < 0)
+		return load_addr;
+
+	pr_debug("Library %s load address: %#lx\n", bp->new_path, load_addr);
+
+	err = apply_rela_plt(ctx, load_addr, bp);
+	if (err)
+		return err;
+
+	ctx->old_base = hint;
+	ctx->new_base = load_addr;
+
+	/* There must be a check, that process doesn't reside in the library we
+	 * patch, including all the calls to the current IP.
+	 * IOW, there must be a stack rollback.
+	 * This is required, becauce we have to fix _all_ the calls to the old
+	 * library by replacing them to the new one.
+	 * Why we need it? Because we can't change only one function, because
+	 * this function cat access data. And if it accesses data, then
+	 * data has to be updated in the new library to the current value
+	 * in the old libraryr.
+	 * While this means, that this data can be exported to other process (like errno) */
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+
+		if (fp->plt) {
+			err = fix_plt_entry(ctx, bp, fp);
+			if (err)
+				return err;
+		}
+	}
+
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+
+		if (fp->dyn) {
+			err = fix_dyn_entry(ctx, bp, fp);
+			if (err)
+				return err;
+		}
+	}
+
+	err = copy_local_data(ctx, bp);
+	if (err)
+		return err;
+
+	return 0;
+}
+
 static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 {
 	int err;
@@ -178,11 +543,18 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 
 	if (!strcmp(bp->object_type, "ET_EXEC"))
 		err = apply_exec_binpatch(ctx, binpatch);
+	else if (!strcmp(bp->object_type, "ET_DYN"))
+		err = apply_dyn_binpatch(ctx, bp);
 	else {
 		pr_err("Unknown patch type: %s\n", bp->object_type);
 		err = -EINVAL;
 	}
 
+	/* TODO: nsb crashes here. This is because protobuf structure is used
+	 * to store some temporary data.
+	 * Need to fix.
+	 */
+//	bin_patch__free_unpacked(bp, NULL);
 	return err;
 }
 
