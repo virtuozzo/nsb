@@ -62,6 +62,55 @@ int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 	return sret;
 }
 
+int process_close_file(struct process_ctx_s *ctx, int fd)
+{
+	int ret;
+	long sret = -ENOSYS;
+
+	ret = compel_syscall(ctx->ctl, __NR(close, false),
+				(unsigned long *)&sret,
+				(unsigned long)fd, 0, 0, 0, 0, 0);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		return -1;
+	}
+
+	if (sret < 0) {
+		errno = -sret;
+		pr_perror("Failed to close %d", fd);
+		return -1;
+	}
+
+	return (int)(long)sret;
+}
+
+int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mode_t mode)
+{
+	int ret;
+	long sret = -ENOSYS;
+
+	process_write_data(ctx->pid, ctx->remote_map,
+			path, round_up(strlen(path) + 1, 8));
+
+	ret = compel_syscall(ctx->ctl, __NR(open, false),
+				(unsigned long *)&sret,
+				(unsigned long)ctx->remote_map,
+				(unsigned long)flags,
+				(unsigned long)mode, 0, 0, 0);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		return -1;
+	}
+
+	if (sret < 0) {
+		errno = -sret;
+		pr_perror("Failed to open %s", path);
+		return -1;
+	}
+
+	return (int)(long)sret;
+}
+
 static struct patch_place_s *find_place(struct binpatch_s *bp, unsigned long hint)
 {
 	struct patch_place_s *place;
@@ -212,6 +261,14 @@ int process_infect(struct process_ctx_s *ctx)
 		goto err;
 	}
 	print_vmas(ctx->pid, &ctx->vmas);
+
+	ctx->remote_map = process_create_map(ctx, -1, 0, 0, PAGE_SIZE,
+			MAP_ANONYMOUS | MAP_PRIVATE,
+			PROT_READ | PROT_WRITE | PROT_EXEC);
+	if ((void *)ctx->remote_map == MAP_FAILED) {
+		pr_err("failed to create remove mem\n");
+		goto err;
+	}
 
 	return 0;
 

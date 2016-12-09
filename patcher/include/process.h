@@ -22,6 +22,7 @@ struct process_ctx_s {
 	struct parasite_ctl	*ctl;
 	struct list_head	vmas;
 	struct binpatch_s	binpatch;
+	int64_t			remote_map;
 };
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);
@@ -32,5 +33,9 @@ int process_infect(struct process_ctx_s *ctx);
 
 int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 			unsigned long addr, size_t size, int flags, int prot);
+
+int process_open_file(struct process_ctx_s *ctx, const char *path,
+			int flags, mode_t mode);
+int process_close_file(struct process_ctx_s *ctx, int fd);
 
 #endif
