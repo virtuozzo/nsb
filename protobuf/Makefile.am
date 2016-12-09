@@ -1,4 +1,3 @@
-# Make sure, that check for header happens _after_ source generation
 dist_noinst_DATA = funcpatch.proto	\
 		   binpatch.proto	\
 		   objinfo.proto	\
