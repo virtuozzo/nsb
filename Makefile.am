@@ -35,6 +35,7 @@ nsb_SOURCES =						\
 			patcher/include/process.h	\
 			patcher/include/x86_64.h	\
 			patcher/include/vma.h		\
+			patcher/include/elf.h		\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -42,6 +43,7 @@ nsb_SOURCES =						\
 			patcher/log.c			\
 			patcher/main.c			\
 			patcher/vma.c			\
+			patcher/elf.c			\
 			patcher/patch.c
 
 nsb_CFLAGS = -I$(top_srcdir)
