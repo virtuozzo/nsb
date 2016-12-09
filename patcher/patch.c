@@ -112,7 +112,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 		if (size < 0)
 			return size;
 
-		err = process_write_data(ctx->pid, (void *)fp->addr, jump, round_up(fp->size, 8));
+		err = process_write_data(ctx->pid, (void *)fp->addr, jump, round_up(size, 8));
 		if (err < 0)
 			pr_err("failed to patch: %d\n", err);
 	}
