@@ -122,31 +122,29 @@ int process_read_data(pid_t pid, void *addr, void *data, size_t size)
 	return ptrace_peek_area(pid, data, addr, size);
 }
 
-static int process_add_map(struct process_ctx_s *ctx,
-			   unsigned long addr, size_t size)
+int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
+			unsigned long addr, size_t size, int flags, int prot)
 {
 	int ret;
 	long sret = -ENOSYS;
 
-	/* TODO: need drop PROT_WRITE at the end */
 	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)&sret,
-			     addr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-			     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+			     addr, size, prot, flags, fd, offset);
 	if (ret < 0) {
 		pr_err("Failed to execute syscall for %d\n", ctx->pid);
 		return -1;
 	}
 
 	if (sret < 0) {
-		errno = sret;
-		pr_perror("Failed to create mmap with size %zu bytes\n", size);
+		errno = -sret;
+		pr_perror("Failed to create mmap with size %zu bytes", size);
 		return -1;
 	}
 
-	pr_debug("Created anon map %#lx-%#lx in task %d\n",
+	pr_debug("Created map %#lx-%#lx in task %d\n",
 		 sret, sret + size, ctx->pid);
 
-	return 0;
+	return sret;
 }
 
 static struct patch_place_s *find_place(struct binpatch_s *bp, unsigned long hint)
@@ -196,7 +194,7 @@ static unsigned long process_find_hole(struct process_ctx_s *ctx, unsigned long 
 static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 				size_t size, struct patch_place_s **place)
 {
-	int ret;
+	long ret;
 	unsigned long addr;
 	struct binpatch_s *bp = &ctx->binpatch;
 	struct patch_place_s *p;
@@ -215,9 +213,21 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 	if (!p)
 		return -ENOMEM;
 
-	ret = process_add_map(ctx, p->start, p->size);
-	if (ret < 0)
+	/* TODO: need drop PROT_WRITE at the end */
+	ret = process_create_map(ctx, -1, 0,
+				 p->start, p->size,
+				 MAP_ANONYMOUS | MAP_PRIVATE,
+				 PROT_READ | PROT_WRITE | PROT_EXEC);
+	if ((void *)ret == MAP_FAILED) {
+		pr_err("failed to create remove mem\n");
 		goto destroy_place;
+	}
+
+	if (ret != p->start) {
+		pr_err("mmap result doesn't match expected: %ld != %ld\n",
+				ret, p->start);
+		goto unmap_remote;
+	}
 
 	list_add_tail(&p->list, &bp->places);
 
@@ -227,6 +237,8 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 	*place = p;
 	return 0;
 
+unmap_remote:
+	/* TODO here remote map has to be unmapped */
 destroy_place:
 	free(p);
 	return ret;

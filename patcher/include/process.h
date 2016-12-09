@@ -30,4 +30,7 @@ long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t siz
 int process_cure(struct process_ctx_s *ctx);
 int process_infect(struct process_ctx_s *ctx);
 
+int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
+			unsigned long addr, size_t size, int flags, int prot);
+
 #endif
