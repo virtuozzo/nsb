@@ -120,21 +120,11 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	return err;
 }
 
-static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
+static int apply_exec_binpatch(struct process_ctx_s *ctx, struct binpatch_s *binpatch)
 {
 	int i, err = 0;
-	BinPatch *bp;
+	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
-	struct binpatch_s *binpatch = &ctx->binpatch;
-
-	INIT_LIST_HEAD(&binpatch->functions);
-	INIT_LIST_HEAD(&binpatch->places);
-
-	binpatch->bp = read_binpatch(patchfile);
-	if (!binpatch->bp)
-		return -1;
-
-	bp = binpatch->bp;
 
 	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
 	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
@@ -144,17 +134,13 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 		unsigned long addr;
 
 		addr = process_get_place(ctx, fp->addr, fp->size);
-		if (addr < 0) {
-			err = addr;
-			goto err;
-		}
+		if (addr < 0)
+			return addr;
 
 		funcpatch = xmalloc(sizeof(*funcpatch));
-		if (!funcpatch) {
-			pr_err("failed to allocate\n");
-			err = -ENOMEM;;
-			goto err;
-		}
+		if (!funcpatch)
+			return -ENOMEM;
+
 		funcpatch->addr = addr;
 		funcpatch->fp = fp;
 		list_add_tail(&funcpatch->list, &binpatch->functions);
@@ -167,8 +153,36 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 		if (err)
 			break;
 	}
-err:
-	bin_patch__free_unpacked(bp, NULL);
+
+	return err;
+}
+
+static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
+{
+	int err;
+	BinPatch *bp;
+	struct binpatch_s *binpatch = &ctx->binpatch;
+
+	INIT_LIST_HEAD(&binpatch->functions);
+	INIT_LIST_HEAD(&binpatch->places);
+
+	bp = read_binpatch(patchfile);
+	if (!bp)
+		return -1;
+
+	binpatch->bp = bp;
+
+	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
+	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
+	pr_debug("bpatch: object type: %s\n", bp->object_type);
+
+	if (!strcmp(bp->object_type, "ET_EXEC"))
+		err = apply_exec_binpatch(ctx, binpatch);
+	else {
+		pr_err("Unknown patch type: %s\n", bp->object_type);
+		err = -EINVAL;
+	}
+
 	return err;
 }
 
@@ -188,6 +202,8 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 		return err;
 
 	ret = apply_binpatch(ctx, patchfile);
+	if (ret)
+		 pr_err("failed to apply binary patch\n");
 
 	/* TODO all the work has to be rolled out, if an error occured */
 
