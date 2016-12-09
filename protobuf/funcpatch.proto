@@ -9,4 +9,5 @@ message FuncPatch {
 	repeated ObjInfo	objs	= 6;
 	required bool		dyn	= 7;
 	required bool		plt	= 8;
+	optional int32		old_addr	= 9;
 }

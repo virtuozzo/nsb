@@ -230,6 +230,8 @@ class FuncPatch:
 	def get_patch(self, code, dyn, plt):
 		image = funcpatch_pb2.FuncPatch()
 		image.name = self.func_b.funcname
+		if self.func_a:
+			image.old_addr = self.func_a.start
 		image.addr = self.func_b.start
 		image.size = self.func_b.size
 		image.new = False
@@ -245,6 +247,7 @@ class FuncPatch:
 		print "    New     : %s" % image.new
 		print "    Dyn     : %s" % image.dyn
 		print "    Plt     : %s" % image.plt
+		print "    Old addr: %#x" % image.old_addr
 
 		for i in self.code_info:
 			ci = i.get_patch()
