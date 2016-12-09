@@ -34,12 +34,14 @@ nsb_SOURCES =						\
 			patcher/include/protobuf.h	\
 			patcher/include/process.h	\
 			patcher/include/x86_64.h	\
+			patcher/include/vma.h		\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
 			patcher/process.c		\
 			patcher/log.c			\
 			patcher/main.c			\
+			patcher/vma.c			\
 			patcher/patch.c
 
 nsb_CFLAGS = -I$(top_srcdir)/protobuf/

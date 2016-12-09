@@ -7,6 +7,7 @@
 
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/vma.h"
 
 #include "include/process.h"
 
@@ -19,98 +20,12 @@ extern int compel_syscall(struct parasite_ctl *ctl,
 			  unsigned long arg5,
 			  unsigned long arg6);
 
-struct vma_area {
-	struct list_head	list;
-
-	uint64_t		start;
-	uint64_t		end;
-	uint64_t		pgoff;
-	uint32_t		prot;
-	uint32_t		flags;
-};
-
 struct patch_place_s {
 	struct list_head	list;
 	unsigned long		start;
 	unsigned long		size;
 	unsigned long		used;
 };
-
-static int collect_mappings(pid_t pid, struct list_head *head)
-{
-	unsigned long start, end, pgoff;
-	char r, w, x, s;
-
-	int dev_maj;
-	int dev_min;
-	unsigned long ino;
-
-	int ret = -1;
-
-	struct vma_area *vma_area = NULL;
-	char buf[1024];
-	char path[64];
-	FILE *f;
-
-	pr_debug("Collecting mappings for %d\n", pid);
-
-	snprintf(path, sizeof(path), "/proc/%d/maps", pid);
-	f = fopen(path, "r");
-	if (!f) {
-		pr_perror("Can't open %s", path);
-		return -1;
-	}
-
-	while (fgets(buf, sizeof(buf), f)) {
-		int num, path_off;
-
-		if (!vma_area) {
-			vma_area = xzalloc(sizeof(*vma_area));
-			if (!vma_area)
-				goto err;
-		}
-
-		num = sscanf(buf, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
-			     &start, &end, &r, &w, &x, &s, &pgoff,
-			     &dev_maj, &dev_min, &ino, &path_off);
-		if (num < 10) {
-			pr_err("Can't parse: %s\n", buf);
-			goto err;
-		}
-
-		vma_area->start	= start;
-		vma_area->end	= end;
-		vma_area->pgoff	= pgoff;
-		vma_area->prot	= PROT_NONE;
-
-		if (r == 'r')
-			vma_area->prot |= PROT_READ;
-		if (w == 'w')
-			vma_area->prot |= PROT_WRITE;
-		if (x == 'x')
-			vma_area->prot |= PROT_EXEC;
-
-		if (s == 's')
-			vma_area->flags = MAP_SHARED;
-		else if (s == 'p')
-			vma_area->flags = MAP_PRIVATE;
-		else {
-			pr_err("Unexpected VMA met (%c)\n", s);
-			goto err;
-		}
-
-		list_add_tail(&vma_area->list, head);
-		pr_debug("VMA: %lx-%lx %c%c%c%c %lx %x:%x %lu\n",
-			start, end, r, w, x, s, pgoff,
-			dev_maj, dev_min, ino);
-		vma_area = NULL;
-	}
-
-	ret = 0;
-
-err:
-	return ret;
-}
 
 int process_write_data(pid_t pid, void *addr, void *data, size_t size)
 {
@@ -179,15 +94,11 @@ static struct patch_place_s *alloc_place(unsigned long addr, size_t size)
 
 static unsigned long process_find_hole(struct process_ctx_s *ctx, unsigned long hint, size_t size)
 {
-	struct vma_area *vma;
+	unsigned long addr;
 
-	list_for_each_entry(vma, &ctx->vmas, list) {
-		struct vma_area *next_vma;
-
-		next_vma = list_entry(vma->list.next, typeof(*vma), list);
-		if (next_vma->start - vma->end > size)
-			return vma->end;
-	}
+	addr = find_vma_hole(&ctx->vmas, hint, size);
+	if (addr)
+		return addr;
 	return -ENOENT;
 }
 
@@ -283,14 +194,13 @@ int process_cure(struct process_ctx_s *ctx)
 
 static unsigned long find_syscall_ip(struct list_head *head)
 {
-	struct vma_area *vma_area;
+	const struct vma_area *vma;
 
-	list_for_each_entry(vma_area, head, list) {
-		if (vma_area->prot & PROT_EXEC)
-			return vma_area->start;
-	}
-
+	vma = find_vma_by_prot(head, PROT_EXEC);
+	if (vma)
+		return vma->start;
 	return 0;
+
 }
 
 int process_infect(struct process_ctx_s *ctx)
@@ -315,10 +225,11 @@ int process_infect(struct process_ctx_s *ctx)
 //	ictx->loglevel = log_get_loglevel();
 	ictx->log_fd = log_get_fd();
 
-	if (collect_mappings(ctx->pid, &ctx->vmas)) {
+	if (collect_vmas(ctx->pid, &ctx->vmas)) {
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		goto err;
 	}
+	print_vmas(ctx->pid, &ctx->vmas);
 
 	syscall_ip = find_syscall_ip(&ctx->vmas);
 	if (!syscall_ip) {

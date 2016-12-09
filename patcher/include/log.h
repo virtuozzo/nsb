@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 
 #define LOG_UNSET	(-1)
 #define LOG_MSG		(0) /* Print message regardless of log level */

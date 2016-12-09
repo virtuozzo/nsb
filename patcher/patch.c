@@ -4,6 +4,7 @@
 #include "include/patch.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/vma.h"
 
 #include "include/process.h"
 #include "include/x86_64.h"
