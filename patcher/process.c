@@ -192,22 +192,8 @@ int process_cure(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static unsigned long find_syscall_ip(struct list_head *head)
-{
-	const struct vma_area *vma;
-
-	vma = find_vma_by_prot(head, PROT_EXEC);
-	if (vma)
-		return vma->start;
-	return 0;
-
-}
-
 int process_infect(struct process_ctx_s *ctx)
 {
-	struct infect_ctx *ictx;
-	struct parasite_ctl *ctl;
-	unsigned long syscall_ip;
 	int ret;
 
 	ret = compel_stop_task(ctx->pid);
@@ -215,31 +201,17 @@ int process_infect(struct process_ctx_s *ctx)
 	if (ret != TASK_ALIVE)
 		return ret;
 
-	ctl = compel_prepare(ctx->pid);
-	if (!ctl) {
+	ctx->ctl = compel_prepare(ctx->pid);
+	if (!ctx->ctl) {
 		pr_err("Can't create compel control\n");
 		return -1;
 	}
-
-	ictx = compel_infect_ctx(ctl);
-//	ictx->loglevel = log_get_loglevel();
-	ictx->log_fd = log_get_fd();
 
 	if (collect_vmas(ctx->pid, &ctx->vmas)) {
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		goto err;
 	}
 	print_vmas(ctx->pid, &ctx->vmas);
-
-	syscall_ip = find_syscall_ip(&ctx->vmas);
-	if (!syscall_ip) {
-		pr_err("Can't find suitable vma for syscall %d\n", ctx->pid);
-		goto err;
-	}
-	pr_debug("syscall ip at %#lx\n", syscall_ip);
-	ictx->syscall_ip = syscall_ip;
-
-	ctx->ctl = ctl;
 
 	return 0;
 
