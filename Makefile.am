@@ -44,7 +44,7 @@ nsb_SOURCES =						\
 			patcher/vma.c			\
 			patcher/patch.c
 
-nsb_CFLAGS = -I$(top_srcdir)/protobuf/
+nsb_CFLAGS = -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
 
