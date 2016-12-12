@@ -17,6 +17,7 @@ struct vma_area {
 	int			deleted;
 };
 
+int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path);
 int collect_vmas(pid_t pid, struct list_head *head);
 void print_vmas(pid_t pid, struct list_head *head);
 

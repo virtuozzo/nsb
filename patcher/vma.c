@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/mman.h>
 
 #include "include/vma.h"
@@ -26,67 +27,110 @@ void print_vmas(pid_t pid, struct list_head *head)
 	}
 }
 
-int collect_vmas(pid_t pid, struct list_head *head)
+static int parse_vma(const char *line, struct vma_area *vma, int *path_off)
 {
-	struct vma_area *vma;
-	int ret = -1;
+	char r, w, x, s;
 
-	char buf[1024];
-	char path[64];
+	int dev_maj;
+	int dev_min;
+	unsigned long ino;
+
+	int num;
+
+	num = sscanf(line, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
+		     &vma->start, &vma->end, &r, &w, &x, &s, &vma->pgoff,
+		     &dev_maj, &dev_min, &ino, path_off);
+	if (num != 10) {
+		pr_err("Can't parse: %s\n", line);
+		return -EINVAL;
+	}
+
+	vma->prot = PROT_NONE;
+	if (r == 'r')
+		vma->prot |= PROT_READ;
+	if (w == 'w')
+		vma->prot |= PROT_WRITE;
+	if (x == 'x')
+		vma->prot |= PROT_EXEC;
+
+	if (s == 's')
+		vma->flags = MAP_SHARED;
+	else if (s == 'p')
+		vma->flags = MAP_PRIVATE;
+	else {
+		pr_err("Unexpected VMA met (%c)\n", s);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path)
+{
+	int ret;
+	char buf[PATH_MAX];
 	FILE *f;
 
-	pr_debug("Collecting mappings for %d\n", pid);
-
-	snprintf(path, sizeof(path), "/proc/%d/maps", pid);
-	f = fopen(path, "r");
+	snprintf(buf, sizeof(buf), "/proc/%d/maps", pid);
+	f = fopen(buf, "r");
 	if (!f) {
-		pr_perror("Can't open %s", path);
+		pr_perror("Can't open %s", buf);
 		return -1;
 	}
 
 	while (fgets(buf, sizeof(buf), f)) {
-		char r, w, x, s;
+		int path_off;
 
-		int dev_maj;
-		int dev_min;
-		unsigned long ino;
+		buf[strlen(buf) - 1] = '\0';
 
-		int num, path_off;
+		ret = parse_vma(buf, vma, &path_off);
+		if (ret)
+			return ret;
+
+		if (!strcmp(buf + path_off, path))
+			goto ret;
+	}
+
+	ret = -ENOENT;
+
+ret:
+	fclose(f);
+	return ret;
+}
+
+int collect_vmas(pid_t pid, struct list_head *head)
+{
+	struct vma_area *vma;
+	int ret = -1;
+	char buf[PATH_MAX];
+	FILE *f;
+
+	pr_debug("Collecting mappings for %d\n", pid);
+
+	snprintf(buf, sizeof(buf), "/proc/%d/maps", pid);
+	f = fopen(buf, "r");
+	if (!f) {
+		pr_perror("Can't open %s", buf);
+		return -1;
+	}
+
+	while (fgets(buf, sizeof(buf), f)) {
+		int path_off;
+
+		buf[strlen(buf) - 1] = '\0';
 
 		vma = xzalloc(sizeof(*vma));
 		if (!vma)
 			goto err;
 
-		num = sscanf(buf, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
-			     &vma->start, &vma->end, &r, &w, &x, &s, &vma->pgoff,
-			     &dev_maj, &dev_min, &ino, &path_off);
-		if (num != 10) {
-			pr_err("Can't parse: %s\n", buf);
+		ret = parse_vma(buf, vma, &path_off);
+		if (ret)
 			goto free_vma;
-		}
 
 		vma->path = xstrdup(buf + path_off);
 		if (!vma->path) {
 			pr_err("failed to fuplicate string\n");
 			goto free_vma;
-		}
-		vma->path[strlen(vma->path) - 1] = '\0';
-
-		vma->prot = PROT_NONE;
-		if (r == 'r')
-			vma->prot |= PROT_READ;
-		if (w == 'w')
-			vma->prot |= PROT_WRITE;
-		if (x == 'x')
-			vma->prot |= PROT_EXEC;
-
-		if (s == 's')
-			vma->flags = MAP_SHARED;
-		else if (s == 'p')
-			vma->flags = MAP_PRIVATE;
-		else {
-			pr_err("Unexpected VMA met (%c)\n", s);
-			goto free_vma_path;
 		}
 
 		list_add_tail(&vma->list, head);
@@ -98,8 +142,6 @@ err:
 	fclose(f);
 	return ret;
 
-free_vma_path:
-	free(vma->path);
 free_vma:
 	free(vma);
 	goto err;
