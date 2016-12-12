@@ -99,10 +99,10 @@ class Test:
 
 
 class BinPatch:
-	def __init__(self, source, target):
+	def __init__(self, source, target, outfile):
 		self.source = source
 		self.target = target
-		self.outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
+		self.outfile = outfile
 
 		self.gen_stderr = None
 		self.gen_stderr = None
@@ -159,10 +159,9 @@ class BinPatch:
 
 
 class LivePatchTest:
-	def __init__(self, source, target, src_res, tgt_res):
-		self.path = source
-		self.test = Test(source)
-		self.patch = BinPatch(source, target)
+	def __init__(self, binary, src_res, tgt_res, patch):
+		self.test = Test(binary)
+		self.patch = patch
 		self.src_res = src_res
 		self.tgt_res = tgt_res
 		self.lp_failed = False
@@ -190,3 +189,10 @@ class LivePatchTest:
 			self.lp_failed = True
 
 		return self.test_result()
+
+
+class StaticLivePatchTest(LivePatchTest):
+	def __init__(self, source, target, src_res, tgt_res):
+		outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
+		patch = BinPatch(source, target, outfile)
+		LivePatchTest.__init__(self, source, src_res, tgt_res, patch)
