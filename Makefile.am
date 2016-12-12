@@ -51,15 +51,27 @@ nsb_SOURCES =						\
 nsb_CFLAGS = -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-
-TESTS = 					\
-			tests/static_a_to_static_b.py	\
-			tests/static_a_to_static_c.py	\
-			tests/static_a_to_static_f.py	\
-			tests/static_d_to_static_g.py	\
-			tests/static_e_to_static_h.py	\
-			tests/static_j_to_static_i.py	\
-			tests/static_i_to_static_j.py
+TESTS = 							\
+			tests/static_a_to_static_b.py		\
+			tests/static_a_to_static_c.py		\
+			tests/static_a_to_static_f.py		\
+			tests/static_d_to_static_g.py		\
+			tests/static_e_to_static_h.py		\
+			tests/static_j_to_static_i.py		\
+			tests/static_i_to_static_j.py		\
+								\
+			tests/shared_a_to_shared_b.py		\
+			tests/shared_a_to_shared_c.py		\
+			tests/shared_a_to_shared_f.py		\
+			tests/shared_d_to_shared_g.py		\
+			tests/shared_e_to_shared_h.py		\
+			tests/shared_j_to_shared_i.py		\
+			tests/shared_i_to_shared_j.py		\
+			tests/shared_k_to_shared_l.py		\
+			tests/shared_l_to_shared_k.py		\
+			tests/shared_m_to_shared_n.py		\
+								\
+			tests/shared_a_to_shared_combined.py
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@)))  --outfile $@
