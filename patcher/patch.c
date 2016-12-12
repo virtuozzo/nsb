@@ -10,6 +10,7 @@
 
 #include "include/process.h"
 #include "include/x86_64.h"
+#include "include/backtrace.h"
 
 struct process_ctx_s process_context;
 
@@ -564,9 +565,81 @@ static int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
+static long process_get_map_base(struct process_ctx_s *ctx)
+{
+	struct binpatch_s *binpatch = &ctx->binpatch;
+	BinPatch *bp = binpatch->bp;
+	int err;
+	struct vma_area vma;
+
+	err = collect_vma_by_path(ctx->pid, &vma, bp->old_path);
+	if (err) {
+		pr_err("Can't find %s mapping in process %d\n",
+				bp->old_path, ctx->pid);
+		return err;
+	}
+
+	return vma.start;
+}
+
+static int process_call_in_map(const struct list_head *calls,
+			       uint64_t map_start, uint64_t map_end)
+{
+	struct backtrace_function_s *bf;
+
+	list_for_each_entry(bf, calls, list) {
+		if ((map_start < bf->ip) && (bf->ip < map_end)) {
+			pr_debug("Found call in stack withing "
+				 "patching range: %#lx (%#lx-%lx)\n",
+				 bf->ip, map_start, map_end);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int process_check_stack(struct process_ctx_s *ctx)
 {
-	/* TODO: here stack has to be examined */
+	struct binpatch_s *binpatch = &ctx->binpatch;
+	BinPatch *bp = binpatch->bp;
+	int err, i = 0;
+	struct backtrace_s bt = {
+		.calls = LIST_HEAD_INIT(bt.calls),
+	};
+	struct backtrace_function_s *bf;
+	long map_base = 0;
+
+	if ((!strcmp(bp->object_type, "ET_DYN"))) {
+		map_base = process_get_map_base(ctx);
+		if (map_base < 0)
+			return map_base;
+	}
+
+	err = process_backtrace(ctx->pid, &bt);
+	if (err) {
+		pr_err("failed to unwind process %d stack\n", ctx->pid);
+		return err;
+	}
+
+	pr_debug("stack depth: %d\n", bt.depth);
+	list_for_each_entry(bf, &bt.calls, list)
+		pr_debug("#%d  %#lx in %s\n", i++, bf->ip, bf->name);
+
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+		uint64_t start, end;
+
+		/* Skip new functions: they are outside stack by default */
+		if (fp->new_)
+			continue;
+
+		start = map_base + fp->addr;
+		end = start + fp->size;
+
+		pr_debug("Patch: %#lx - %#lx\n", start, end);
+		if (process_call_in_map(&bt.calls, start, end))
+			return -EAGAIN;
+	}
 	return 0;
 }
 
