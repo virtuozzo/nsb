@@ -129,9 +129,6 @@ static int apply_exec_binpatch(struct process_ctx_s *ctx)
 	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
 
-	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
-	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
-
 	for (i = 0; i < bp->n_patches; i++) {
 		FuncPatch *fp = bp->patches[i];
 		unsigned long addr;
@@ -562,6 +559,60 @@ err:
 	return -1;
 }
 
+static int process_resume(struct process_ctx_s *ctx)
+{
+	return process_cure(ctx);
+}
+
+static int process_check_stack(struct process_ctx_s *ctx)
+{
+	/* TODO: here stack has to be examined */
+	return 0;
+}
+
+static int process_catch(struct process_ctx_s *ctx)
+{
+	int ret, err;
+
+	err = process_infect(ctx);
+	if (err)
+		return err;
+
+	ret = process_check_stack(ctx);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	err = process_cure(ctx);
+	return ret ? ret : err;
+}
+
+static int process_suspend(struct process_ctx_s *ctx)
+{
+	int try = 0, tries = 5;
+	int timeout_msec = 100;
+	int err;
+
+	do {
+		if (try) {
+			pr_info("Failed to catch process in a suitable time/place.\n"
+				"Retry in %d msec\n", timeout_msec);
+			usleep(timeout_msec * 1000);
+			timeout_msec <<= 1;
+		}
+		err = process_catch(ctx);
+		if (err != -EAGAIN)
+			break;
+	} while (++try < tries);
+
+	if (err == -EAGAIN) {
+		return -ETIMEDOUT;
+	}
+	return err;
+}
+
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 {
 	int ret, err;
@@ -571,9 +622,12 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	if (err)
 		return err;
 
-	err = process_infect(ctx);
-	if (err)
+	err = process_suspend(ctx);
+	if (err) {
+		errno = -err;
+		pr_perror("Failed to suspend process");
 		return err;
+	}
 
 	ret = process_link(ctx);
 	if (ret)
@@ -585,7 +639,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 
 	/* TODO all the work has to be rolled out, if an error occured */
 resume:
-	err = process_cure(ctx);
+	err = process_resume(ctx);
 
 	return ret ? ret : err;
 }
