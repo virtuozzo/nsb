@@ -122,9 +122,10 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 	return err;
 }
 
-static int apply_exec_binpatch(struct process_ctx_s *ctx, struct binpatch_s *binpatch)
+static int apply_exec_binpatch(struct process_ctx_s *ctx)
 {
 	int i, err = 0;
+	struct binpatch_s *binpatch = &ctx->binpatch;
 	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
 
@@ -459,8 +460,10 @@ static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
 	return 0;
 }
 
-static int apply_dyn_binpatch(struct process_ctx_s *ctx, BinPatch *bp)
+static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
+	struct binpatch_s *binpatch = &ctx->binpatch;
+	BinPatch *bp = binpatch->bp;
 	int err, i;
 	int64_t hint, load_addr;
 
@@ -522,11 +525,14 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx, BinPatch *bp)
 	return 0;
 }
 
-static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
+static int init_context(struct process_ctx_s *ctx, pid_t pid,
+			const char *patchfile)
 {
-	int err;
-	BinPatch *bp;
 	struct binpatch_s *binpatch = &ctx->binpatch;
+	BinPatch *bp;
+
+	ctx->pid = pid;
+	INIT_LIST_HEAD(&ctx->vmas),
 
 	INIT_LIST_HEAD(&binpatch->functions);
 	INIT_LIST_HEAD(&binpatch->places);
@@ -535,27 +541,25 @@ static int apply_binpatch(struct process_ctx_s *ctx, const char *patchfile)
 	if (!bp)
 		return -1;
 
-	binpatch->bp = bp;
-
 	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
 	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
 	pr_debug("bpatch: object type: %s\n", bp->object_type);
 
 	if (!strcmp(bp->object_type, "ET_EXEC"))
-		err = apply_exec_binpatch(ctx, binpatch);
+		ctx->apply = apply_exec_binpatch;
 	else if (!strcmp(bp->object_type, "ET_DYN"))
-		err = apply_dyn_binpatch(ctx, bp);
+		ctx->apply = apply_dyn_binpatch;
 	else {
 		pr_err("Unknown patch type: %s\n", bp->object_type);
-		err = -EINVAL;
+		goto err;
 	}
 
-	/* TODO: nsb crashes here. This is because protobuf structure is used
-	 * to store some temporary data.
-	 * Need to fix.
-	 */
-//	bin_patch__free_unpacked(bp, NULL);
-	return err;
+	binpatch->bp = bp;
+	return 0;
+
+err:
+	bin_patch__free_unpacked(bp, NULL);
+	return -1;
 }
 
 int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
@@ -563,8 +567,9 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
 
-	ctx->pid = pid;
-	INIT_LIST_HEAD(&ctx->vmas),
+	err = init_context(ctx, pid, patchfile);
+	if (err)
+		return err;
 
 	pr_debug("====================\n");
 	pr_debug("Patching process %d\n", ctx->pid);
@@ -573,7 +578,7 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	if (err)
 		return err;
 
-	ret = apply_binpatch(ctx, patchfile);
+	ret = ctx->apply(ctx);
 	if (ret)
 		 pr_err("failed to apply binary patch\n");
 
