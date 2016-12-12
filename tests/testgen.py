@@ -14,6 +14,14 @@ target = args.target
 
 src_type = re.search('[^_]+', os.path.basename(source)).group(0)
 tgt_type = re.search('[^_]+', os.path.basename(target)).group(0)
+
+if src_type == "shared":
+	tst_type = "Shared"
+elif src_type == "static":
+	tst_type = "Static"
+else:
+	print "Unsupported test type: %s" % src_type
+
 if src_type != tgt_type:
 	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
 	raise
@@ -35,7 +43,7 @@ code =	"import os\n" +								\
 	"import testrunner\n\n" +						\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
 	"exit(testrunner.%sLivePatchTest('%s', '%s', %u, %u).run())\n" %	\
-	("Static", source, target, src_ret, tgt_ret)
+	(tst_type, source, target, src_ret, tgt_ret)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

@@ -11,6 +11,7 @@ AM_PROG_CC_C_O
 AC_PATH_PROG([M4], [m4])
 
 AC_GNU_SOURCE
+LT_INIT
 AC_CONFIG_FILES([
 		 Makefile
 		 protobuf/Makefile

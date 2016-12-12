@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import subprocess
 import signal
 import multiprocessing
@@ -13,6 +14,16 @@ class Test:
 		self.stderr = None
 		self.returncode = None
 		self.__state__ = "init"
+		self.p = None
+		self.__set_test_env__(os.path.dirname(path))
+
+	def __set_test_env__(self, library_path):
+		ld_library_path = ""
+		try:
+			ld_library_path = os.environ['LD_LIBRARY_PATH']
+		except:
+			pass
+		os.environ['LD_LIBRARY_PATH'] = ld_library_path + ":" + library_path
 
 	def start(self, wait=True):
 		args = [self.path]
@@ -196,3 +207,20 @@ class StaticLivePatchTest(LivePatchTest):
 		outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
 		patch = BinPatch(source, target, outfile)
 		LivePatchTest.__init__(self, source, src_res, tgt_res, patch)
+
+
+class SharedLivePatchTest(LivePatchTest):
+	def __init__(self, source, target, src_res, tgt_res):
+		outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
+		binary = self.__get_bin_by_test__(source)
+		source = self.__get_lib_by_test__(source)
+		target = self.__get_lib_by_test__(target)
+		patch = BinPatch(source, target, outfile)
+		LivePatchTest.__init__(self, binary, src_res, tgt_res, patch)
+
+	def __get_bin_by_test__(self, test):
+		return os.path.dirname(test) + "/.libs/" + os.path.basename(test)
+
+	def __get_lib_by_test__(self, test):
+		label = re.split('_', os.path.basename(test))[1]
+		return os.path.dirname(test) + "/.libs/libtest_" + label + ".so"
