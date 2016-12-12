@@ -32,6 +32,7 @@ int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);
 int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size);
 long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size);
 int process_cure(struct process_ctx_s *ctx);
+int process_link(struct process_ctx_s *ctx);
 int process_infect(struct process_ctx_s *ctx);
 
 int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,

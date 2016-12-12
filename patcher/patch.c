@@ -571,19 +571,20 @@ int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
 	if (err)
 		return err;
 
-	pr_debug("====================\n");
-	pr_debug("Patching process %d\n", ctx->pid);
-
 	err = process_infect(ctx);
 	if (err)
 		return err;
+
+	ret = process_link(ctx);
+	if (ret)
+		goto resume;
 
 	ret = ctx->apply(ctx);
 	if (ret)
 		 pr_err("failed to apply binary patch\n");
 
 	/* TODO all the work has to be rolled out, if an error occured */
-
+resume:
 	err = process_cure(ctx);
 
 	return ret ? ret : err;

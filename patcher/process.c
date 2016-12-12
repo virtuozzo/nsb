@@ -241,14 +241,12 @@ int process_cure(struct process_ctx_s *ctx)
 	return 0;
 }
 
-int process_infect(struct process_ctx_s *ctx)
+int process_link(struct process_ctx_s *ctx)
 {
-	int ret;
+	int err;
 
-	ret = compel_stop_task(ctx->pid);
-	pr_debug("Stopping... %s\n", (ret != TASK_ALIVE) ? "FAIL" : "OK");
-	if (ret != TASK_ALIVE)
-		return ret;
+	pr_debug("====================\n");
+	pr_debug("Patching process %d\n", ctx->pid);
 
 	ctx->ctl = compel_prepare(ctx->pid);
 	if (!ctx->ctl) {
@@ -256,9 +254,10 @@ int process_infect(struct process_ctx_s *ctx)
 		return -1;
 	}
 
-	if (collect_vmas(ctx->pid, &ctx->vmas)) {
+	err = collect_vmas(ctx->pid, &ctx->vmas);
+	if (err) {
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
-		goto err;
+		return err;
 	}
 	print_vmas(ctx->pid, &ctx->vmas);
 
@@ -267,12 +266,20 @@ int process_infect(struct process_ctx_s *ctx)
 			PROT_READ | PROT_WRITE | PROT_EXEC);
 	if ((void *)ctx->remote_map == MAP_FAILED) {
 		pr_err("failed to create remove mem\n");
-		goto err;
+		return -1;
 	}
 
 	return 0;
+}
 
-err:
-	process_cure(ctx);
-	return -1;
+int process_infect(struct process_ctx_s *ctx)
+{
+	int ret;
+
+	pr_debug("Stopping %d...", ctx->pid);
+
+	ret = (compel_stop_task(ctx->pid) != TASK_ALIVE) ? ret : 0;
+
+	pr_debug("%s\n", ret ? "FAIL" : "OK");
+	return ret;
 }
