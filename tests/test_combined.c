@@ -48,6 +48,6 @@ int __attribute__ ((noinline)) caller(int dry_run)
 		return 1;
 	}
 
-	printf("PASS\n");
+	(void)getpid();
 	return 0;
 }
