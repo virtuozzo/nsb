@@ -1,5 +1,7 @@
 LIBS =
 
+AM_LDFLAGS = -avoid-version -rpath /whereever
+
 libtest_a_la_SOURCES = test_a.c
 libtest_b_la_SOURCES = test_b.c
 libtest_c_la_SOURCES = test_c.c
@@ -17,7 +19,7 @@ libtest_n_la_SOURCES = test_n.c
 
 libtest_combined_la_SOURCES = test_combined.c
 
-lib_LTLIBRARIES = libtest_a.la libtest_b.la libtest_c.la libtest_d.la	\
+check_LTLIBRARIES = libtest_a.la libtest_b.la libtest_c.la libtest_d.la	\
 		  libtest_e.la libtest_f.la libtest_g.la libtest_h.la	\
 		  libtest_i.la libtest_j.la libtest_k.la libtest_l.la	\
 		  libtest_m.la libtest_n.la				\
