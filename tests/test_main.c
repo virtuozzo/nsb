@@ -16,12 +16,10 @@ static void sighandler(int dummy)
 
 int call_after_sig(caller_t caller)
 {
-	(void) caller(0);
 	signal(SIGINT, sighandler);
 
-	while (!signalled) {
-		sleep(1);
-	}
+	while (!signalled)
+		(void) caller(0);
 	return caller(0);
 }
 
