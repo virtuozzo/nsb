@@ -130,6 +130,8 @@ static int apply_exec_binpatch(struct process_ctx_s *ctx)
 	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
 
+	pr_debug("Applying static binary patch:\n");
+
 	for (i = 0; i < bp->n_patches; i++) {
 		FuncPatch *fp = bp->patches[i];
 		unsigned long addr;
@@ -464,6 +466,8 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	BinPatch *bp = binpatch->bp;
 	int err, i;
 	int64_t hint, load_addr;
+
+	pr_debug("Applying PIC binary patch:\n");
 
 	err = discover_plt_hints(ctx, bp);
 	if (err)
