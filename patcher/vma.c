@@ -17,7 +17,7 @@ void print_vmas(pid_t pid, struct list_head *head)
 	pr_debug("Process %d mappings:\n", pid);
 
 	list_for_each_entry(vma, head, list) {
-		pr_debug("VMA: %lx-%lx %c%c%c%c %lx %s\n",
+		pr_debug("VMA: %lx-%lx %c%c%c%c %8lx %s\n",
 				vma->start, vma->end,
 				(vma->prot & PROT_READ) ? 'r' : '-',
 				(vma->prot & PROT_WRITE) ? 'w' : '-',
