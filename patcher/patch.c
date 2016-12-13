@@ -593,7 +593,7 @@ static int process_call_in_map(const struct list_head *calls,
 
 	list_for_each_entry(bf, calls, list) {
 		if ((map_start < bf->ip) && (bf->ip < map_end)) {
-			pr_debug("Found call in stack withing "
+			pr_debug("Found call in stack within "
 				 "patching range: %#lx (%#lx-%lx)\n",
 				 bf->ip, map_start, map_end);
 			return 1;
