@@ -139,7 +139,7 @@ class BinPatch:
 
 	def generate(self):
 		try:
-			p = self.__run_cmd__("python %s %s %s --outfile %s" % (self.generator, self.source, self.target, self.outfile))
+			p = self.__run_cmd__("python %s generate %s %s --outfile %s" % (self.generator, self.source, self.target, self.outfile))
 			self.gen_stdout, self.gen_stderr = p.communicate()
 			print self.gen_stdout
 			self.gen_result = p.returncode
