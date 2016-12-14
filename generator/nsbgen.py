@@ -1,6 +1,7 @@
 import argparse
 from generate import gen_patch
 from build_id import print_build_id
+from check import check_pid, check_build_id, make_check
 
 parser = argparse.ArgumentParser()
 sp = parser.add_subparsers(help = "Use --help for list of actions")
@@ -15,6 +16,11 @@ genp.add_argument("--outfile", help="Output file")
 bid = sp.add_parser("build-id", help = "Get ELF file Build ID")
 bid.set_defaults(action = print_build_id)
 bid.add_argument("file")
+
+chk = sp.add_parser("check", help = "Check process for mapped ELF by Build ID")
+chk.set_defaults(action = make_check)
+chk.add_argument("pid", type=check_pid, help = "Process pid")
+chk.add_argument("id", type=check_build_id, help = "Build ID")
 
 args = parser.parse_args()
 exit(args.action(args))
