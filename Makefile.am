@@ -8,7 +8,7 @@ AM_MAKEFLAGS = --no-print-directory
 # These exports are required for tests generation and tests running
 # For tests running they can be set via AM_TESTS_ENVIRONMENT.
 # But how to set them for tests generation?
-export NSB_GENERATOR=$(top_srcdir)/generator/main.py
+export NSB_GENERATOR=$(top_srcdir)/generator/nsbgen.py
 export NSB_PATCHER=$(top_srcdir)/nsb
 export TESTS_DIR=$(top_srcdir)/tests
 
@@ -18,7 +18,7 @@ generator_PYTHON =						\
 			generator/elffile.py		\
 			generator/funcpatch.py		\
 			generator/function.py		\
-			generator/main.py		\
+			generator/nsbgen.py		\
 							\
 			protobuf/binpatch_pb2.py	\
 			protobuf/datasym_pb2.py		\
