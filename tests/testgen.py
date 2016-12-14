@@ -39,7 +39,8 @@ if not os.path.isabs(target) and tests_dir:
 src_ret = Test(source).run()
 tgt_ret = Test(target).run()
 
-code =	"import os\n" +								\
+code =	"#!/usr/bin/env python2\n" +						\
+	"import os\n" +								\
 	"import testrunner\n\n" +						\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
 	"exit(testrunner.%sLivePatchTest('%s', '%s', %u, %u).run())\n" %	\
