@@ -81,3 +81,17 @@ class ElfFile:
 						describe_reloc_type(rel['r_info_type'], self.elf),
 						s.value)
 		return rela_dyn
+
+	def build_id(self):
+		section = '.note.gnu.build-id'
+		try:
+			n_type = 'NT_GNU_BUILD_ID'
+			bid = self.elf.get_section_by_name(section)
+			for note in bid.iter_notes():
+				if note['n_type'] == n_type:
+					return note['n_desc']
+			print ("ELF section %s doesn't have %s descriptor" %
+					(section, n_type))
+		except AttributeError:
+			print "ELF file doesn't have %s section" % section
+		return None
