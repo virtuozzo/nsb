@@ -18,6 +18,9 @@ AC_CONFIG_FILES([
 		 tests/Makefile
 ])
 
+AM_PATH_PYTHON([2.7])
+AC_SUBST(generatordir, ${pythondir}/nsb)
+
 AC_CHECK_PROG(PROTOC_CHECK, protoc, yes)
 if test x"$PROTOC_CHECK" != x"yes" ; then
 	AC_MSG_ERROR([protobuf-compiler is required.])

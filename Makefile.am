@@ -12,6 +12,21 @@ export NSB_GENERATOR=$(top_srcdir)/generator/main.py
 export NSB_PATCHER=$(top_srcdir)/nsb
 export TESTS_DIR=$(top_srcdir)/tests
 
+generator_PYTHON =						\
+			generator/binfile.py		\
+			generator/binpatch.py		\
+			generator/elffile.py		\
+			generator/funcpatch.py		\
+			generator/function.py		\
+			generator/main.py		\
+							\
+			protobuf/binpatch_pb2.py	\
+			protobuf/datasym_pb2.py		\
+			protobuf/funcpatch_pb2.py	\
+			protobuf/objinfo_pb2.py		\
+			protobuf/relaplt_pb2.py		\
+			protobuf/segment_pb2.py
+
 bin_PROGRAMS = nsb
 
 nsb_SOURCES =						\
