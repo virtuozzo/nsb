@@ -6,6 +6,9 @@ import signal
 import multiprocessing
 from collections import namedtuple
 from abc import ABCMeta, abstractmethod
+sys.path.append("generator/")
+from check import map_by_build_id
+from build_id import get_build_id
 
 
 class Test:
@@ -115,6 +118,9 @@ class Test:
 		print "************ Pass *************"
 		return 0
 
+	def get_map_path(self, bid):
+		return map_by_build_id(self.p.pid, bid)
+
 
 class BinPatch:
 	def __init__(self, source, target, outfile):
@@ -196,7 +202,13 @@ class LivePatchTest:
 			print "Failed to start process %s\n" % test.path
 			return 1
 
-		patch = BinPatch(self.src_elf, self.tgt_elf, self.bp_out)
+		bid = self.get_elf_bid(self.src_elf)
+		print "ELF \"%s\" Build-ID: %s" % (self.src_elf, bid)
+
+		source = test.get_map_path(bid)
+		print "Test map by Build-ID: %s" % source
+
+		patch = BinPatch(source, self.tgt_elf, self.bp_out)
 
 		if patch.generate() != 0:
 			print "Failed to generate binary patch\n"
@@ -214,6 +226,9 @@ class LivePatchTest:
 			return 1
 
 		return test.check_result(self.tgt_res)
+
+	def get_elf_bid(self, path):
+		return get_build_id(path)
 
 	@abstractmethod
 	def test_binary(self, path): pass
