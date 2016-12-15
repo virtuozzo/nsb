@@ -5,6 +5,7 @@ import subprocess
 import signal
 import multiprocessing
 from collections import namedtuple
+from abc import ABCMeta, abstractmethod
 
 
 class Test:
@@ -63,13 +64,13 @@ class Test:
 			return self.returncode
 		return 0
 
-	def stop(self):
+	def signal(self, signo):
 		try:
 			if self.__state__ != "started":
 				print "Process is not started. State: %s" % self.__state__
 				return
 
-			os.kill(self.p.pid, signal.SIGINT)
+			os.kill(self.p.pid, signo)
 		except OSError as e:
 			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
 			return 1
@@ -78,6 +79,12 @@ class Test:
 			print "Unexpected stop error:", sys.exc_info()[0]
 			return 1
 		return self.wait()
+
+	def stop(self):
+		return self.signal(signal.SIGINT)
+
+	def kill(self):
+		return self.signal(signal.SIGKILL)
 
 	def run(self):
 		if self.start(wait=False) is None:
@@ -170,57 +177,63 @@ class BinPatch:
 
 
 class LivePatchTest:
-	def __init__(self, binary, src_res, tgt_res, patch):
-		self.test = Test(binary)
-		self.patch = patch
+	__metaclass__ = ABCMeta
+
+	def __init__(self, source, target, src_res, tgt_res):
+		self.test_bin = self.test_binary(source)
+		self.src_elf = self.patch_binary(source)
+		self.tgt_elf = self.patch_binary(target)
+		self.bp_out = source + "_to_" + os.path.basename(target) + ".binpatch"
 		self.src_res = src_res
 		self.tgt_res = tgt_res
 		self.lp_failed = False
 
-	def test_result(self):
+	def run(self):
+		print "Starting test %s" % self.test_bin
+		test = Test(self.test_bin)
+
+		if test.start() is None:
+			print "Failed to start process %s\n" % test.path
+			return 1
+
+		patch = BinPatch(self.src_elf, self.tgt_elf, self.bp_out)
+
+		if patch.generate() != 0:
+			print "Failed to generate binary patch\n"
+			test.kill()
+			return 1
+
+		if patch.apply(test) != 0:
+			print "Failed to apply binary patch:\n%s" % patch.apply_stderr
+			self.lp_failed = True
+
+		if test.stop() != 0:
+			self.lp_failed = True
+
 		if self.lp_failed:
 			return 1
 
-		return self.test.check_result(self.tgt_res)
+		return test.check_result(self.tgt_res)
 
-	def run(self):
-		if self.patch.generate() != 0:
-			print "Failed to generate binary patch\n"
-			return 1
+	@abstractmethod
+	def test_binary(self, path): pass
 
-		if self.test.start() is None:
-			print "Failed to start process %s\n" % self.test.path
-			return 1
-
-		if self.patch.apply(self.test) != 0:
-			print "Failed to apply binary patch:\n%s" % self.patch.apply_stderr
-			self.lp_failed = True
-
-		if self.test.stop() != 0:
-			self.lp_failed = True
-
-		return self.test_result()
+	@abstractmethod
+	def patch_binary(self, path): pass
 
 
 class StaticLivePatchTest(LivePatchTest):
-	def __init__(self, source, target, src_res, tgt_res):
-		outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
-		patch = BinPatch(source, target, outfile)
-		LivePatchTest.__init__(self, source, src_res, tgt_res, patch)
+	def test_binary(self, path):
+		return path
+
+	def patch_binary(self, path):
+		return path
 
 
 class SharedLivePatchTest(LivePatchTest):
-	def __init__(self, source, target, src_res, tgt_res):
-		outfile = os.path.dirname(source) + "/" + os.path.basename(source) + "_to_" + os.path.basename(target) + ".binpatch"
-		binary = self.__get_bin_by_test__(source)
-		source = self.__get_lib_by_test__(source)
-		target = self.__get_lib_by_test__(target)
-		patch = BinPatch(source, target, outfile)
-		LivePatchTest.__init__(self, binary, src_res, tgt_res, patch)
+	def test_binary(self, path):
+		return os.path.dirname(path) + "/.libs/" + os.path.basename(path)
 
-	def __get_bin_by_test__(self, test):
-		return os.path.dirname(test) + "/.libs/" + os.path.basename(test)
-
-	def __get_lib_by_test__(self, test):
-		label = re.split('_', os.path.basename(test))[1]
-		return os.path.dirname(test) + "/.libs/libtest_" + label + ".so"
+	def patch_binary(self, path):
+		label = re.split('_', os.path.basename(path))[1]
+		return os.path.dirname(path) + "/.libs/libtest_" + label + ".so"
