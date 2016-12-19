@@ -16,8 +16,40 @@ struct options {
 	pid_t		 pid;
 	const char	*patch_path;
 	int		verbosity;
-	char		*command;
+	int		(*handler)(const struct options *o);
 };
+
+void print_usage(void)
+{
+	fprintf(stderr, "\n"
+		"Usage:\n"
+		"  nsb patch -p PID -f patch-file [options]\n"
+		"\n");
+}
+
+static int cmd_patch_process(const struct options *o)
+{
+	if (!o->pid) {
+		pr_msg("Error: process pid has to be provided\n");
+		return 1;
+	}
+
+	if (!o->patch_path) {
+		pr_msg("Error: patch file has to be provided\n");
+		return 1;
+	}
+
+	return patch_process(o->pid, o->patch_path);
+}
+
+void *cmd_handler(char **argv)
+{
+	if (!strcmp(argv[optind], "patch"))
+		return cmd_patch_process;
+
+	fprintf(stderr, "%s: invalid subcommand -- '%s'\n", argv[0], argv[optind]);
+	return NULL;
+}
 
 static int parse_options(int argc, char **argv, struct options *o)
 {
@@ -56,16 +88,6 @@ static int parse_options(int argc, char **argv, struct options *o)
 		}
 	}
 
-	if (!o->pid) {
-		pr_msg("Error: process pid has to be provided\n");
-		goto usage;
-	}
-
-	if (!o->patch_path) {
-		pr_msg("Error: patch file has to be provided\n");
-		goto usage;
-	}
-
 	if (optind == argc) {
 		pr_msg("Error: command has to be provided\n");
 		goto usage;
@@ -75,14 +97,14 @@ static int parse_options(int argc, char **argv, struct options *o)
 		goto usage;
 	}
 
-	o->command = argv[optind];
+	o->handler = cmd_handler(argv);
+	if (!o->handler)
+		goto usage;
+
 	return 0;
 
 usage:
-	pr_msg("\n"
-"Usage:\n"
-"  nsb patch -p PID -f patch-file [options]\n"
-"\n");
+	print_usage();
 	return 1;
 
 bad_arg:
@@ -110,10 +132,5 @@ int main(int argc, char *argv[])
 
 	compel_log_init(__print_on_level, o.verbosity);
 
-	if (strcmp(o.command, "patch")) {
-		pr_msg("Error: unknown command: %s\n", argv[optind]);
-		return -1;
-	}
-
-	return patch_process(o.pid, o.patch_path);
+	return o.handler(&o);
 }
