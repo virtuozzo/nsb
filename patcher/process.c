@@ -276,10 +276,27 @@ int process_infect(struct process_ctx_s *ctx)
 {
 	int ret;
 
-	pr_debug("Stopping %d...", ctx->pid);
+	pr_debug("Stopping %d...\n", ctx->pid);
 
-	ret = (compel_stop_task(ctx->pid) != TASK_ALIVE) ? ret : 0;
-
-	pr_debug("%s\n", ret ? "FAIL" : "OK");
+	switch (compel_stop_task(ctx->pid)) {
+		case TASK_ALIVE:
+			ret = 0;
+			pr_debug("Process %d seized\n", ctx->pid);
+			break;
+		case TASK_STOPPED:
+			ret = -EBUSY;
+			pr_debug("BUSY\n");
+			break;
+		case TASK_ZOMBIE:
+			ret = -EINVAL;
+			pr_debug("ZOMBIE\n");
+			break;
+		case TASK_DEAD:
+			ret = -EINVAL;
+			pr_debug("DEAD\n");
+			break;
+		default:
+			ret = -errno;
+	}
 	return ret;
 }
