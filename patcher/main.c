@@ -50,6 +50,7 @@ static int parse_options(int argc, char **argv, struct options *o)
 		case 'f':
 			o->patch_path = optarg;
 			break;
+		case '?':
 		default:
 			goto usage;
 		}
