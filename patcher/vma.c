@@ -127,10 +127,12 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		if (ret)
 			goto free_vma;
 
-		vma->path = xstrdup(buf + path_off);
-		if (!vma->path) {
-			pr_err("failed to fuplicate string\n");
-			goto free_vma;
+		if (strlen(buf) != path_off) {
+			vma->path = xstrdup(buf + path_off);
+			if (!vma->path) {
+				pr_err("failed to fuplicate string\n");
+				goto free_vma;
+			}
 		}
 
 		list_add_tail(&vma->list, head);
@@ -180,6 +182,8 @@ const struct vma_area *find_vma_by_path(struct list_head *head,
 	const struct vma_area *vma;
 
 	list_for_each_entry(vma, head, list) {
+		if (!vma->path)
+			continue;
 		if (!strcmp(vma->path, path))
 			return vma;
 	}
