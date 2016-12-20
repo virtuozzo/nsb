@@ -115,5 +115,5 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	return patch_process(o.pid, 4096, o.patch_path);
+	return patch_process(o.pid, o.patch_path);
 }

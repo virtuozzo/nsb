@@ -690,7 +690,7 @@ static int process_suspend(struct process_ctx_s *ctx)
 	return err;
 }
 
-int patch_process(pid_t pid, size_t mmap_size, const char *patchfile)
+int patch_process(pid_t pid, const char *patchfile)
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
