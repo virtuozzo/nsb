@@ -65,7 +65,7 @@ nsb_SOURCES =						\
 			patcher/backtrace.c		\
 			patcher/patch.c
 
-nsb_CFLAGS = -I$(top_srcdir)
+nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
 TESTS = 							\
