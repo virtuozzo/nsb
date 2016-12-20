@@ -10,8 +10,6 @@
 #include "include/backtrace.h"
 
 #define MAX_DEPTH	64
-static int verbose = 1;
-static int print_names = 1;
 
 static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp, const char *name)
 {
