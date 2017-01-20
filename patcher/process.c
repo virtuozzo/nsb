@@ -11,15 +11,6 @@
 
 #include "include/process.h"
 
-extern int compel_syscall(struct parasite_ctl *ctl,
-			  int nr, unsigned long *ret,
-			  unsigned long arg1,
-			  unsigned long arg2,
-			  unsigned long arg3,
-			  unsigned long arg4,
-			  unsigned long arg5,
-			  unsigned long arg6);
-
 struct patch_place_s {
 	struct list_head	list;
 	unsigned long		start;
@@ -43,7 +34,7 @@ int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 	int ret;
 	long sret = -ENOSYS;
 
-	ret = compel_syscall(ctx->ctl, __NR(mmap, false), (unsigned long *)&sret,
+	ret = compel_syscall(ctx->ctl, __NR(mmap, false), &sret,
 			     addr, size, prot, flags, fd, offset);
 	if (ret < 0) {
 		pr_err("Failed to execute syscall for %d\n", ctx->pid);
@@ -67,9 +58,8 @@ int process_close_file(struct process_ctx_s *ctx, int fd)
 	int ret;
 	long sret = -ENOSYS;
 
-	ret = compel_syscall(ctx->ctl, __NR(close, false),
-				(unsigned long *)&sret,
-				(unsigned long)fd, 0, 0, 0, 0, 0);
+	ret = compel_syscall(ctx->ctl, __NR(close, false), &sret,
+			     (unsigned long)fd, 0, 0, 0, 0, 0);
 	if (ret < 0) {
 		pr_err("Failed to execute syscall for %d\n", ctx->pid);
 		return -1;
@@ -92,8 +82,7 @@ int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mo
 	process_write_data(ctx->pid, ctx->remote_map,
 			path, round_up(strlen(path) + 1, 8));
 
-	ret = compel_syscall(ctx->ctl, __NR(open, false),
-				(unsigned long *)&sret,
+	ret = compel_syscall(ctx->ctl, __NR(open, false), &sret,
 				(unsigned long)ctx->remote_map,
 				(unsigned long)flags,
 				(unsigned long)mode, 0, 0, 0);
