@@ -4,7 +4,7 @@ m4_ifdef([AM_SILENT_RULES],
 	 [AM_SILENT_RULES([yes])],
 	 [AC_SUBST([AM_DEFAULT_VERBOSITY], [1])])
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects foreign])
 AC_CONFIG_MACRO_DIR([m4])
 AM_PROG_CC_C_O
 
