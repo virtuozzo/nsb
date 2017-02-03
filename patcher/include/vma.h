@@ -15,6 +15,7 @@ struct vma_area {
 	uint32_t		flags;
 	char			*path;
 	int			deleted;
+	char			*map_file;
 };
 
 int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path);

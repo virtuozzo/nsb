@@ -103,6 +103,7 @@ int collect_vmas(pid_t pid, struct list_head *head)
 	struct vma_area *vma;
 	int ret = -1;
 	char buf[PATH_MAX];
+	char map_file[PATH_MAX];
 	FILE *f;
 
 	pr_debug("Collecting mappings for %d\n", pid);
@@ -130,16 +131,22 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		if (strlen(buf) == path_off)
 			goto add;
 
-		snprintf(buf, sizeof(buf), "/proc/%d/map_files/%lx-%lx",
+		snprintf(map_file, sizeof(buf), "/proc/%d/map_files/%lx-%lx",
 				pid, vma->start, vma->end);
 
-		if (access(buf, F_OK))
+		if (access(map_file, F_OK))
 			goto add;
 
 		vma->path = xstrdup(buf + path_off);
 		if (!vma->path) {
 			pr_err("failed to fuplicate string\n");
 			goto free_vma;
+		}
+
+		vma->map_file = xstrdup(map_file);
+		if (!vma->map_file) {
+			pr_err("failed to fuplicate string\n");
+			goto free_vma_path;
 		}
 
 add:
@@ -152,6 +159,8 @@ err:
 	fclose(f);
 	return ret;
 
+free_vma_path:
+	free(vma->path);
 free_vma:
 	free(vma);
 	goto err;
