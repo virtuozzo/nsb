@@ -222,7 +222,6 @@ long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t siz
 
 int process_cure(struct process_ctx_s *ctx)
 {
-	pr_debug("Resume from %d\n", ctx->pid);
 	if (compel_resume_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
 		pr_err("Can't unseize from %d\n", ctx->pid);
 		return -1;
@@ -256,7 +255,7 @@ int process_infect(struct process_ctx_s *ctx)
 {
 	int ret;
 
-	pr_debug("Stopping %d...\n", ctx->pid);
+	pr_info("Stopping %d...\n", ctx->pid);
 
 	switch (compel_stop_task(ctx->pid)) {
 		case TASK_ALIVE:

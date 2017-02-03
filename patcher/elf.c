@@ -34,6 +34,7 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegm
 	unsigned long size = es->file_sz + ELF_PAGEOFFSET(es->vaddr);
 	unsigned long off = es->offset - ELF_PAGEOFFSET(es->vaddr);
 	int prot = 0;
+	int64_t maddr;
 
 	addr = ELF_PAGESTART(addr);
 	size = ELF_PAGEALIGN(size);
@@ -47,8 +48,10 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegm
 		prot |= PROT_WRITE;
 	if (es->flags & PF_X)
 		prot |= PROT_EXEC;
-	pr_debug("mmap on addr %#lx, prot: %#x, flags: %#x, off: %#lx, size: %#lx\n", addr, prot, flags, off, size);
-	return process_create_map(ctx, fd, off, addr, size, flags, prot);
+	maddr = process_create_map(ctx, fd, off, addr, size, flags, prot);
+	if (maddr > 0)
+		pr_info("  - %#lx-%#lx, prot: %#x, flags: %#x, off: %#lx\n", maddr, maddr + size, prot, flags, off);
+	return maddr;
 }
 
 int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
@@ -60,6 +63,7 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 	uint64_t load_bias = hint & 0xfffffffff0000000;
 	int flags = MAP_PRIVATE;
 
+	pr_info("= Loading %s:\n", bp->new_path);
 	fd = open(bp->new_path, O_RDONLY);
 	if (fd < 0) {
 		pr_perror("failed to open %s for read", bp->new_path);
@@ -70,7 +74,7 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 	if (fd < 0)
 		return -1;
 
-	pr_debug("Opened %s as fd %d\n", bp->new_path, fd);
+	pr_debug("    Opened %s as fd %d\n", bp->new_path, fd);
 	for (i = 0; i < bp->n_new_segments; i++) {
 		ElfSegment *es = bp->new_segments[i];
 		int64_t addr;
@@ -78,7 +82,7 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 		if (strcmp(es->type, "PT_LOAD"))
 			continue;
 
-		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
+		pr_debug("    %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
 			 es->type, es->offset, es->vaddr, es->paddr, es->mem_sz, es->flags, es->align, es->file_sz);
 
 		addr = elf_map(ctx, fd, load_bias + es->vaddr, es, flags);
