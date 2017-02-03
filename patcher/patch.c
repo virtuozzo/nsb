@@ -520,7 +520,6 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 	}
 	pr_debug("bpatch: vma path: %s\n", pvma->path);
 	pr_debug("bpatch: vma addr: %#lx\n", pvma->start);
-	bp->old_path = pvma->path;
 	ctx->pvma = pvma;
 	ctx->old_base = ctx->pvma->start;
 	return 0;
@@ -542,7 +541,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (!bp)
 		return -1;
 
-	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
 	pr_debug("bpatch: old_bid    : %s\n", bp->old_bid);
 	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
 	pr_debug("bpatch: object type: %s\n", bp->object_type);

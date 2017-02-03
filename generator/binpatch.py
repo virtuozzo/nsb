@@ -83,12 +83,10 @@ class BinPatch:
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
 
-		image.old_path = self.bf_old.filename
 		image.old_bid = get_build_id(self.bf_old.filename)
 		image.new_path = self.bf_new.filename
 		image.object_type = self.bf_old.header.type
 
-		print "image.old_path   : %s" % image.old_path
 		print "image.old_bid    : %s" % image.old_bid
 		print "image.new_path   : %s" % image.new_path
 		print "image.object_type: %s" % image.object_type
