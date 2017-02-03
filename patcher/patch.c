@@ -547,6 +547,12 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
 	pr_debug("bpatch: object type: %s\n", bp->object_type);
 
+	if (collect_vmas(ctx->pid, &ctx->vmas)) {
+		pr_err("Can't collect mappings for %d\n", ctx->pid);
+		goto err;
+	}
+	print_vmas(ctx->pid, &ctx->vmas);
+
 	if (!strcmp(bp->object_type, "ET_EXEC"))
 		ctx->apply = apply_exec_binpatch;
 	else if (!strcmp(bp->object_type, "ET_DYN"))

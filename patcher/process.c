@@ -232,8 +232,6 @@ int process_cure(struct process_ctx_s *ctx)
 
 int process_link(struct process_ctx_s *ctx)
 {
-	int err;
-
 	pr_debug("====================\n");
 	pr_debug("Patching process %d\n", ctx->pid);
 
@@ -242,13 +240,6 @@ int process_link(struct process_ctx_s *ctx)
 		pr_err("Can't create compel control\n");
 		return -1;
 	}
-
-	err = collect_vmas(ctx->pid, &ctx->vmas);
-	if (err) {
-		pr_err("Can't collect mappings for %d\n", ctx->pid);
-		return err;
-	}
-	print_vmas(ctx->pid, &ctx->vmas);
 
 	ctx->remote_map = process_create_map(ctx, -1, 0, 0, PAGE_SIZE,
 			MAP_ANONYMOUS | MAP_PRIVATE,
