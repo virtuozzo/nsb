@@ -451,6 +451,23 @@ static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
 	return 0;
 }
 
+static int apply_dyn_jumps(struct process_ctx_s *ctx,BinPatch *bp)
+{
+	int i, err;
+
+	pr_info("= Apply jumps:\n");
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+
+		if (fp->dyn) {
+			err = fix_dyn_entry(ctx, bp, fp);
+			if (err)
+				return err;
+		}
+	}
+	return 0;
+}
+
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	struct binpatch_s *binpatch = &ctx->binpatch;
@@ -492,18 +509,11 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 		}
 	}
 
-	pr_info("= Apply jumps:\n");
-	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
-
-		if (fp->dyn) {
-			err = fix_dyn_entry(ctx, bp, fp);
-			if (err)
-				return err;
-		}
-	}
-
 	err = copy_local_data(ctx, bp);
+	if (err)
+		return err;
+
+	err = apply_dyn_jumps(ctx, bp);
 	if (err)
 		return err;
 
