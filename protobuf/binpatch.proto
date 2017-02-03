@@ -11,4 +11,5 @@ message BinPatch {
 	repeated RelaPlt	relocations	= 5;
 	repeated ElfSegment	new_segments	= 6;
 	repeated DataSym	local_vars	= 7;
+	required string		old_bid		= 8;
 }

@@ -540,6 +540,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		return -1;
 
 	pr_debug("bpatch: old_path   : %s\n", bp->old_path);
+	pr_debug("bpatch: old_bid    : %s\n", bp->old_bid);
 	pr_debug("bpatch: new_path   : %s\n", bp->new_path);
 	pr_debug("bpatch: object type: %s\n", bp->object_type);
 
