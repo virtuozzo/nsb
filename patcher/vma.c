@@ -35,7 +35,6 @@ static int parse_vma(const char *line, struct vma_area *vma, int *path_off)
 	int dev_maj;
 	int dev_min;
 	unsigned long ino;
-
 	int num;
 
 	num = sscanf(line, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
@@ -128,14 +127,22 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		if (ret)
 			goto free_vma;
 
-		if (strlen(buf) != path_off) {
-			vma->path = xstrdup(buf + path_off);
-			if (!vma->path) {
-				pr_err("failed to fuplicate string\n");
-				goto free_vma;
-			}
+		if (strlen(buf) == path_off)
+			goto add;
+
+		snprintf(buf, sizeof(buf), "/proc/%d/map_files/%lx-%lx",
+				pid, vma->start, vma->end);
+
+		if (access(buf, F_OK))
+			goto add;
+
+		vma->path = xstrdup(buf + path_off);
+		if (!vma->path) {
+			pr_err("failed to fuplicate string\n");
+			goto free_vma;
 		}
 
+add:
 		list_add_tail(&vma->list, head);
 	}
 
