@@ -283,58 +283,6 @@ static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 	return 0;
 }
 
-static RelaPlt *get_real_plt_by_name(const BinPatch *bp, const char *name)
-{
-	int i;
-
-	for (i = 0; i < bp->n_relocations; i++) {
-		RelaPlt *rp = bp->relocations[i];
-
-		if (!strcmp(rp->name, name))
-			return rp;
-	}
-	return NULL;
-}
-
-static int fix_plt_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
-{
-	RelaPlt *rp;
-	uint64_t old_plt_addr, new_plt_addr;
-	uint64_t new_func_addr;
-	int err;
-
-	pr_info("  - Entry \"%s\":\n", fp->name);
-
-	rp = get_real_plt_by_name(bp, fp->name);
-	if (!rp) {
-		pr_err("failed to find function %s in .rela.plt\n", fp->name);
-		return 1;
-	}
-
-	old_plt_addr = ctx->old_base + rp->hint;
-	new_plt_addr = ctx->new_base + rp->offset;
-
-	pr_info("      Old PLT address     : %#lx\n", old_plt_addr);
-
-	err = process_read_data(ctx->pid, new_plt_addr,
-				&new_func_addr, sizeof(new_func_addr));
-	if (err)
-		return err;
-
-	pr_info("      New Function address: %#lx\n", new_func_addr);
-
-	pr_info("        Overwrite .got.plt entry: %#lx ---> %#lx\n",
-			new_func_addr, old_plt_addr);
-
-	err = process_write_data(ctx->pid, old_plt_addr,
-				 (void *)&new_func_addr, sizeof(new_func_addr));
-	if (err < 0) {
-		pr_err("failed to patch: %d\n", err);
-		return err;
-	}
-	return 0;
-}
-
 static int fix_dyn_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
 {
 	unsigned char jump[X86_MAX_SIZE];
@@ -472,7 +420,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	struct binpatch_s *binpatch = &ctx->binpatch;
 	BinPatch *bp = binpatch->bp;
-	int err, i;
+	int err;
 
 	pr_debug("Applying PIC binary patch:\n");
 
@@ -487,27 +435,6 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	err = apply_rela_plt(ctx, bp);
 	if (err)
 		return err;
-
-	/* There must be a check, that process doesn't reside in the library we
-	 * patch, including all the calls to the current IP.
-	 * IOW, there must be a stack rollback.
-	 * This is required, becauce we have to fix _all_ the calls to the old
-	 * library by replacing them to the new one.
-	 * Why we need it? Because we can't change only one function, because
-	 * this function cat access data. And if it accesses data, then
-	 * data has to be updated in the new library to the current value
-	 * in the old libraryr.
-	 * While this means, that this data can be exported to other process (like errno) */
-	pr_info("= Fix source PLT entries:\n");
-	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
-
-		if (fp->plt) {
-			err = fix_plt_entry(ctx, bp, fp);
-			if (err)
-				return err;
-		}
-	}
 
 	err = copy_local_data(ctx, bp);
 	if (err)
