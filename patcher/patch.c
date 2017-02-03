@@ -271,18 +271,6 @@ static int apply_rela_plt(struct process_ctx_s *ctx, uint64_t load_addr, const B
 	return 0;
 }
 
-static long find_old_elf_base(struct process_ctx_s *ctx, const BinPatch *bp)
-{
-	const struct vma_area *vma;
-
-	vma = find_vma_by_path(&ctx->vmas, bp->old_path);
-	if (!vma)
-		return -ENOENT;
-
-	pr_debug("Address for old %s map: %#lx\n", bp->old_path, vma->start);
-	return vma->start;
-}
-
 static RelaPlt *get_real_plt_by_name(const BinPatch *bp, const char *name)
 {
 	int i;
@@ -465,7 +453,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	struct binpatch_s *binpatch = &ctx->binpatch;
 	BinPatch *bp = binpatch->bp;
 	int err, i;
-	int64_t hint, load_addr;
+	int64_t load_addr;
 
 	pr_debug("Applying PIC binary patch:\n");
 
@@ -473,11 +461,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	hint = find_old_elf_base(ctx, bp);
-	if (!hint)
-		return -EINVAL;
-
-	load_addr = load_elf(ctx, bp, hint);
+	load_addr = load_elf(ctx, bp, ctx->pvma->start);
 	if (load_addr < 0)
 		return load_addr;
 
@@ -487,7 +471,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	ctx->old_base = hint;
+	ctx->old_base = ctx->pvma->start;
 	ctx->new_base = load_addr;
 
 	/* There must be a check, that process doesn't reside in the library we
