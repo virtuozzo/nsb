@@ -68,6 +68,13 @@ AC_CHECK_LIB(
 		[AC_MSG_ERROR([*** libunwind-x86_64 not found.])
 ])
 
+AC_CHECK_LIB(
+		[elf],
+		[elf_version],
+		[],
+		[AC_MSG_ERROR([*** libelf not found.])
+])
+
 AC_PYTHON_MODULE(elftools.elf.elffile)
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/nsbgen.py)

@@ -3,11 +3,13 @@
 #include <fcntl.h>
 #include <sys/user.h>
 #include <sys/mman.h>
-#include <linux/elf.h>
+#include <stdio.h>
+#include <gelf.h>
 
 #include "include/elf.h"
 #include "include/process.h"
 #include "include/log.h"
+#include "include/xmalloc.h"
 
 #include <protobuf/segment.pb-c.h>
 
@@ -19,6 +21,12 @@
 #define ELF_PAGESTART(_v)	((_v) & ~(unsigned long)(ELF_MIN_ALIGN-1))
 #define ELF_PAGEOFFSET(_v)	((_v) & (ELF_MIN_ALIGN-1))
 #define ELF_PAGEALIGN(_v)	(((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
+
+struct elf_info_s {
+	char			*path;
+	Elf			*e;
+	size_t			shstrndx;
+};
 
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
 {
@@ -86,4 +94,96 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 	(void)process_close_file(ctx, fd);
 
 	return load_bias;
+}
+
+static Elf *elf_open(const char *path)
+{
+	int fd;
+	Elf *e;
+
+	if (elf_version(EV_CURRENT) == EV_NONE) {
+		pr_err("ELF library initialization failed: %s\n", elf_errmsg(-1));
+		return NULL;
+	}
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		pr_perror("failed to open %s", path);
+		return NULL;
+	}
+
+	e = elf_begin(fd, ELF_C_READ, NULL );
+	if (!e)
+		goto close_fd;
+
+	if (elf_kind(e) != ELF_K_ELF) {
+		pr_info("%s if not and regular ELF file\n", path);
+		goto end_elf;
+	}
+
+	return e;
+
+close_fd:
+	close(fd);
+	return NULL;
+
+end_elf:
+	(void)elf_end(e);
+	return NULL;
+}
+
+static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
+{
+	struct elf_info_s *ei;
+
+	ei = xzalloc(sizeof(*ei));
+	if (!ei)
+		return NULL;
+
+	ei->path = strdup(path);
+	if (!ei->path)
+		goto free_ei;
+
+	if (elf_getshdrstrndx(e, &ei->shstrndx)) {
+		pr_err("failed to get section string index: %s\n", elf_errmsg(-1));
+		goto free_ei_path;
+	}
+
+	ei->e = e;
+
+	return ei;
+
+free_ei_path:
+	free(ei->path);
+free_ei:
+	free(ei);
+	return NULL;
+}
+
+void elf_destroy_info(struct elf_info_s *ei)
+{
+	(void)elf_end(ei->e);
+	free(ei);
+}
+
+struct elf_info_s *elf_create_info(const char *path)
+{
+	Elf *e;
+	struct elf_info_s *ei;
+
+	e = elf_open(path);
+	if (!e) {
+		pr_err("failed to parse ELF %s: %s\n", path, elf_errmsg(-1));
+		return NULL;
+	}
+
+	ei = elf_alloc_info(e, path);
+	if (!ei)
+		goto end_elf;
+
+	return ei;
+
+end_elf:
+	(void)elf_end(e);
+	return NULL;
 }
