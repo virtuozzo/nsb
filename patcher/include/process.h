@@ -26,6 +26,7 @@ struct process_ctx_s {
 	int64_t			remote_map;
 	unsigned long		old_base;
 	unsigned long		new_base;
+	const struct vma_area	*pvma;
 };
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);

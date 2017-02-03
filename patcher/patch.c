@@ -527,6 +527,20 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	return 0;
 }
 
+static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
+{
+	const struct vma_area *pvma;
+
+	pvma = find_vma_by_path(&ctx->vmas, bp->old_path);
+	if (!pvma) {
+		pr_err("failed to find process %d vma with path %s\n",
+				ctx->pid, bp->old_path);
+		return -ENOENT;
+	}
+	ctx->pvma = pvma;
+	return 0;
+}
+
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile)
 {
@@ -552,6 +566,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 	}
 	print_vmas(ctx->pid, &ctx->vmas);
+
+	if (process_find_patchable_vma(ctx, bp))
+		goto err;
 
 	if (!strcmp(bp->object_type, "ET_EXEC"))
 		ctx->apply = apply_exec_binpatch;
