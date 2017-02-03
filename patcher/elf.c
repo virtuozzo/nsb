@@ -187,3 +187,96 @@ end_elf:
 	(void)elf_end(e);
 	return NULL;
 }
+
+static char *get_section_name(struct elf_info_s *ei, Elf_Scn *scn)
+{
+	GElf_Shdr shdr;
+	char *sname;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("getshdr() failed: %s\n", elf_errmsg(-1));
+		return NULL;
+	}
+
+	sname = elf_strptr(ei->e, ei->shstrndx, shdr.sh_name);
+	if (!sname)
+		pr_err("elf_strptr() failed: %s\n", elf_errmsg(-1));
+
+	return sname;
+}
+
+static Elf_Scn *elf_get_section(struct elf_info_s *ei, const char *name)
+{
+	Elf_Scn *scn = NULL;
+
+	while((scn = elf_nextscn(ei->e, scn)) != NULL) {
+		char *sname;
+
+		sname = get_section_name(ei, scn);
+		if (!sname)
+			break;
+
+		if (!strcmp(sname, name))
+			return scn;
+	}
+
+	return NULL;
+}
+
+static char *get_build_id(Elf_Scn *bid_scn)
+{
+	Elf_Data *data;
+	GElf_Nhdr nhdr;
+	size_t size, noff, doff, i;
+	char *bid, *b, *d;
+
+	data = elf_getdata(bid_scn, NULL);
+	if (!data) {
+		pr_err(".note.gnu.build-id section doesn't have data\n");
+		return NULL;
+	}
+
+	size = gelf_getnote(data, 0, &nhdr, &noff, &doff);
+	if (!size) {
+		pr_err("failed to parse .note.gnu.build-id header\n");
+		return NULL;
+	}
+
+	bid = xmalloc(nhdr.n_descsz * 2 + 1);
+	if (!bid)
+		return NULL;
+	bid[nhdr.n_descsz * 2] = '\0';
+
+	for (i = 0, d = data->d_buf + doff, b = bid; i < nhdr.n_descsz; i++, b += 2)
+		sprintf(b, "%02x", *d++ & 0xff);
+
+	return bid;
+}
+
+static char *elf_get_bid(struct elf_info_s *ei)
+{
+	Elf_Scn *bid_scn;
+
+	bid_scn = elf_get_section(ei, ".note.gnu.build-id");
+	if (!bid_scn) {
+		pr_err("failed to find \".note.gnu.build-id\" section in %s\n", ei->path);
+		return NULL;
+	}
+	return get_build_id(bid_scn);
+}
+
+char *elf_build_id(const char *path)
+{
+	struct elf_info_s *ei;
+	char *bid = NULL;
+
+	if (access(path, R_OK))
+		return NULL;
+
+	ei = elf_create_info(path);
+	if (ei) {
+		bid = elf_get_bid(ei);
+		elf_destroy_info(ei);
+	}
+	return bid;
+}

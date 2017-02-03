@@ -14,4 +14,6 @@ struct elf_info_s;
 struct elf_info_s *elf_create_info(const char *path);
 void elf_destroy_info(struct elf_info_s *ei);
 
+char *elf_build_id(const char *path);
+
 #endif /* __PATCHER_ELF_H__ */
