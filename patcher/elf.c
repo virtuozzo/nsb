@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <stdio.h>
 #include <gelf.h>
+#include <unistd.h>
 
 #include "include/elf.h"
 #include "include/process.h"

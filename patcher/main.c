@@ -42,10 +42,28 @@ static int cmd_patch_process(const struct options *o)
 	return patch_process(o->pid, o->patch_path);
 }
 
+static int cmd_check_process(const struct options *o)
+{
+	if (!o->pid) {
+		pr_msg("Error: process pid has to be provided\n");
+		return 1;
+	}
+
+	if (!o->patch_path) {
+		pr_msg("Error: patch file has to be provided\n");
+		return 1;
+	}
+
+	return check_process(o->pid, o->patch_path);
+}
+
 void *cmd_handler(char **argv)
 {
 	if (!strcmp(argv[optind], "patch"))
 		return cmd_patch_process;
+
+	if (!strcmp(argv[optind], "check"))
+		return cmd_check_process;
 
 	fprintf(stderr, "%s: invalid subcommand -- '%s'\n", argv[0], argv[optind]);
 	return NULL;

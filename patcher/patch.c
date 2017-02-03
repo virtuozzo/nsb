@@ -726,3 +726,22 @@ resume:
 
 	return ret ? ret : err;
 }
+
+int check_process(pid_t pid, const char *patchfile)
+{
+	int err;
+	LIST_HEAD(vmas);
+	BinPatch *bp;
+
+	err = collect_vmas(pid, &vmas);
+	if (err) {
+		pr_err("Can't collect mappings for %d\n", pid);
+		return err;
+	}
+
+	bp = read_binpatch(patchfile);
+	if (!bp)
+		return -1;
+
+	return !find_vma_by_bid(&vmas, bp->old_bid);
+}

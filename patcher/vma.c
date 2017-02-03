@@ -9,6 +9,7 @@
 #include "include/vma.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/elf.h"
 
 void print_vmas(pid_t pid, struct list_head *head)
 {
@@ -203,3 +204,24 @@ unsigned long find_vma_hole(const struct list_head *vmas,
 	return 0;
 }
 
+const struct vma_area *find_vma_by_bid(const struct list_head *head, const char *bid)
+{
+	const struct vma_area *vma;
+	char *vma_bid = NULL;
+
+	list_for_each_entry(vma, head, list) {
+		if (!vma->path)
+			continue;
+
+		vma_bid = elf_build_id(vma->path);
+		if (!vma_bid)
+			continue;
+
+		if (!strcmp(bid, vma_bid)) {
+			free(vma_bid);
+			return vma;
+		}
+		free(vma_bid);
+	}
+	return NULL;
+}
