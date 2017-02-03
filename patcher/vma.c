@@ -258,3 +258,23 @@ int iterate_file_vmas(struct list_head *head, void *data,
 	}
 	return err;
 }
+
+struct vma_area *find_vma(const struct list_head *head, void *data,
+			  int (*actor)(const struct vma_area *vma, void *data))
+{
+	struct vma_area *vma;
+
+	list_for_each_entry(vma, head, list) {
+		int ret;
+
+		if (!vma->path)
+			continue;
+
+		ret = actor(vma, data);
+		if (ret < 0)
+			break;
+		if (ret)
+			return vma;
+	}
+	return NULL;
+}
