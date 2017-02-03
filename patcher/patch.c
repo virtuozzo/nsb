@@ -239,13 +239,13 @@ static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 
 	for (i = 0; i < bp->n_relocations; i++) {
 		RelaPlt *rp = bp->relocations[i];
-		uint64_t rel_addr;
+		uint64_t plt_addr;
 		uint64_t func_addr;
 
 		pr_info("  - Entry \"%s\" (%s at %#x):\n",
 			 rp->name, rp->info_type, rp->offset);
 
-		rel_addr = load_addr + rp->offset;
+		plt_addr = load_addr + rp->offset;
 
 		if (rp->addend) {
 			pr_info("      Locality      : internal\n");
@@ -269,14 +269,14 @@ static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 					func_addr, vma->start, rp->hint);
 		}
 
-		pr_info("      PLT address   : %#lx\n", rel_addr);
+		pr_info("      PLT address   : %#lx\n", plt_addr);
 		pr_info("        Overwrite .got.plt entry: %#lx ---> %#lx\n",
-				func_addr, rel_addr);
+				func_addr, plt_addr);
 
-		err = process_write_data(ctx->pid, rel_addr, &func_addr, sizeof(func_addr));
+		err = process_write_data(ctx->pid, plt_addr, &func_addr, sizeof(func_addr));
 		if (err) {
 			pr_err("failed to write to addr %#lx in process %d\n",
-					rel_addr, ctx->pid);
+					plt_addr, ctx->pid);
 			return err;
 		}
 	}
@@ -299,7 +299,8 @@ static RelaPlt *get_real_plt_by_name(const BinPatch *bp, const char *name)
 static int fix_plt_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
 {
 	RelaPlt *rp;
-	uint64_t old_addr, new_addr;
+	uint64_t old_plt_addr, new_plt_addr;
+	uint64_t new_func_addr;
 	int err;
 
 	pr_info("  - Entry \"%s\":\n", fp->name);
@@ -310,21 +311,23 @@ static int fix_plt_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
 		return 1;
 	}
 
-	old_addr = ctx->old_base + rp->hint;
-	new_addr = ctx->new_base + rp->offset;
+	old_plt_addr = ctx->old_base + rp->hint;
+	new_plt_addr = ctx->new_base + rp->offset;
 
-	pr_info("      Old PLT address     : %#lx\n", old_addr);
+	pr_info("      Old PLT address     : %#lx\n", old_plt_addr);
 
-	err = process_read_data(ctx->pid, new_addr, &new_addr, sizeof(new_addr));
+	err = process_read_data(ctx->pid, new_plt_addr,
+				&new_func_addr, sizeof(new_func_addr));
 	if (err)
 		return err;
 
-	pr_info("      New Function address: %#lx\n", new_addr);
+	pr_info("      New Function address: %#lx\n", new_func_addr);
 
 	pr_info("        Overwrite .got.plt entry: %#lx ---> %#lx\n",
-			new_addr, old_addr);
+			new_func_addr, old_plt_addr);
 
-	err = process_write_data(ctx->pid, old_addr, (void *)&new_addr, 8);
+	err = process_write_data(ctx->pid, old_plt_addr,
+				 (void *)&new_func_addr, sizeof(new_func_addr));
 	if (err < 0) {
 		pr_err("failed to patch: %d\n", err);
 		return err;
