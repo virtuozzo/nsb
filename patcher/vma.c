@@ -241,3 +241,20 @@ const struct vma_area *find_vma_by_bid(const struct list_head *head, const char 
 	}
 	return NULL;
 }
+
+int iterate_file_vmas(struct list_head *head, void *data,
+		int (*actor)(struct vma_area *vma, void *data))
+{
+	struct vma_area *vma;
+	int err = 0;
+
+	list_for_each_entry(vma, head, list) {
+		if (!vma->path)
+			continue;
+
+		err = actor(vma, data);
+		if (err)
+			break;
+	}
+	return err;
+}

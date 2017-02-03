@@ -32,4 +32,7 @@ const struct vma_area *find_vma_by_bid(const struct list_head *head, const char 
 unsigned long find_vma_hole(const struct list_head *vmas,
 			    unsigned long hint, size_t size);
 
+int iterate_file_vmas(struct list_head *head, void *data,
+		      int (*actor)(struct vma_area *vma, void *data));
+
 #endif /* __PATCHER_VMA_H__ */
