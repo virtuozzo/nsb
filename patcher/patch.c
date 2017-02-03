@@ -477,7 +477,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (!hint)
 		return -EINVAL;
 
-	load_addr = load_elf_segments(ctx, bp, hint);
+	load_addr = load_elf(ctx, bp, hint);
 	if (load_addr < 0)
 		return load_addr;
 

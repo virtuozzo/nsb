@@ -42,11 +42,14 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegm
 	return process_create_map(ctx, fd, off, addr, size, flags, prot);
 }
 
-int64_t load_elf_segments(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
+int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 {
 	int i, fd;
-	int load_addr_set = 0;
-	uint64_t load_bias = 0;
+	// TODO: there should be bigger offset. 2 or maybe even 4 GB.
+	// But jmpq command construction fails, if map lays ouside 2g offset.
+	// This might be a bug in jmps construction
+	uint64_t load_bias = hint & 0xfffffffff0000000;
+	int flags = MAP_PRIVATE;
 
 	fd = open(bp->new_path, O_RDONLY);
 	if (fd < 0) {
@@ -61,7 +64,6 @@ int64_t load_elf_segments(struct process_ctx_s *ctx, const BinPatch *bp, uint64_
 	pr_debug("Opened %s as fd %d\n", bp->new_path, fd);
 	for (i = 0; i < bp->n_new_segments; i++) {
 		ElfSegment *es = bp->new_segments[i];
-		int flags = MAP_PRIVATE;
 		int64_t addr;
 
 		if (strcmp(es->type, "PT_LOAD"))
@@ -70,20 +72,6 @@ int64_t load_elf_segments(struct process_ctx_s *ctx, const BinPatch *bp, uint64_
 		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
 			 es->type, es->offset, es->vaddr, es->paddr, es->mem_sz, es->flags, es->align, es->file_sz);
 
-		if (!load_addr_set) {
-			if (hint)
-				// TODO: there should be bigger offset. 2 or maybe even 4 GB.
-				// But jmpq command construction fails, if map lays ouside 2g offset.
-				// This might be a bug in jmps construction
-				load_bias = hint & 0xfffffffff0000000;
-			else
-				load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - es->vaddr);
-		} else
-			flags |= MAP_FIXED;
-
-	//	pr_debug("load_bias: %#lx\n", load_bias);
-	//	pr_debug("load_bias + vaddr: %#lx\n", load_bias + es->vaddr);
-
 		addr = elf_map(ctx, fd, load_bias + es->vaddr, es, flags);
 		if (addr == -1) {
 			pr_perror("failed to map");
@@ -91,13 +79,8 @@ int64_t load_elf_segments(struct process_ctx_s *ctx, const BinPatch *bp, uint64_
 			break;
 		}
 
-		pr_debug("map_addr: %#lx\n", addr);
-
-		if (!load_addr_set) {
-			load_addr_set = 1;
-			load_bias += addr - ELF_PAGESTART(load_bias + es->vaddr);
-			pr_debug("load_bias: %#lx\n", load_bias);
-		}
+		load_bias += addr - ELF_PAGESTART(load_bias + es->vaddr);
+		flags |= MAP_FIXED;
 	}
 
 	(void)process_close_file(ctx, fd);
