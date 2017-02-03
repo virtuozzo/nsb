@@ -512,12 +512,14 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 {
 	const struct vma_area *pvma;
 
-	pvma = find_vma_by_path(&ctx->vmas, bp->old_path);
+	pvma = find_vma_by_bid(&ctx->vmas, bp->old_bid);
 	if (!pvma) {
-		pr_err("failed to find process %d vma with path %s\n",
-				ctx->pid, bp->old_path);
+		pr_err("failed to find process %d vma with Build ID %s\n",
+				ctx->pid, bp->old_bid);
 		return -ENOENT;
 	}
+	pr_debug("bpatch: vma path: %s\n", pvma->path);
+	bp->old_path = pvma->path;
 	ctx->pvma = pvma;
 	ctx->old_base = ctx->pvma->start;
 	return 0;
