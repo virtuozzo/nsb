@@ -229,10 +229,11 @@ err:
 	return err;
 }
 
-static int apply_rela_plt(struct process_ctx_s *ctx, uint64_t load_addr, const BinPatch *bp)
+static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 {
 	int i;
 	int err;
+	int64_t load_addr = ctx->new_base;
 
 	pr_debug("Applying PLT relocations:\n");
 	pr_debug("load address: %#lx\n", load_addr);
@@ -453,7 +454,6 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	struct binpatch_s *binpatch = &ctx->binpatch;
 	BinPatch *bp = binpatch->bp;
 	int err, i;
-	int64_t load_addr;
 
 	pr_debug("Applying PIC binary patch:\n");
 
@@ -461,18 +461,15 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	load_addr = load_elf(ctx, bp, ctx->pvma->start);
-	if (load_addr < 0)
-		return load_addr;
+	ctx->new_base = load_elf(ctx, bp, ctx->pvma->start);
+	if (ctx->new_base < 0)
+		return ctx->new_base;
 
-	pr_debug("Library %s load address: %#lx\n", bp->new_path, load_addr);
+	pr_debug("Library %s load address: %#lx\n", bp->new_path, ctx->new_base);
 
-	err = apply_rela_plt(ctx, load_addr, bp);
+	err = apply_rela_plt(ctx, bp);
 	if (err)
 		return err;
-
-	ctx->old_base = ctx->pvma->start;
-	ctx->new_base = load_addr;
 
 	/* There must be a check, that process doesn't reside in the library we
 	 * patch, including all the calls to the current IP.
@@ -522,6 +519,7 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 		return -ENOENT;
 	}
 	ctx->pvma = pvma;
+	ctx->old_base = ctx->pvma->start;
 	return 0;
 }
 
