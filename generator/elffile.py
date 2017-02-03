@@ -69,7 +69,6 @@ class ElfFile:
 			rela_plt[s.name] = ElfRelaPlt(rel['r_offset'],
 						describe_reloc_type(rel['r_info_type'], self.elf),
 						s.value)
-			print rela_plt
 		return rela_plt
 
 	def get_rela_dyn(self, symbols):
