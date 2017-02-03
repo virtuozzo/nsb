@@ -11,23 +11,6 @@
 #include "include/xmalloc.h"
 #include "include/elf.h"
 
-void print_vmas(pid_t pid, struct list_head *head)
-{
-	struct vma_area *vma;
-
-	pr_debug("Process %d mappings:\n", pid);
-
-	list_for_each_entry(vma, head, list) {
-		pr_debug("VMA: %lx-%lx %c%c%c%c %8lx %s\n",
-				vma->start, vma->end,
-				(vma->prot & PROT_READ) ? 'r' : '-',
-				(vma->prot & PROT_WRITE) ? 'w' : '-',
-				(vma->prot & PROT_EXEC) ? 'x' : '-',
-				(vma->flags == MAP_SHARED) ? 's' : 'p',
-				vma->pgoff, vma->path);
-	}
-}
-
 static int parse_vma(const char *line, struct vma_area *vma, int *path_off)
 {
 	char r, w, x, s;
@@ -127,6 +110,15 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		ret = parse_vma(buf, vma, &path_off);
 		if (ret)
 			goto free_vma;
+
+		pr_debug("VMA: %lx-%lx %c%c%c%c %8lx %s\n",
+				vma->start, vma->end,
+				(vma->prot & PROT_READ) ? 'r' : '-',
+				(vma->prot & PROT_WRITE) ? 'w' : '-',
+				(vma->prot & PROT_EXEC) ? 'x' : '-',
+				(vma->flags == MAP_SHARED) ? 's' : 'p',
+				vma->pgoff,
+				(strlen(buf) == path_off) ? "" : (buf + path_off));
 
 		if (strlen(buf) == path_off)
 			goto add;

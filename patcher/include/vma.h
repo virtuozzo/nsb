@@ -20,7 +20,6 @@ struct vma_area {
 
 int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path);
 int collect_vmas(pid_t pid, struct list_head *head);
-void print_vmas(pid_t pid, struct list_head *head);
 
 const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
 					unsigned long addr);

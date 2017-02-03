@@ -493,7 +493,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		goto err;
 	}
-	print_vmas(ctx->pid, &ctx->vmas);
 
 	if (process_find_patchable_vma(ctx, bp))
 		goto err;
