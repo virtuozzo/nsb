@@ -519,6 +519,7 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 		return -ENOENT;
 	}
 	pr_debug("bpatch: vma path: %s\n", pvma->path);
+	pr_debug("bpatch: vma addr: %#lx\n", pvma->start);
 	bp->old_path = pvma->path;
 	ctx->pvma = pvma;
 	ctx->old_base = ctx->pvma->start;
@@ -577,23 +578,6 @@ static int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
-static long process_get_map_base(struct process_ctx_s *ctx)
-{
-	struct binpatch_s *binpatch = &ctx->binpatch;
-	BinPatch *bp = binpatch->bp;
-	int err;
-	struct vma_area vma;
-
-	err = collect_vma_by_path(ctx->pid, &vma, bp->old_path);
-	if (err) {
-		pr_err("Can't find %s mapping in process %d\n",
-				bp->old_path, ctx->pid);
-		return err;
-	}
-
-	return vma.start;
-}
-
 static int process_call_in_map(const struct list_head *calls,
 			       uint64_t map_start, uint64_t map_end)
 {
@@ -619,13 +603,6 @@ static int process_check_stack(struct process_ctx_s *ctx)
 		.calls = LIST_HEAD_INIT(bt.calls),
 	};
 	struct backtrace_function_s *bf;
-	long map_base = 0;
-
-	if ((!strcmp(bp->object_type, "ET_DYN"))) {
-		map_base = process_get_map_base(ctx);
-		if (map_base < 0)
-			return map_base;
-	}
 
 	err = process_backtrace(ctx->pid, &bt);
 	if (err) {
@@ -645,7 +622,7 @@ static int process_check_stack(struct process_ctx_s *ctx)
 		if (fp->new_)
 			continue;
 
-		start = map_base + fp->addr;
+		start = ctx->old_base + fp->addr;
 		end = start + fp->size;
 
 		pr_debug("Patch: %#lx - %#lx\n", start, end);
