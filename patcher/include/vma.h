@@ -19,7 +19,6 @@ struct vma_area {
 	struct elf_info_s	*ei;
 };
 
-int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path);
 int collect_vmas(pid_t pid, struct list_head *head);
 
 const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
