@@ -21,5 +21,12 @@ int elf_type(const struct elf_info_s *ei);
 
 char *elf_get_soname(struct elf_info_s *ei);
 int path_get_soname(const char *path, char **soname);
+int elf_soname_needed(struct elf_info_s *ei, const char *soname);
+const struct list_head *elf_needed_list(struct elf_info_s *ei);
+
+struct elf_needed {
+	struct list_head        list;
+	char                    *needed;
+};
 
 #endif /* __PATCHER_ELF_H__ */

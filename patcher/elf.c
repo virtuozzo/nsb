@@ -37,9 +37,11 @@ struct elf_info_s {
 	Elf_Scn			*strtab;
 	elf_scn_t		*dynamic;
 	char			*soname;
+	struct list_head	needed;
 };
 
 static int __elf_get_soname(struct elf_info_s *ei, char **soname);
+static int elf_collect_needed(struct elf_info_s *ei);
 
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
 {
@@ -176,6 +178,8 @@ static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
 		goto free_ei_path;
 	}
 
+	INIT_LIST_HEAD(&ei->needed);
+
 	ei->e = e;
 
 	return ei;
@@ -210,6 +214,9 @@ struct elf_info_s *elf_create_info(const char *path)
 		goto end_elf;
 
 	if (__elf_get_soname(ei, &ei->soname))
+		goto destroy_elf;
+
+	if (elf_collect_needed(ei))
 		goto destroy_elf;
 
 	return ei;
@@ -514,4 +521,89 @@ int path_get_soname(const char *path, char **soname)
 
 	elf_destroy_info(ei);
 	return err;
+}
+
+static int iter_dyn_sym(struct elf_info_s *ei,
+			int (*actor)(struct elf_info_s *ei,
+				     const GElf_Dyn *dyn, void *data),
+			void *data)
+{
+	int i;
+	elf_scn_t *scn;
+	GElf_Dyn dyn;
+
+	scn = elf_set_dynamic_scn(ei);
+	if (!scn)
+		return -ENOENT;
+
+	for (i = 0; i < scn->nr_ent; i++) {
+		int ret;
+
+		if (!gelf_getdyn(scn->data, i, &dyn)) {
+			pr_err("failed to get %d tag from \".dynamic\" section\n", i);
+			return -EINVAL;
+		}
+
+		ret = actor(ei, &dyn, data);
+		if (ret)
+			return ret;
+	}
+	return 0;
+}
+
+static int collect_needed(struct elf_info_s *ei, const GElf_Dyn *d, void *data)
+{
+	struct list_head *head = data;
+	struct elf_needed *n;
+	Elf_Scn *strtab_scn;
+	char *needed;
+
+	if (d->d_tag != DT_NEEDED)
+		return 0;
+
+	strtab_scn = elf_get_strtab_scn(ei);
+	if (!strtab_scn)
+		return -EINVAL;
+
+	needed = elf_strptr(ei->e, elf_ndxscn(strtab_scn), DYN_VAL(d));
+	if (!needed) {
+		pr_err("elf_strptr() failed: %s\n", elf_errmsg(-1));
+		return -EINVAL;
+	}
+
+	n = xmalloc(sizeof(*n));
+	if (!n)
+		return -ENOMEM;
+
+	n->needed = xstrdup(needed);
+	if (!n->needed) {
+		free(n);
+		return -ENOMEM;
+	}
+
+	list_add_tail(&n->list, head);
+	return 0;
+}
+
+static int elf_collect_needed(struct elf_info_s *ei)
+{
+	if (list_empty(&ei->needed))
+		return iter_dyn_sym(ei, collect_needed, &ei->needed);
+	return 0;
+}
+
+int elf_soname_needed(struct elf_info_s *ei, const char *soname)
+{
+	struct elf_needed *n;
+
+	list_for_each_entry(n, &ei->needed, list) {
+		if (!strcmp(n->needed, soname))
+			return 1;
+	}
+	return 0;
+}
+
+const struct list_head *elf_needed_list(struct elf_info_s *ei)
+{
+	return &ei->needed;
 }
