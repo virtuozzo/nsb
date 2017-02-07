@@ -138,6 +138,11 @@ end_elf:
 	return NULL;
 }
 
+int elf_type(const struct elf_info_s *ei)
+{
+	return ei->hdr.e_type;
+}
+
 static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
 {
 	struct elf_info_s *ei;
