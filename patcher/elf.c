@@ -23,12 +23,23 @@
 #define ELF_PAGEOFFSET(_v)	((_v) & (ELF_MIN_ALIGN-1))
 #define ELF_PAGEALIGN(_v)	(((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
 
+typedef struct elf_scn_s {
+	Elf_Scn		*scn;
+	Elf_Data	*data;
+	unsigned	nr_ent;
+} elf_scn_t;
+
 struct elf_info_s {
 	char			*path;
 	Elf			*e;
 	size_t			shstrndx;
 	GElf_Ehdr		hdr;
+	Elf_Scn			*strtab;
+	elf_scn_t		*dynamic;
+	char			*soname;
 };
+
+static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
 {
@@ -178,6 +189,7 @@ free_ei:
 
 void elf_destroy_info(struct elf_info_s *ei)
 {
+	free(ei->soname);
 	(void)elf_end(ei->e);
 	free(ei);
 }
@@ -197,10 +209,17 @@ struct elf_info_s *elf_create_info(const char *path)
 	if (!ei)
 		goto end_elf;
 
+	if (__elf_get_soname(ei, &ei->soname))
+		goto destroy_elf;
+
 	return ei;
 
 end_elf:
 	(void)elf_end(e);
+	return NULL;
+
+destroy_elf:
+	elf_destroy_info(ei);
 	return NULL;
 }
 
@@ -295,4 +314,204 @@ char *elf_build_id(const char *path)
 		elf_destroy_info(ei);
 	}
 	return bid;
+}
+
+static int sect_nr_ent(struct elf_info_s *ei, Elf_Scn *scn)
+{
+	GElf_Shdr shdr;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("failed to get header for section: %s\n",
+					elf_errmsg(-1));
+		return elf_errno();
+	}
+
+	return shdr.sh_size/shdr.sh_entsize;
+}
+
+static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
+{
+	GElf_Shdr shdr;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("getshdr() failed: %s\n", elf_errmsg(-1));
+		return -EINVAL;
+	}
+
+	return shdr.sh_addr;
+}
+
+static Elf_Scn *elf_get_section_by_addr(struct elf_info_s *ei, GElf_Addr addr)
+{
+	Elf_Scn *scn = NULL;
+
+	while((scn = elf_nextscn(ei->e, scn)) != NULL) {
+		GElf_Sxword saddr;
+
+		saddr = get_section_addr(ei, scn);
+		if (saddr < 0)
+			break;
+
+		if (saddr == addr)
+			return scn;
+	}
+
+	return NULL;
+}
+
+static int elf_create_scn(struct elf_info_s *ei,
+		          elf_scn_t **elf_scn, const char *sname)
+{
+	elf_scn_t *escn;
+	Elf_Scn	*scn;
+	Elf_Data *data;
+	int nr_ent;
+
+	scn = elf_get_section(ei, sname);
+	if (!scn)
+		return -ENOENT;
+
+	data = elf_getdata(scn, NULL);
+	if (!data) {
+		pr_err("%s section doesn't have data\n", sname);
+		return -ENODATA;
+	}
+
+	nr_ent = sect_nr_ent(ei, scn);
+	if (nr_ent < 0)
+		return nr_ent;
+
+	escn = xmalloc(sizeof(*escn));
+	if (!escn)
+		return -ENOMEM;
+
+	escn->scn = scn;
+	escn->data = data;
+	escn->nr_ent = nr_ent;
+	*elf_scn = escn;
+
+	return 0;
+}
+
+static elf_scn_t *elf_set_dynamic_scn(struct elf_info_s *ei)
+{
+	if (!ei->dynamic) {
+		if (elf_create_scn(ei, &ei->dynamic, ".dynamic"))
+			return NULL;
+	}
+	return ei->dynamic;
+}
+
+static int find_soname(struct elf_info_s *ei, const GElf_Dyn *d, const void *dummy)
+{
+	if (d->d_tag != DT_SONAME)
+		return 0;
+	return 1;
+}
+
+static int find_strtab(struct elf_info_s *ei, const GElf_Dyn *d, const void *dummy)
+{
+	if (d->d_tag != DT_STRTAB)
+		return 0;
+	return 1;
+}
+
+static int find_dyn_sym(struct elf_info_s *ei, GElf_Dyn *dyn,
+			int (*compare)(struct elf_info_s *ei,
+				       const GElf_Dyn *dyn, const void *data),
+			const void *data)
+{
+	int i;
+	elf_scn_t *scn;
+
+	scn = elf_set_dynamic_scn(ei);
+	if (!scn)
+		return -ENOENT;
+
+	for (i = 0; i < scn->nr_ent; i++) {
+		int ret;
+
+		if (!gelf_getdyn(scn->data, i, dyn)) {
+			pr_err("failed to get %d tag from \".dynamic\" section\n", i);
+			return -EINVAL;
+		}
+
+		ret = compare(ei, dyn, data);
+		if (ret)
+			return ret;
+	}
+	return -ENOENT;
+}
+
+#define DYN_PTR(dyn)		(dyn)->d_un.d_ptr
+#define DYN_VAL(dyn)		(dyn)->d_un.d_val
+
+static Elf_Scn *elf_get_strtab_scn(struct elf_info_s *ei)
+{
+	if (!ei->strtab) {
+		int err;
+		GElf_Dyn strtab_dyn;
+
+		err = find_dyn_sym(ei, &strtab_dyn, find_strtab, NULL);
+		if (err < 0) {
+			pr_debug("Failed to find DT_STRTAB tag\n");
+			return NULL;
+		}
+
+		ei->strtab = elf_get_section_by_addr(ei, DYN_PTR(&strtab_dyn));
+	}
+	return ei->strtab;
+}
+
+static int __elf_get_soname(struct elf_info_s *ei, char **soname)
+{
+	Elf_Scn *strtab_scn;
+	GElf_Dyn soname_dyn;
+	int err;
+	char *name;
+
+	if (elf_type(ei) != ET_DYN)
+		return 0;
+
+	strtab_scn = elf_get_strtab_scn(ei);
+	if (!strtab_scn)
+		return -EINVAL;
+
+	err = find_dyn_sym(ei, &soname_dyn, find_soname, NULL);
+	if (err < 0) {
+		pr_debug("Failed to find DT_SONAME tag\n");
+		return err;
+	}
+
+	name = elf_strptr(ei->e, elf_ndxscn(strtab_scn), DYN_VAL(&soname_dyn));
+	if (!name) {
+		pr_err("elf_strptr() failed: %s\n", elf_errmsg(-1));
+		return -EINVAL;
+	}
+
+	*soname = xstrdup(name);
+	if (!*soname)
+		return -ENOMEM;
+
+	return 0;
+}
+
+char *elf_get_soname(struct elf_info_s *ei)
+{
+	return ei->soname;
+}
+
+int path_get_soname(const char *path, char **soname)
+{
+	struct elf_info_s *ei;
+	int err;
+
+	ei = elf_create_info(path);
+	if (!ei)
+		return -EINVAL;
+
+	err = __elf_get_soname(ei, soname);
+
+	elf_destroy_info(ei);
+	return err;
 }

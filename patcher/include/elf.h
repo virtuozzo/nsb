@@ -6,6 +6,8 @@
 
 #include <protobuf/binpatch.pb-c.h>
 
+#include "list.h"
+
 struct process_ctx_s;
 int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp,
 			  uint64_t hint);
@@ -16,5 +18,8 @@ void elf_destroy_info(struct elf_info_s *ei);
 
 char *elf_build_id(const char *path);
 int elf_type(const struct elf_info_s *ei);
+
+char *elf_get_soname(struct elf_info_s *ei);
+int path_get_soname(const char *path, char **soname);
 
 #endif /* __PATCHER_ELF_H__ */
