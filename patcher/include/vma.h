@@ -16,6 +16,7 @@ struct vma_area {
 	char			*path;
 	int			deleted;
 	char			*map_file;
+	struct elf_info_s	*ei;
 };
 
 int collect_vma_by_path(pid_t pid, struct vma_area *vma, const char *path);
@@ -35,5 +36,7 @@ unsigned long find_vma_hole(const struct list_head *vmas,
 
 int iterate_file_vmas(struct list_head *head, void *data,
 		      int (*actor)(struct vma_area *vma, void *data));
+
+const char *vma_soname(const struct vma_area *vma);
 
 #endif /* __PATCHER_VMA_H__ */

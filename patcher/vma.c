@@ -141,6 +141,10 @@ int collect_vmas(pid_t pid, struct list_head *head)
 			goto free_vma_path;
 		}
 
+		vma->ei = elf_create_info(vma->map_file);
+		if (!vma->ei)
+			goto free_map_file;
+
 add:
 		list_add_tail(&vma->list, head);
 	}
@@ -151,6 +155,8 @@ err:
 	fclose(f);
 	return ret;
 
+free_map_file:
+	free(vma->map_file);
 free_vma_path:
 	free(vma->path);
 free_vma:
@@ -269,4 +275,9 @@ struct vma_area *find_vma(const struct list_head *head, void *data,
 			return vma;
 	}
 	return NULL;
+}
+
+const char *vma_soname(const struct vma_area *vma)
+{
+	return elf_get_soname(vma->ei);
 }
