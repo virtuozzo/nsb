@@ -27,6 +27,7 @@ struct elf_info_s {
 	char			*path;
 	Elf			*e;
 	size_t			shstrndx;
+	GElf_Ehdr		hdr;
 };
 
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
@@ -151,6 +152,11 @@ static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
 
 	if (elf_getshdrstrndx(e, &ei->shstrndx)) {
 		pr_err("failed to get section string index: %s\n", elf_errmsg(-1));
+		goto free_ei_path;
+	}
+
+	if (&ei->hdr != gelf_getehdr(e, &ei->hdr)) {
+		pr_err("failed to get ELF header: %s\n", elf_errmsg(elf_errno()));
 		goto free_ei_path;
 	}
 
