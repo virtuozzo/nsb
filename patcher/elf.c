@@ -261,7 +261,7 @@ static Elf_Scn *elf_get_section(struct elf_info_s *ei, const char *name)
 		if (!strcmp(sname, name))
 			return scn;
 	}
-
+	pr_err("failed to find \"%s\" section in %s\n", name, ei->path);
 	return NULL;
 }
 
@@ -300,10 +300,8 @@ static char *elf_get_bid(struct elf_info_s *ei)
 	Elf_Scn *bid_scn;
 
 	bid_scn = elf_get_section(ei, ".note.gnu.build-id");
-	if (!bid_scn) {
-		pr_err("failed to find \".note.gnu.build-id\" section in %s\n", ei->path);
+	if (!bid_scn)
 		return NULL;
-	}
 	return get_build_id(bid_scn);
 }
 
