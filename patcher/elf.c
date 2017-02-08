@@ -35,7 +35,10 @@ struct elf_info_s {
 	size_t			shstrndx;
 	GElf_Ehdr		hdr;
 	Elf_Scn			*strtab;
+	elf_scn_t		*rela_plt;
 	elf_scn_t		*dynamic;
+	elf_scn_t		*dynsym;
+	Elf_Scn			*dynstr;
 	char			*soname;
 	struct list_head	needed;
 	char			*bid;
@@ -613,4 +616,222 @@ int elf_soname_needed(struct elf_info_s *ei, const char *soname)
 const struct list_head *elf_needed_list(struct elf_info_s *ei)
 {
 	return &ei->needed;
+}
+
+static struct extern_symbol *create_ext_sym(char *name, uint64_t offset, int bind)
+{
+	struct extern_symbol *es;
+
+	es = xmalloc(sizeof(*es));
+	if (!es)
+		return NULL;
+
+	es->name = name;
+	es->offset = offset;
+	es->bind = bind;
+	es->soname = NULL;
+	es->vma = NULL;
+	return es;
+}
+
+static int get_symbol_name(const GElf_Sym *sym, struct elf_info_s *ei,
+			   Elf_Scn *strscn, char **name)
+{
+	*name = NULL;
+
+	if (sym->st_name) {
+		*name = elf_strptr(ei->e, elf_ndxscn(strscn), sym->st_name);
+		if (!*name) {
+			pr_err("elf_strptr() failed: %s\n", elf_errmsg(-1));
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static int dynsym_name(const GElf_Sym *sym, struct elf_info_s *ei, char **name)
+{
+	if (!ei->dynstr) {
+		ei->dynstr = elf_get_section(ei, ".dynstr");
+		if (!ei->dynstr) {
+			pr_err("failed to find \".dynstr\" section\n");
+			return -EINVAL;
+		}
+	}
+	return get_symbol_name(sym, ei, ei->dynstr, name);
+}
+
+static elf_scn_t *elf_set_dynsym_scn(struct elf_info_s *ei)
+{
+	if (!ei->dynsym) {
+		if (elf_create_scn(ei, &ei->dynsym, ".dynsym"))
+			return NULL;
+	}
+	return ei->dynsym;
+}
+
+static int find_sym_dym(struct elf_info_s *ei, GElf_Sym *sym,
+			int (*compare)(struct elf_info_s *ei,
+				       const GElf_Sym *sym, const void *data),
+			const void *data)
+{
+	int i;
+	elf_scn_t *escn;
+
+	escn = elf_set_dynsym_scn(ei);
+	if (!escn)
+		return -ENOENT;
+
+	for (i = 0; i < escn->nr_ent; i++) {
+		int ret;
+
+		if (gelf_getsym(escn->data, i, sym) != sym)
+			return -ENOENT;
+
+		ret = compare(ei, sym, data);
+		if (ret)
+			return ret;
+	}
+	return -ENOENT;
+}
+
+static int compare_sym_name(struct elf_info_s *ei,
+			    const GElf_Sym *sym, const void *data)
+{
+	const char *symname = data;
+	char *name;
+	int err;
+
+	if (!sym->st_name)
+		return 0;
+
+	if (!sym->st_size)
+		return 0;
+
+	err = dynsym_name(sym, ei, &name);
+	if (err)
+		return err;
+
+	return !strcmp(name, symname);
+}
+
+static int elf_find_dsym_by_name(struct elf_info_s *ei, const char *symname,
+				 GElf_Sym *sym)
+{
+	return find_sym_dym(ei, sym, compare_sym_name, symname);
+}
+
+int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name)
+{
+	GElf_Sym sym;
+	int err;
+
+	err = elf_find_dsym_by_name(ei, name, &sym);
+	if (err < 0)
+		return err;
+
+	return sym.st_value;
+}
+
+static elf_scn_t *elf_set_real_plt_scn(struct elf_info_s *ei)
+{
+	if (!ei->rela_plt) {
+		if (elf_create_scn(ei, &ei->rela_plt, ".rela.plt"))
+			return NULL;
+	}
+	return ei->rela_plt;
+}
+
+static int iter_rela_plt(struct elf_info_s *ei,
+			 int (*actor)(struct elf_info_s *ei,
+				      const GElf_Rela *rela, void *data),
+			 void *data)
+{
+	int i;
+	elf_scn_t *escn;
+	GElf_Rela rela;
+
+	escn = elf_set_real_plt_scn(ei);
+	if (!escn)
+		return -ENOENT;
+
+	for (i = 0; i < escn->nr_ent; i++) {
+		int ret;
+
+		if (!gelf_getrela(escn->data, i, &rela)) {
+			pr_err("failed to get %d tag from \".rela.plt\" section\n", i);
+			return -EINVAL;
+		}
+
+		ret = actor(ei, &rela, data);
+		if (ret)
+			return ret;
+	}
+	return 0;
+}
+
+static int collect_es(struct elf_info_s *ei, const GElf_Rela *rela, void *data)
+{
+	struct list_head *head = data;
+	elf_scn_t *escn;
+	GElf_Sym sym;
+	char *name;
+	int err;
+	struct extern_symbol *es;
+
+	escn = elf_set_dynsym_scn(ei);
+	if (!escn)
+		return -EINVAL;
+
+	if (gelf_getsym(escn->data, GELF_R_SYM(rela->r_info), &sym) != &sym)
+		return -ENOENT;
+
+	if (!sym.st_name)
+		return 0;
+
+	err = dynsym_name(&sym, ei, &name);
+	if (err)
+		return err;
+
+	es = create_ext_sym(name, rela->r_offset, GELF_ST_BIND(sym.st_info));
+	if (!es)
+		return -ENOMEM;
+
+	list_add_tail(&es->list, head);
+
+	return 0;
+}
+
+int elf_extern_dsyms(struct elf_info_s *ei, struct list_head *head)
+{
+	int err;
+	struct extern_symbol *es, *tmp;
+
+	err = iter_rela_plt(ei, collect_es, head);
+	if (err)
+		goto free_list;
+	return 0;
+
+free_list:
+	list_for_each_entry_safe(es, tmp, head, list) {
+		list_del(&es->list);
+		free(es);
+	}
+	return err;
+}
+
+int elf_contains_sym(struct elf_info_s *ei, const char *symname)
+{
+	int err;
+	GElf_Sym sym;
+
+	err = elf_find_dsym_by_name(ei, symname, &sym);
+	switch (err) {
+		case 0:
+			return 1;
+		case -ENOENT:
+			return 0;
+	}
+	return err;
 }

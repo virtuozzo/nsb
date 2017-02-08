@@ -30,4 +30,19 @@ struct elf_needed {
 	char                    *needed;
 };
 
+int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name);
+int elf_extern_dsyms(struct elf_info_s *ei, struct list_head *head);
+int elf_contains_sym(struct elf_info_s *ei, const char *symname);
+
+struct extern_symbol {
+	struct list_head	list;
+	char			*name;
+	uint64_t		offset;
+	int			bind;
+	char			*soname;
+	const struct vma_area	*vma;
+};
+
+int elf_contains_sym(struct elf_info_s *ei, const char *symname);
+
 #endif /* __PATCHER_ELF_H__ */
