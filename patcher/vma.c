@@ -165,7 +165,7 @@ const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
 
 }
 
-const struct vma_area *find_vma_by_prot(struct list_head *head, int prot)
+const struct vma_area *find_vma_by_prot(const struct list_head *head, int prot)
 {
 	const struct vma_area *vma;
 
@@ -176,7 +176,7 @@ const struct vma_area *find_vma_by_prot(struct list_head *head, int prot)
 	return NULL;
 }
 
-const struct vma_area *find_vma_by_path(struct list_head *head,
+const struct vma_area *find_vma_by_path(const struct list_head *head,
 					const char *path)
 {
 	const struct vma_area *vma;

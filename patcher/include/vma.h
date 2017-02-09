@@ -23,8 +23,8 @@ void print_vmas(pid_t pid, struct list_head *head);
 
 const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
 					unsigned long addr);
-const struct vma_area *find_vma_by_prot(struct list_head *head, int prot);
-const struct vma_area *find_vma_by_path(struct list_head *head,
+const struct vma_area *find_vma_by_prot(const struct list_head *head, int prot);
+const struct vma_area *find_vma_by_path(const struct list_head *head,
 					const char *path);
 
 unsigned long find_vma_hole(const struct list_head *vmas,
