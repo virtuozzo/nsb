@@ -38,10 +38,12 @@ struct elf_info_s {
 	elf_scn_t		*dynamic;
 	char			*soname;
 	struct list_head	needed;
+	char			*bid;
 };
 
 static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 static int elf_collect_needed(struct elf_info_s *ei);
+static char *elf_get_bid(struct elf_info_s *ei);
 
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
 {
@@ -219,6 +221,8 @@ struct elf_info_s *elf_create_info(const char *path)
 	if (elf_collect_needed(ei))
 		goto destroy_elf;
 
+	ei->bid = elf_get_bid(ei);
+
 	return ei;
 
 end_elf:
@@ -303,6 +307,11 @@ static char *elf_get_bid(struct elf_info_s *ei)
 	if (!bid_scn)
 		return NULL;
 	return get_build_id(bid_scn);
+}
+
+const char *elf_bid(struct elf_info_s *ei)
+{
+	return ei->bid;
 }
 
 char *elf_build_id(const char *path)
