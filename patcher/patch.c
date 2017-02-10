@@ -12,6 +12,7 @@
 #include "include/process.h"
 #include "include/x86_64.h"
 #include "include/backtrace.h"
+#include "include/rtld.h"
 
 struct process_ctx_s process_context;
 
@@ -23,6 +24,7 @@ struct patch_ops_s {
 	int (*set_jumps)(struct process_ctx_s *ctx);
 	int (*check_backtrace)(const struct process_ctx_s *ctx,
 			       const struct backtrace_s *bt);
+	int (*cleanup_target)(struct process_ctx_s *ctx);
 };
 
 static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp, const char *name)
@@ -517,6 +519,12 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
+	if (ctx->ops->cleanup_target) {
+		err = ctx->ops->cleanup_target(ctx);
+		if (err)
+			return err;
+	}
+
 	return 0;
 }
 
@@ -932,13 +940,56 @@ struct patch_ops_s patch_jump_ops = {
 	.name = "jump",
 	.set_jumps = set_dyn_jumps,
 	.check_backtrace = jumps_check_backtrace,
+	.cleanup_target = NULL,
+};
+
+static int unmap_file_vma(struct vma_area *vma, void *data)
+{
+	struct process_ctx_s *ctx = data;
+
+	if (!vma->path)
+		return 0;
+
+	if (strcmp(vma->path, ctx->pvma->path))
+		return 0;
+
+	return process_unmap(ctx, vma->start, vma->end - vma->start);
+}
+
+static int unmap_old_lib(struct process_ctx_s *ctx)
+{
+	if (fixup_rtld(ctx))
+		return -EINVAL;
+
+	pr_debug("= Unmap target VMA:\n");
+	return iterate_file_vmas(&ctx->vmas, ctx, unmap_file_vma);
+}
+
+static int swap_check_backtrace(const struct process_ctx_s *ctx,
+				const struct backtrace_s *bt)
+{
+	if (bt->depth == 1)
+		return -EAGAIN;
+
+	if (process_call_in_map(&bt->calls, ctx->pvma->start, ctx->pvma->end))
+		return -EAGAIN;
+	return 0;
+}
+
+struct patch_ops_s patch_swap_ops = {
+	.name = "swap",
+	.set_jumps = NULL,
+	.check_backtrace = swap_check_backtrace,
+	.cleanup_target = unmap_old_lib,
 };
 
 static struct patch_ops_s *get_patch_ops(const char *how)
 {
 	if (!strcmp(how, "jump"))
 		return &patch_jump_ops;
-	pr_msg("Error: \"how\" option can be only \"jump\"\n");
+	if (!strcmp(how, "swap"))
+		return &patch_swap_ops;
+	pr_msg("Error: \"how\" option can be either \"jump\" or \"swap\"\n");
 	return NULL;
 }
 
