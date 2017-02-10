@@ -131,80 +131,103 @@ free_vma:
 	goto err;
 }
 
+const struct vma_area *find_vma(const struct list_head *head, const void *data,
+			  int (*actor)(const struct vma_area *vma, const void *data))
+{
+	struct vma_area *vma;
+
+	list_for_each_entry(vma, head, list) {
+		int ret;
+
+		if (!vma->path)
+			continue;
+
+		ret = actor(vma, data);
+		if (ret < 0)
+			break;
+		if (ret)
+			return vma;
+	}
+	return NULL;
+}
+
+static int compare_addr(const struct vma_area *vma, const void *data)
+{
+	unsigned long addr = *(const unsigned long *)data;
+
+	if (addr < vma->start)
+		return 0;
+	if (addr > vma->end)
+		return 0;
+
+	return 1;
+}
+
 const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
 					unsigned long addr)
 {
-	const struct vma_area *vma;
-
-	list_for_each_entry(vma, vmas, list) {
-		if (addr < vma->start)
-			continue;
-		if (addr > vma->end)
-			continue;
-		return vma;
-	}
-	return NULL;
-
+	return find_vma(vmas, &addr, compare_addr);
 }
 
-const struct vma_area *find_vma_by_prot(const struct list_head *head, int prot)
+static int compare_prot(const struct vma_area *vma, const void *data)
 {
-	const struct vma_area *vma;
+	int prot = *(const int *)data;
 
-	list_for_each_entry(vma, head, list) {
-		if (vma->prot & prot)
-			return vma;
-	}
-	return NULL;
+	return vma->prot & prot;
 }
 
-const struct vma_area *find_vma_by_path(const struct list_head *head,
+const struct vma_area *find_vma_by_prot(const struct list_head *vmas, int prot)
+{
+	return find_vma(vmas, &prot, compare_prot);
+}
+
+static int compare_path(const struct vma_area *vma, const void *data)
+{
+	const char *path = data;
+
+	if (!vma->path)
+		return 0;
+	return !strcmp(vma->path, path);
+}
+
+const struct vma_area *find_vma_by_path(const struct list_head *vmas,
 					const char *path)
 {
-	const struct vma_area *vma;
+	return find_vma(vmas, path, compare_path);
+}
 
-	list_for_each_entry(vma, head, list) {
-		if (!vma->path)
-			continue;
-		if (!strcmp(vma->path, path))
-			return vma;
-	}
-	return NULL;
+static int find_hole(const struct vma_area *vma, const void *data)
+{
+	size_t size = *(const size_t *)data;
+	const struct vma_area *next_vma;
+
+	next_vma = list_entry(vma->list.next, typeof(*vma), list);
+	return next_vma->start - vma->end > size;
 }
 
 unsigned long find_vma_hole(const struct list_head *vmas,
 			    unsigned long hint, size_t size)
 {
-	const struct vma_area *vma, *next_vma;
+	const struct vma_area *vma;
 
-	list_for_each_entry(vma, vmas, list) {
-		next_vma = list_entry(vma->list.next, typeof(*vma), list);
-		if (next_vma->start - vma->end > size)
-			return vma->end;
-	}
-	return 0;
+	vma = find_vma(vmas, &size, find_hole);
+
+	return vma ? vma->end : 0;
 }
 
-const struct vma_area *find_vma_by_bid(const struct list_head *head, const char *bid)
+static int compare_bid(const struct vma_area *vma, const void *data)
 {
-	const struct vma_area *vma;
-	char *vma_bid = NULL;
+	const char *bid = data;
 
-	list_for_each_entry(vma, head, list) {
-		if (!vma->path)
-			continue;
+	if (!elf_bid(vma->ei))
+		return 0;
 
-		vma_bid = elf_build_id(vma->path);
-		if (!vma_bid)
-			continue;
+	return !strcmp(elf_bid(vma->ei), bid);
+}
 
-		if (!strcmp(bid, vma_bid)) {
-			free(vma_bid);
-			return vma;
-		}
-		free(vma_bid);
-	}
-	return NULL;
+const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char *bid)
+{
+	return find_vma(vmas, bid, compare_bid);
 }
 
 int iterate_file_vmas(struct list_head *head, void *data,
@@ -222,26 +245,6 @@ int iterate_file_vmas(struct list_head *head, void *data,
 			break;
 	}
 	return err;
-}
-
-struct vma_area *find_vma(const struct list_head *head, void *data,
-			  int (*actor)(const struct vma_area *vma, void *data))
-{
-	struct vma_area *vma;
-
-	list_for_each_entry(vma, head, list) {
-		int ret;
-
-		if (!vma->path)
-			continue;
-
-		ret = actor(vma, data);
-		if (ret < 0)
-			break;
-		if (ret)
-			return vma;
-	}
-	return NULL;
 }
 
 const char *vma_soname(const struct vma_area *vma)
