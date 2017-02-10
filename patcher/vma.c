@@ -251,3 +251,18 @@ const char *vma_soname(const struct vma_area *vma)
 {
 	return elf_get_soname(vma->ei);
 }
+
+static int compare_soname(const struct vma_area *vma, const void *data)
+{
+	const char *soname = data;
+
+	if (!vma_soname(vma))
+		return 0;
+
+	return !strcmp(vma_soname(vma), soname);
+}
+
+const struct vma_area *find_vma_by_soname(const struct list_head *vmas, const char *soname)
+{
+	return find_vma(vmas, soname, compare_soname);
+}

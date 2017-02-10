@@ -29,6 +29,8 @@ const struct vma_area *find_vma_by_path(const struct list_head *head,
 const struct vma_area *find_vma_by_bid(const struct list_head *head, const char *bid);
 const struct vma_area *find_vma(const struct list_head *head, const void *data,
 			  int (*actor)(const struct vma_area *vma, const void *data));
+const struct vma_area *find_vma_by_soname(const struct list_head *vmas,
+					  const char *soname);
 
 unsigned long find_vma_hole(const struct list_head *vmas,
 			    unsigned long hint, size_t size);
