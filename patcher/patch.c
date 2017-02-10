@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <dlfcn.h>
@@ -447,6 +448,96 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	return 0;
 }
 
+struct ctx_dep {
+	struct list_head	list;
+	const struct vma_area	*vma;
+};
+
+static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
+{
+	struct ctx_dep *cd;
+
+	cd = xmalloc(sizeof(*cd));
+	if (!cd)
+		return NULL;
+	cd->vma = vma;
+	return cd;
+}
+
+static int collect_lib_deps(struct process_ctx_s *ctx, const struct vma_area *vma, struct list_head *head)
+{
+	struct elf_needed *en;
+	LIST_HEAD(needed);
+	LIST_HEAD(nested);
+
+	list_for_each_entry(en, elf_needed_list(vma->ei), list) {
+		const struct vma_area *vma;
+		struct ctx_dep *cd;
+		int err;
+
+		vma = find_vma_by_soname(&ctx->vmas, en->needed);
+		if (!vma) {
+			pr_err("failed to find VMA by soname %s\n", en->needed);
+			return -ENOENT;
+		}
+
+		cd = ctx_create_dep(vma);
+		if (!cd)
+			return -EINVAL;
+		list_add_tail(&cd->list, &needed);
+
+		err = collect_lib_deps(ctx, vma, &nested);
+		if (err)
+			return err;
+
+	}
+	list_splice_tail(&needed, head);
+	list_splice_tail(&nested, head);
+	return 0;
+}
+
+static int collect_ctx_deplist(struct process_ctx_s *ctx)
+{
+	struct ctx_dep *cd;
+	char path[PATH_MAX];
+	char *exe_bid;
+	const struct vma_area *exe_vma;
+
+	snprintf(path, sizeof(path), "/proc/%d/exe", ctx->pid);
+
+	exe_bid = elf_build_id(path);
+	if (!exe_bid)
+		return -EINVAL;
+
+	exe_vma = find_vma_by_bid(&ctx->vmas, exe_bid);
+	if (!exe_vma)
+		return -EINVAL;
+
+	cd = ctx_create_dep(exe_vma);
+	if (!cd)
+		return -EINVAL;
+	list_add_tail(&cd->list, &ctx->objdeps);
+
+	return collect_lib_deps(ctx, exe_vma, &ctx->objdeps);
+}
+
+static int get_ctx_deplist(struct process_ctx_s *ctx)
+{
+	int err;
+	struct ctx_dep *cd;
+
+	pr_debug("= Process soname search list:\n");
+
+	err = collect_ctx_deplist(ctx);
+	if (err)
+		return err;
+
+	list_for_each_entry(cd, &ctx->objdeps, list)
+		pr_debug("      - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
+
+	return 0;
+}
+
 static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 {
 	const struct vma_area *pvma;
@@ -477,6 +568,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	ctx->pid = pid;
 	INIT_LIST_HEAD(&ctx->vmas),
+	INIT_LIST_HEAD(&ctx->objdeps),
 
 	INIT_LIST_HEAD(&binpatch->functions);
 	INIT_LIST_HEAD(&binpatch->places);
@@ -495,6 +587,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	}
 
 	if (process_find_patchable_vma(ctx, bp))
+		goto err;
+
+	if (get_ctx_deplist(ctx))
 		goto err;
 
 	if (!strcmp(bp->object_type, "ET_EXEC"))
