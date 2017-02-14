@@ -18,7 +18,7 @@ void elf_destroy_info(struct elf_info_s *ei);
 
 char *elf_build_id(const char *path);
 const char *elf_bid(struct elf_info_s *ei);
-int elf_type(const struct elf_info_s *ei);
+int elf_type_dyn(const struct elf_info_s *ei);
 
 char *elf_get_soname(struct elf_info_s *ei);
 int path_get_soname(const char *path, char **soname);

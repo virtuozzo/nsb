@@ -156,9 +156,9 @@ end_elf:
 	return NULL;
 }
 
-int elf_type(const struct elf_info_s *ei)
+int elf_type_dyn(const struct elf_info_s *ei)
 {
-	return ei->hdr.e_type;
+	return ei->hdr.e_type == ET_DYN;
 }
 
 static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
@@ -487,7 +487,7 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname)
 	int err;
 	char *name;
 
-	if (elf_type(ei) != ET_DYN)
+	if (!elf_type_dyn(ei))
 		return 0;
 
 	strtab_scn = elf_get_strtab_scn(ei);
