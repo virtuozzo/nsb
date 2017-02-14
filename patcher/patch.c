@@ -417,6 +417,60 @@ static int apply_dyn_jumps(struct process_ctx_s *ctx,BinPatch *bp)
 	return 0;
 }
 
+static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area *vma)
+{
+	struct extern_symbol *es;
+	int64_t address;
+	int err;
+	struct elf_info_s *ei;
+
+	ei = elf_create_info(ctx->binpatch.bp->new_path);
+	if (!ei)
+		return -1;
+
+	list_for_each_entry(es, &vma->target_syms, list) {
+		unsigned long offset = es->offset;
+
+		pr_debug("    \"%s\":\n", es->name);
+
+		if (elf_type_dyn(vma->ei))
+			offset += vma->start;
+
+		pr_debug("       GOT address: %#lx\n", offset);
+
+		address = elf_dsym_offset(ei, es->name);
+
+		address += ctx->new_base;
+		pr_debug("       new address: %#lx\n", address);
+
+		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es->offset);
+		err = process_write_data(ctx->pid, es->offset, &address, sizeof(address));
+		if (err < 0) {
+			pr_err("failed to patch: %d\n", err);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+static int fix_vma_refs(struct vma_area *vma, void *data)
+{
+	struct process_ctx_s *ctx = data;
+
+	if (list_empty(&vma->target_syms))
+		return 0;
+
+	pr_debug("  - %s -> %s:\n", vma->map_file, vma->path);
+	return vma_fix_target_syms(ctx, vma);
+}
+
+static int fix_target_references(struct process_ctx_s *ctx)
+{
+	pr_info("= Fix target references:\n");
+	return iterate_file_vmas(&ctx->vmas, ctx, fix_vma_refs);
+}
+
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	struct binpatch_s *binpatch = &ctx->binpatch;
@@ -442,6 +496,10 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 		return err;
 
 	err = apply_dyn_jumps(ctx, bp);
+	if (err)
+		return err;
+
+	err = fix_target_references(ctx);
 	if (err)
 		return err;
 
