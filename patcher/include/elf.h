@@ -42,6 +42,7 @@ struct extern_symbol {
 	char			*soname;
 	const struct vma_area	*vma;
 };
+int elf_weak_sym(const struct extern_symbol *es);
 
 int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 

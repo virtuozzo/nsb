@@ -835,3 +835,8 @@ int elf_contains_sym(struct elf_info_s *ei, const char *symname)
 	}
 	return err;
 }
+
+int elf_weak_sym(const struct extern_symbol *es)
+{
+	return es->bind == STB_WEAK;
+}
