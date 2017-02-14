@@ -37,6 +37,7 @@ int process_cure(struct process_ctx_s *ctx);
 int process_link(struct process_ctx_s *ctx);
 int process_infect(struct process_ctx_s *ctx);
 
+int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size);
 int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 			unsigned long addr, size_t size, int flags, int prot);
 

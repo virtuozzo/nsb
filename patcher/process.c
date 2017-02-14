@@ -279,3 +279,27 @@ int process_infect(struct process_ctx_s *ctx)
 	}
 	return ret;
 }
+
+int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
+{
+	int ret;
+	long sret = -ENOSYS;
+
+	ret = compel_syscall(ctx->ctl, __NR(munmap, false), &sret,
+			addr, size, 0, 0, 0, 0);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		return -1;
+	}
+
+	if (sret < 0) {
+		errno = -sret;
+		pr_perror("Failed to unmap with size %zu bytes", size);
+		return -1;
+	}
+
+	pr_debug("Unmapped %#lx-%#lx in task %d\n",
+			addr, addr + size, ctx->pid);
+
+	return 0;
+}
