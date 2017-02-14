@@ -538,6 +538,91 @@ static int get_ctx_deplist(struct process_ctx_s *ctx)
 	return 0;
 }
 
+static int ctx_bind_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
+{
+	int ret;
+	const struct ctx_dep *n;
+
+	list_for_each_entry(n, &ctx->objdeps, list) {
+		const struct vma_area *vma = n->vma;
+
+		ret = elf_contains_sym(vma->ei, es->name);
+		if (ret < 0)
+			return ret;
+		if (ret) {
+			es->vma = vma;
+			return 0;
+		}
+	}
+
+	if (elf_weak_sym(es))
+		return 0;
+
+	pr_err("failed to find %s symbol\n", es->name);
+	return -ENOENT;
+}
+
+static int collect_dependent_vma(struct process_ctx_s *ctx,
+				 struct vma_area *vma)
+{
+	int err;
+	LIST_HEAD(plt_syms);
+	struct extern_symbol *es, *tmp;
+
+	err = elf_extern_dsyms(vma->ei, &plt_syms);
+	if (err)
+		return err;
+
+	pr_debug("    PLT symbols to update:\n");
+	list_for_each_entry_safe(es, tmp, &plt_syms, list) {
+		err = ctx_bind_es(ctx, es);
+		if (err)
+			return err;
+
+		if (es->vma != ctx->pvma)
+			continue;
+
+		list_move(&es->list, &vma->target_syms);
+
+		pr_debug("      - %s:\n", es->name);
+		pr_debug("          offset  : %#lx\n", es->offset);
+		pr_debug("          bind    : %d\n", es->bind);
+		pr_debug("          path    : %s\n", es->vma->path);
+		pr_debug("          map_file: %s\n", es->vma->map_file);
+	}
+
+	return 0;
+}
+
+static int check_file_vma(struct vma_area *vma, void *data)
+{
+	struct process_ctx_s *ctx = data;
+	int ret;
+
+	if (!vma->path)
+		return 0;
+
+	if (!vma_is_executable(vma))
+		return 0;
+
+	pr_info("  - %#lx-%#lx -> %s\n", vma->start, vma->end, vma->path);
+	ret = elf_soname_needed(vma->ei, vma_soname(ctx->pvma));
+	if (ret < 0)
+		pr_err("failed to find %s dependences: %d\n", vma->path, ret);
+	else if (ret)
+		ret = collect_dependent_vma(ctx, vma);
+	return ret < 0 ? ret : 0;
+}
+
+static int process_collect_dependable_vmas(struct process_ctx_s *ctx)
+{
+	if (!elf_type_dyn(ctx->pvma->ei))
+		return 0;
+
+	pr_info("= Searching mappings, depending on \"%s\":\n", vma_soname(ctx->pvma));
+	return iterate_file_vmas(&ctx->vmas, ctx, check_file_vma);
+}
+
 static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 {
 	const struct vma_area *pvma;
@@ -591,6 +676,11 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	if (get_ctx_deplist(ctx))
 		goto err;
+
+	if (process_collect_dependable_vmas(ctx)) {
+		pr_err("failed to find dependable VMAs\n");
+		goto err;
+	}
 
 	if (!strcmp(bp->object_type, "ET_EXEC"))
 		ctx->apply = apply_exec_binpatch;
