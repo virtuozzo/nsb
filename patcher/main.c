@@ -15,6 +15,7 @@ int compel_main(void *arg_p, unsigned int arg_s) { return 0; }
 struct options {
 	pid_t		 pid;
 	const char	*patch_path;
+	const char	*how;
 	int		verbosity;
 	int		(*handler)(const struct options *o);
 };
@@ -39,7 +40,10 @@ static int cmd_patch_process(const struct options *o)
 		return 1;
 	}
 
-	return patch_process(o->pid, o->patch_path);
+	if (check_patch_mode(o->how))
+		return 1;
+
+	return patch_process(o->pid, o->patch_path, o->how);
 }
 
 static int cmd_check_process(const struct options *o)
@@ -77,6 +81,7 @@ static int parse_options(int argc, char **argv, struct options *o)
 		{ "pid",			required_argument,	0, 'p'	},
 		{ "log-level",			required_argument,	0, 'v'	},
 		{ "filename",			required_argument,	0, 'f'	},
+		{ "how",			required_argument,	0, 1000	},
 		{ },
 	};
 	int opt, idx = -1;
@@ -99,6 +104,9 @@ static int parse_options(int argc, char **argv, struct options *o)
 			break;
 		case 'f':
 			o->patch_path = optarg;
+			break;
+		case 1000:
+			o->how = optarg;
 			break;
 		case '?':
 		default:
@@ -138,7 +146,9 @@ bad_arg:
 
 int main(int argc, char *argv[])
 {
-	struct options o = {};
+	struct options o = {
+		.how = "jump",
+	};
 	int err;
 
 	err = parse_options(argc, argv, &o);

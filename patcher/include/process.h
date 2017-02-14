@@ -19,7 +19,7 @@ struct binpatch_s {
 
 struct process_ctx_s {
 	pid_t			pid;
-	int			(*apply)(struct process_ctx_s *ctx);
+	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
 	struct list_head	vmas;
 	struct binpatch_s	binpatch;

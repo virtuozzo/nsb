@@ -15,6 +15,16 @@
 
 struct process_ctx_s process_context;
 
+static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
+
+struct patch_ops_s {
+	char *name;
+	int (*apply_patch)(struct process_ctx_s *ctx);
+	int (*set_jumps)(struct process_ctx_s *ctx);
+	int (*check_backtrace)(const struct process_ctx_s *ctx,
+			       const struct backtrace_s *bt);
+};
+
 static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp, const char *name)
 {
 	const struct funcpatch_s *funcpatch;
@@ -400,9 +410,11 @@ static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
 	return 0;
 }
 
-static int apply_dyn_jumps(struct process_ctx_s *ctx,BinPatch *bp)
+static int set_dyn_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
+	struct binpatch_s *binpatch = &ctx->binpatch;
+	BinPatch *bp = binpatch->bp;
 
 	pr_info("= Apply jumps:\n");
 	for (i = 0; i < bp->n_patches; i++) {
@@ -495,9 +507,11 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	err = apply_dyn_jumps(ctx, bp);
-	if (err)
-		return err;
+	if (ctx->ops->set_jumps) {
+		err = ctx->ops->set_jumps(ctx);
+		if (err)
+			return err;
+	}
 
 	err = fix_target_references(ctx);
 	if (err)
@@ -701,7 +715,7 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 }
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
-			const char *patchfile)
+			const char *patchfile, const char *how)
 {
 	struct binpatch_s *binpatch = &ctx->binpatch;
 	BinPatch *bp;
@@ -720,9 +734,14 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (!bp)
 		return -1;
 
+	ctx->ops = set_patch_ops(how, bp->object_type);
+	if (!ctx->ops)
+		goto err;
+
 	pr_info("  source BID : %s\n", bp->old_bid);
 	pr_info("  target path: %s\n", bp->new_path);
 	pr_info("  object type: %s\n", bp->object_type);
+	pr_info("  patch mode : %s\n", ctx->ops->name);
 
 	if (collect_vmas(ctx->pid, &ctx->vmas)) {
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
@@ -737,15 +756,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	if (process_collect_dependable_vmas(ctx)) {
 		pr_err("failed to find dependable VMAs\n");
-		goto err;
-	}
-
-	if (!strcmp(bp->object_type, "ET_EXEC"))
-		ctx->apply = apply_exec_binpatch;
-	else if (!strcmp(bp->object_type, "ET_DYN"))
-		ctx->apply = apply_dyn_binpatch;
-	else {
-		pr_err("Unknown patch type: %s\n", bp->object_type);
 		goto err;
 	}
 
@@ -779,10 +789,33 @@ static int process_call_in_map(const struct list_head *calls,
 	return 0;
 }
 
+static int jumps_check_backtrace(const struct process_ctx_s *ctx,
+				 const struct backtrace_s *bt)
+{
+	const struct binpatch_s *binpatch = &ctx->binpatch;
+	const BinPatch *bp = binpatch->bp;
+	int i;
+
+	for (i = 0; i < bp->n_patches; i++) {
+		FuncPatch *fp = bp->patches[i];
+		uint64_t start, end;
+
+		/* Skip new functions: they are outside stack by default */
+		if (fp->new_)
+			continue;
+
+		start = ctx->old_base + fp->addr;
+		end = start + fp->size;
+
+		pr_debug("Patch: %#lx - %#lx\n", start, end);
+		if (process_call_in_map(&bt->calls, start, end))
+			return -EAGAIN;
+	}
+	return 0;
+}
+
 static int process_check_stack(struct process_ctx_s *ctx)
 {
-	struct binpatch_s *binpatch = &ctx->binpatch;
-	BinPatch *bp = binpatch->bp;
 	int err, i = 0;
 	struct backtrace_s bt = {
 		.calls = LIST_HEAD_INIT(bt.calls),
@@ -801,22 +834,7 @@ static int process_check_stack(struct process_ctx_s *ctx)
 	list_for_each_entry(bf, &bt.calls, list)
 		pr_debug("#%d  %#lx in %s\n", i++, bf->ip, bf->name);
 
-	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
-		uint64_t start, end;
-
-		/* Skip new functions: they are outside stack by default */
-		if (fp->new_)
-			continue;
-
-		start = ctx->old_base + fp->addr;
-		end = start + fp->size;
-
-		pr_debug("Patch: %#lx - %#lx\n", start, end);
-		if (process_call_in_map(&bt.calls, start, end))
-			return -EAGAIN;
-	}
-	return 0;
+	return ctx->ops->check_backtrace(ctx, &bt);
 }
 
 static int process_catch(struct process_ctx_s *ctx)
@@ -859,12 +877,12 @@ static int process_suspend(struct process_ctx_s *ctx)
 	return err == -EAGAIN ? -ETIME : err;
 }
 
-int patch_process(pid_t pid, const char *patchfile)
+int patch_process(pid_t pid, const char *patchfile, const char *how)
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
 
-	err = init_context(ctx, pid, patchfile);
+	err = init_context(ctx, pid, patchfile, how);
 	if (err)
 		return err;
 
@@ -879,7 +897,7 @@ int patch_process(pid_t pid, const char *patchfile)
 	if (ret)
 		goto resume;
 
-	ret = ctx->apply(ctx);
+	ret = ctx->ops->apply_patch(ctx);
 	if (ret)
 		 pr_err("failed to apply binary patch\n");
 
@@ -908,4 +926,43 @@ int check_process(pid_t pid, const char *patchfile)
 		return -1;
 
 	return !find_vma_by_bid(&vmas, bp->old_bid);
+}
+
+struct patch_ops_s patch_jump_ops = {
+	.name = "jump",
+	.set_jumps = set_dyn_jumps,
+	.check_backtrace = jumps_check_backtrace,
+};
+
+static struct patch_ops_s *get_patch_ops(const char *how)
+{
+	if (!strcmp(how, "jump"))
+		return &patch_jump_ops;
+	pr_msg("Error: \"how\" option can be only \"jump\"\n");
+	return NULL;
+}
+
+static const struct patch_ops_s *set_patch_ops(const char *how, const char *type)
+{
+	struct patch_ops_s *ops;
+	int (*apply)(struct process_ctx_s *ctx);
+
+	if (!strcmp(type, "ET_EXEC")) {
+		how = "jump";
+		apply = apply_exec_binpatch;
+	} else if (!strcmp(type, "ET_DYN"))
+		apply = apply_dyn_binpatch;
+	else {
+		pr_err("Unknown patch type: %s\n", type);
+		return NULL;
+	}
+
+	ops = get_patch_ops(how);
+	ops->apply_patch = apply;
+	return ops;
+}
+
+int check_patch_mode(const char *how)
+{
+	return get_patch_ops(how) ? 0 : -EINVAL;
 }
