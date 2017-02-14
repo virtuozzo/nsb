@@ -708,10 +708,7 @@ static int process_suspend(struct process_ctx_s *ctx)
 			break;
 	} while (++try < tries);
 
-	if (err == -EAGAIN) {
-		return -ETIMEDOUT;
-	}
-	return err;
+	return err == -EAGAIN ? -ETIME : err;
 }
 
 int patch_process(pid_t pid, const char *patchfile)
