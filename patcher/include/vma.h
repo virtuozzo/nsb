@@ -40,4 +40,6 @@ int iterate_file_vmas(struct list_head *head, void *data,
 
 const char *vma_soname(const struct vma_area *vma);
 
+int vma_is_executable(const struct vma_area *vma);
+
 #endif /* __PATCHER_VMA_H__ */
