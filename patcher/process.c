@@ -10,6 +10,7 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 #include "include/vma.h"
+#include "include/backtrace.h"
 
 #include "include/process.h"
 
@@ -446,5 +447,45 @@ int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
 	pr_debug("Unmapped %#lx-%#lx in task %d\n",
 			addr, addr + size, ctx->pid);
 
+	return 0;
+}
+
+static int task_check_stack(const struct process_ctx_s *ctx, const struct thread_s *t,
+			    int (*check)(const struct process_ctx_s *ctx,
+					 const struct backtrace_s *bt))
+{
+	int err, i = 0;
+	struct backtrace_s bt = {
+		.calls = LIST_HEAD_INIT(bt.calls),
+	};
+	struct backtrace_function_s *bf;
+
+	pr_info("Checking %d stack...\n", t->pid);
+
+	err = process_backtrace(t->pid, &bt);
+	if (err) {
+		pr_err("failed to unwind process %d stack\n", t->pid);
+		return err;
+	}
+
+	pr_debug("stack depth: %d\n", bt.depth);
+	list_for_each_entry(bf, &bt.calls, list)
+		pr_debug("#%d  %#lx in %s\n", i++, bf->ip, bf->name);
+
+	return check(ctx, &bt);
+}
+
+int process_check_stack(const struct process_ctx_s *ctx,
+			int (*check)(const struct process_ctx_s *ctx,
+				      const struct backtrace_s *bt))
+{
+	struct thread_s *t;
+	int err;
+
+	list_for_each_entry(t, &ctx->threads, list) {
+		err = task_check_stack(ctx, t, check);
+		if (err)
+			return err;
+	}
 	return 0;
 }

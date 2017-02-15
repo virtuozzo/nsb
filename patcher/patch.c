@@ -823,29 +823,6 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 	return 0;
 }
 
-static int process_check_stack(struct process_ctx_s *ctx)
-{
-	int err, i = 0;
-	struct backtrace_s bt = {
-		.calls = LIST_HEAD_INIT(bt.calls),
-	};
-	struct backtrace_function_s *bf;
-
-	pr_info("Checking %d stack...\n", ctx->pid);
-
-	err = process_backtrace(ctx->pid, &bt);
-	if (err) {
-		pr_err("failed to unwind process %d stack\n", ctx->pid);
-		return err;
-	}
-
-	pr_debug("stack depth: %d\n", bt.depth);
-	list_for_each_entry(bf, &bt.calls, list)
-		pr_debug("#%d  %#lx in %s\n", i++, bf->ip, bf->name);
-
-	return ctx->ops->check_backtrace(ctx, &bt);
-}
-
 static int process_catch(struct process_ctx_s *ctx)
 {
 	int ret, err;
@@ -854,7 +831,7 @@ static int process_catch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	ret = process_check_stack(ctx);
+	ret = process_check_stack(ctx, ctx->ops->check_backtrace);
 	if (ret)
 		goto err;
 
