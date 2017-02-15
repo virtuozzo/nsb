@@ -4,16 +4,20 @@ import re
 from testrunner import Test
 
 parser = argparse.ArgumentParser()
-parser.add_argument("source", help="Source binary test")
-parser.add_argument("target", help="Target binary test")
+parser.add_argument("name", help="Test name")
 parser.add_argument("--outfile", help="Output test file")
 args = parser.parse_args()
 
-source = args.source
-target = args.target
+split = re.split('_to_|_|.py', os.path.basename(args.name))
 
-src_type = re.search('[^_]+', os.path.basename(source)).group(0)
-tgt_type = re.search('[^_]+', os.path.basename(target)).group(0)
+source = split[0] + '_' + split[1]
+target = split[2] + '_' + split[3]
+src_type = split[0]
+tgt_type = split[2]
+
+if src_type != tgt_type:
+	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
+	exit(1)
 
 if src_type == "shared":
 	tst_type = "Shared"
@@ -21,10 +25,7 @@ elif src_type == "static":
 	tst_type = "Static"
 else:
 	print "Unsupported test type: %s" % src_type
-
-if src_type != tgt_type:
-	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
-	raise
+	exit(1)
 
 outfile = args.outfile
 if outfile is None:

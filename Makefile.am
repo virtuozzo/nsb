@@ -79,7 +79,7 @@ TESTS = 							\
 			tests/static_j_to_static_i.py		\
 			tests/static_i_to_static_j.py		\
 								\
-			tests/shared_a_to_shared_b.py		\
+			tests/shared_a_to_shared_b.py	\
 			tests/shared_a_to_shared_c.py		\
 			tests/shared_a_to_shared_f.py		\
 			tests/shared_d_to_shared_g.py		\
@@ -92,8 +92,8 @@ TESTS = 							\
 								\
 			tests/shared_a_to_shared_combined.py
 
-$(TESTS): $(TESTS_DIR)/testgen.py
-	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $(subst _to_, ,$(subst .py,,$(subst tests/, ,$@)))  --outfile $@
+%.py: $(TESTS_DIR)/testgen.py
+	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
 
 
 TEST_EXTENSIONS = .py
