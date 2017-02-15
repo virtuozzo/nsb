@@ -8,23 +8,32 @@ parser.add_argument("name", help="Test name")
 parser.add_argument("--outfile", help="Output test file")
 args = parser.parse_args()
 
-split = re.split('_to_|_|.py', os.path.basename(args.name))
+if args.name.endswith('.py'):
+    args.name = args.name[:-3]
 
-source = split[0] + '_' + split[1]
-target = split[2] + '_' + split[3]
-src_type = split[0]
-tgt_type = split[2]
-patch_type = split[4]
+test_name = os.path.basename(args.name)
+patch_type = "jump"
 
-if src_type != tgt_type:
-	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
-	exit(1)
-
-if len(patch_type) == 0:
-	patch_type = "jump"
+if "__" in test_name:
+	split = re.split('__', os.path.basename(args.name))
+	test_name = split[0]
+	patch_type = split[1]
 
 if patch_type != "jump" and patch_type != "swap":
 	print "Unsupported patch type: %s" % patch_type
+	exit(1)
+
+
+split = re.split('_to_', test_name)
+
+source = split[0]
+target = split[1]
+
+src_type = re.split('_', source)[0]
+tgt_type = re.split('_', target)[0]
+
+if src_type != tgt_type:
+	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
 	exit(1)
 
 if src_type == "shared":

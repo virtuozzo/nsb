@@ -79,29 +79,29 @@ TESTS = 								\
 			tests/static_j_to_static_i.py			\
 			tests/static_i_to_static_j.py			\
 									\
-			tests/shared_a_to_shared_b_jump.py		\
-			tests/shared_a_to_shared_c_jump.py		\
-			tests/shared_a_to_shared_f_jump.py		\
-			tests/shared_d_to_shared_g_jump.py		\
-			tests/shared_e_to_shared_h_jump.py		\
-			tests/shared_j_to_shared_i_jump.py		\
-			tests/shared_i_to_shared_j_jump.py		\
-			tests/shared_k_to_shared_l_jump.py		\
-			tests/shared_l_to_shared_k_jump.py		\
-			tests/shared_m_to_shared_n_jump.py		\
-			tests/shared_a_to_shared_combined_jump.py	\
+			tests/shared_a_to_shared_b__jump.py		\
+			tests/shared_a_to_shared_c__jump.py		\
+			tests/shared_a_to_shared_f__jump.py		\
+			tests/shared_d_to_shared_g__jump.py		\
+			tests/shared_e_to_shared_h__jump.py		\
+			tests/shared_j_to_shared_i__jump.py		\
+			tests/shared_i_to_shared_j__jump.py		\
+			tests/shared_k_to_shared_l__jump.py		\
+			tests/shared_l_to_shared_k__jump.py		\
+			tests/shared_m_to_shared_n__jump.py		\
+			tests/shared_a_to_shared_combined__jump.py	\
 									\
-			tests/shared_a_to_shared_b_swap.py		\
-			tests/shared_a_to_shared_c_swap.py		\
-			tests/shared_a_to_shared_f_swap.py		\
-			tests/shared_d_to_shared_g_swap.py		\
-			tests/shared_e_to_shared_h_swap.py		\
-			tests/shared_j_to_shared_i_swap.py		\
-			tests/shared_i_to_shared_j_swap.py		\
-			tests/shared_k_to_shared_l_swap.py		\
-			tests/shared_l_to_shared_k_swap.py		\
-			tests/shared_m_to_shared_n_swap.py		\
-			tests/shared_a_to_shared_combined_swap.py
+			tests/shared_a_to_shared_b__swap.py		\
+			tests/shared_a_to_shared_c__swap.py		\
+			tests/shared_a_to_shared_f__swap.py		\
+			tests/shared_d_to_shared_g__swap.py		\
+			tests/shared_e_to_shared_h__swap.py		\
+			tests/shared_j_to_shared_i__swap.py		\
+			tests/shared_i_to_shared_j__swap.py		\
+			tests/shared_k_to_shared_l__swap.py		\
+			tests/shared_l_to_shared_k__swap.py		\
+			tests/shared_m_to_shared_n__swap.py		\
+			tests/shared_a_to_shared_combined__swap.py
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
