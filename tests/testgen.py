@@ -14,9 +14,17 @@ source = split[0] + '_' + split[1]
 target = split[2] + '_' + split[3]
 src_type = split[0]
 tgt_type = split[2]
+patch_type = split[4]
 
 if src_type != tgt_type:
 	print "Tests must have equal types: %s != %s" % (src_type, tgt_type)
+	exit(1)
+
+if len(patch_type) == 0:
+	patch_type = "jump"
+
+if patch_type != "jump" and patch_type != "swap":
+	print "Unsupported patch type: %s" % patch_type
 	exit(1)
 
 if src_type == "shared":
@@ -44,8 +52,8 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"import os\n" +								\
 	"import testrunner\n\n" +						\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
-	"exit(testrunner.%sLivePatchTest('%s', '%s', %u, %u).run())\n" %	\
-	(tst_type, source, target, src_ret, tgt_ret)
+	"exit(testrunner.%sLivePatchTest('%s', '%s', '%s', %u, %u).run())\n" %	\
+	(tst_type, source, target, patch_type, src_ret, tgt_ret)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

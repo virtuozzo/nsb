@@ -123,9 +123,10 @@ class Test:
 
 
 class BinPatch:
-	def __init__(self, source, target, outfile):
+	def __init__(self, source, target, how, outfile):
 		self.source = source
 		self.target = target
+		self.how = how
 		self.outfile = outfile
 
 		self.gen_stderr = None
@@ -170,7 +171,7 @@ class BinPatch:
 				print "Test with pid %d is not running" % test.p.pid
 				return 1
 
-			p = self.__run_cmd__("%s patch -v 4 -f %s -p %d" % (self.patcher, self.outfile, test.p.pid))
+			p = self.__run_cmd__("%s patch -v 4 -f %s --how %s -p %d" % (self.patcher, self.outfile, self.how, test.p.pid))
 			self.apply_stdout, self.apply_stderr = p.communicate()
 			print self.apply_stdout
 			self.apply_result = p.returncode
@@ -185,10 +186,11 @@ class BinPatch:
 class LivePatchTest:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, source, target, src_res, tgt_res):
+	def __init__(self, source, target, how, src_res, tgt_res):
 		self.test_bin = self.test_binary(source)
 		self.src_elf = self.patch_binary(source)
 		self.tgt_elf = self.patch_binary(target)
+		self.how = how
 		self.bp_out = source + "_to_" + os.path.basename(target) + ".binpatch"
 		self.src_res = src_res
 		self.tgt_res = tgt_res
@@ -208,7 +210,7 @@ class LivePatchTest:
 		source = test.get_map_path(bid)
 		print "Test map by Build-ID: %s" % source
 
-		patch = BinPatch(source, self.tgt_elf, self.bp_out)
+		patch = BinPatch(source, self.tgt_elf, self.how, self.bp_out)
 
 		if patch.generate() != 0:
 			print "Failed to generate binary patch\n"
