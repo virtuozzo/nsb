@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/user.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include <compel/compel.h>
 #include <compel/ptrace.h>
@@ -16,6 +18,12 @@ struct patch_place_s {
 	unsigned long		start;
 	unsigned long		size;
 	unsigned long		used;
+};
+
+struct thread_s {
+	struct list_head	list;
+	pid_t			pid;
+	int			seized;
 };
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
@@ -220,13 +228,41 @@ long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t siz
 	return addr;
 }
 
-int process_cure(struct process_ctx_s *ctx)
+static int task_cure(struct thread_s *t)
 {
-	if (compel_resume_task(ctx->pid, TASK_ALIVE, TASK_ALIVE)) {
-		pr_err("Can't unseize from %d\n", ctx->pid);
+	if (!t->seized)
+		return 0;
+
+	if (compel_resume_task(t->pid, TASK_ALIVE, TASK_ALIVE)) {
+		pr_err("Can't unseize from %d\n", t->pid);
 		return -1;
 	}
 	return 0;
+}
+
+void thread_destroy(struct thread_s *t)
+{
+	list_del(&t->list);
+	free(t);
+}
+
+static int process_cure_threads(struct process_ctx_s *ctx)
+{
+	struct thread_s *t, *tmp;
+	int err;
+
+	list_for_each_entry_safe(t, tmp, &ctx->threads, list) {
+		err = task_cure(t);
+		if (err)
+			return err;
+		thread_destroy(t);
+	}
+	return 0;
+}
+
+int process_cure(struct process_ctx_s *ctx)
+{
+	return process_cure_threads(ctx);
 }
 
 int process_link(struct process_ctx_s *ctx)
@@ -251,33 +287,142 @@ int process_link(struct process_ctx_s *ctx)
 	return 0;
 }
 
-int process_infect(struct process_ctx_s *ctx)
+static int task_infect(struct thread_s *t)
 {
-	int ret;
+	pr_debug("  %d\n", t->pid);
 
-	pr_info("Stopping %d...\n", ctx->pid);
-
-	switch (compel_stop_task(ctx->pid)) {
+	switch (compel_stop_task(t->pid)) {
 		case TASK_ALIVE:
-			ret = 0;
-			pr_debug("Process %d seized\n", ctx->pid);
-			break;
+			t->seized = true;
+			return 0;
 		case TASK_STOPPED:
-			ret = -EBUSY;
 			pr_debug("BUSY\n");
-			break;
+			return -EBUSY;
 		case TASK_ZOMBIE:
-			ret = -EINVAL;
 			pr_debug("ZOMBIE\n");
 			break;
 		case TASK_DEAD:
-			ret = -EINVAL;
 			pr_debug("DEAD\n");
 			break;
 		default:
-			ret = -errno;
+			if (errno != -ESRCH)
+				return -errno;
 	}
-	return ret;
+	thread_destroy(t);
+	return 0;
+}
+
+static int iterate_dir_name(const char *dpath,
+			    int (*actor)(const char *dentry, void *data),
+			    void *data)
+{
+	struct dirent *dt;
+	DIR *fdir;
+	int err;
+
+	fdir = opendir(dpath);
+	if (!fdir) {
+		pr_perror("failed to open %s", dpath);
+		return -errno;
+	}
+
+	while ((dt = readdir(fdir)) != NULL) {
+		char *dentry = dt->d_name;
+
+		if (!strcmp(dentry, ".") || !strcmp(dentry, ".."))
+			continue;
+
+		err = actor(dentry, data);
+		if (err)
+			break;
+	}
+
+	closedir(fdir);
+	return err;
+}
+
+static int collect_thread(const char *dentry, void *data)
+{
+	struct list_head *threads = data;
+	struct thread_s *t;
+	pid_t pid;
+
+	pid = atoi(dentry);
+
+	list_for_each_entry(t, threads, list) {
+		if (t->pid == pid)
+			return 0;
+	}
+
+	t = malloc(sizeof(*t));
+	if (!t)
+		return -ENOMEM;
+
+	t->pid = pid;
+	t->seized = 0;
+	list_add_tail(&t->list, threads);
+	return 0;
+}
+
+static int process_collect_threads(struct process_ctx_s *ctx)
+{
+	char tasks[] = "/proc/XXXXXXXXXX/tasks/";
+
+	sprintf(tasks, "/proc/%d/task/", ctx->pid);
+
+	return iterate_dir_name(tasks, collect_thread, &ctx->threads);
+}
+
+static int process_infect_threads(struct process_ctx_s *ctx)
+{
+	struct thread_s *t, *tmp;
+	int err;
+
+	list_for_each_entry_safe(t, tmp, &ctx->threads, list) {
+		err = task_infect(t);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
+static bool process_needs_seize(struct process_ctx_s *ctx)
+{
+	if (list_empty(&ctx->threads))
+		return true;
+	return !list_entry(ctx->threads.prev, struct thread_s, list)->seized;
+}
+
+int process_infect(struct process_ctx_s *ctx)
+{
+	int err;
+
+	pr_debug("= Infecting process %d:\n", ctx->pid);
+
+	while (1) {
+		err = process_collect_threads(ctx);
+		if (err)
+			goto err;
+
+		if (!process_needs_seize(ctx))
+			break;
+
+		err = process_infect_threads(ctx);
+		if (err)
+			goto err;
+	}
+
+	if (list_empty(&ctx->threads)) {
+		pr_err("failed to collect any threads\n");
+		pr_err("Process %d is considered dead\n", ctx->pid);
+		return -ESRCH;
+	}
+
+	return 0;
+
+err:
+	process_cure_threads(ctx);
+	return err;
 }
 
 int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)

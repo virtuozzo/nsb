@@ -28,6 +28,7 @@ struct process_ctx_s {
 	int64_t			new_base;
 	const struct vma_area	*pvma;
 	struct list_head	objdeps;
+	struct list_head	threads;
 };
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);

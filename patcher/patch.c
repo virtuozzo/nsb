@@ -732,8 +732,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	pr_info("  Pid        : %d\n", pid);
 
 	ctx->pid = pid;
-	INIT_LIST_HEAD(&ctx->vmas),
-	INIT_LIST_HEAD(&ctx->objdeps),
+	INIT_LIST_HEAD(&ctx->vmas);
+	INIT_LIST_HEAD(&ctx->objdeps);
+	INIT_LIST_HEAD(&ctx->threads);
 
 	INIT_LIST_HEAD(&binpatch->functions);
 	INIT_LIST_HEAD(&binpatch->places);
