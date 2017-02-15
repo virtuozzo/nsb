@@ -19,12 +19,18 @@ libtest_n_la_SOURCES = test_n.c
 
 libtest_combined_la_SOURCES = test_combined.c
 
+libtest_mta_la_SOURCES = test_a.c
+libtest_mtcombined_la_SOURCES = test_combined.c
+
 check_LTLIBRARIES = libtest_a.la libtest_b.la libtest_c.la libtest_d.la	\
 		  libtest_e.la libtest_f.la libtest_g.la libtest_h.la	\
 		  libtest_i.la libtest_j.la libtest_k.la libtest_l.la	\
 		  libtest_m.la libtest_n.la				\
 									\
-		  libtest_combined.la
+		  libtest_combined.la					\
+		  							\
+		  libtest_mta.la					\
+		  libtest_mtcombined.la
 
 shared_a_SOURCES = test_main.c
 shared_a_LDADD = libtest_a.la
@@ -71,12 +77,22 @@ shared_n_LDADD = libtest_n.la
 shared_combined_SOURCES = test_main.c
 shared_combined_LDADD = libtest_combined.la
 
+
+shared_mta_SOURCES = test_main_mt.c
+shared_mta_LDADD = libtest_mta.la -lpthread
+
+shared_mtcombined_SOURCES = test_main_mt.c
+shared_mtcombined_LDADD = libtest_mtcombined.la -lpthread
+
 check_PROGRAMS = shared_a shared_b shared_c shared_d	\
 		 shared_e shared_f shared_g shared_h	\
 		 shared_i shared_j shared_k shared_l	\
 		 shared_m shared_n			\
 		 					\
-		 shared_combined
+		 shared_combined			\
+		 					\
+		 shared_mta				\
+		 shared_mtcombined
 
 static_a_SOURCES =			\
 			test_main.c	\
