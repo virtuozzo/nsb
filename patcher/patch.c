@@ -866,8 +866,8 @@ err:
 
 static int process_suspend(struct process_ctx_s *ctx)
 {
-	int try = 0, tries = 5;
-	int timeout_msec = 100;
+	int try = 0, tries = 25;
+	int timeout_msec = 20;
 	int err;
 
 	do {
