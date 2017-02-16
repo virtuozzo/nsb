@@ -103,7 +103,9 @@ TESTS = 								\
 			tests/shared_l_to_shared_k__swap.py		\
 			tests/shared_m_to_shared_n__swap.py		\
 			tests/shared_a_to_shared_combined__swap.py	\
-			tests/shared_mta_to_shared_mtcombined__swap.py
+			tests/shared_mta_to_shared_mtcombined__swap.py	\
+									\
+			tests/shared_pvar_to_shared_pvar__jump.py
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
