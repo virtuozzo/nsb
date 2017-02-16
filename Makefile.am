@@ -107,6 +107,11 @@ TESTS = 								\
 									\
 			tests/shared_pvar_to_shared_pvar__jump.py
 
+XFAIL_TESTS = 								\
+			tests/shared_mta_to_shared_mtcombined__swap.py	\
+									\
+			tests/shared_pvar_to_shared_pvar__jump.py
+
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
 
