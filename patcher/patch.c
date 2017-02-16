@@ -143,8 +143,6 @@ static int apply_exec_binpatch(struct process_ctx_s *ctx)
 	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
 
-	pr_debug("Applying static binary patch:\n");
-
 	for (i = 0; i < bp->n_patches; i++) {
 		FuncPatch *fp = bp->patches[i];
 		unsigned long addr;
@@ -179,7 +177,7 @@ static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
 	void *handle;
 	LIST_HEAD(vmas);
 
-	pr_info("= Discovering target PLT hints:\n");
+	pr_info("= Map %s:\n", bp->new_path);
 
 	pr_debug("  - Dlopen %s\n", bp->new_path);
 	handle = dlopen(bp->new_path, RTLD_NOW);
@@ -192,6 +190,8 @@ static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
 		pr_err("Can't collect local mappings\n");
 		goto err;
 	}
+
+	pr_info("= Discovering target PLT hints:\n");
 
 	for (i = 0; i < bp->n_relocations; i++) {
 		RelaPlt *rp = bp->relocations[i];
@@ -491,8 +491,6 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	BinPatch *bp = binpatch->bp;
 	int err;
 
-	pr_debug("Applying PIC binary patch:\n");
-
 	err = discover_plt_hints(ctx, bp);
 	if (err)
 		return err;
@@ -778,7 +776,7 @@ err:
 
 static int process_resume(struct process_ctx_s *ctx)
 {
-	pr_info("Resuming %d\n", ctx->pid);
+	pr_info("= Resuming %d\n", ctx->pid);
 	return process_cure(ctx);
 }
 
@@ -816,7 +814,7 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 		start = ctx->old_base + fp->addr;
 		end = start + fp->size;
 
-		pr_debug("Patch: %#lx - %#lx\n", start, end);
+		pr_debug("      Patch: %#lx - %#lx\n", start, end);
 		if (process_call_in_map(&bt->calls, start, end))
 			return -EAGAIN;
 	}

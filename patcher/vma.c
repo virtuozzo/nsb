@@ -56,7 +56,7 @@ int collect_vmas(pid_t pid, struct list_head *head)
 	char map_file[PATH_MAX];
 	FILE *f;
 
-	pr_debug("Collecting mappings for %d\n", pid);
+	pr_debug("= Collecting mappings for %d\n", pid);
 
 	snprintf(buf, sizeof(buf), "/proc/%d/maps", pid);
 	f = fopen(buf, "r");
@@ -78,7 +78,7 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		if (ret)
 			goto free_vma;
 
-		pr_debug("VMA: %lx-%lx %c%c%c%c %8lx %s\n",
+		pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
 				vma->start, vma->end,
 				(vma->prot & PROT_READ) ? 'r' : '-',
 				(vma->prot & PROT_WRITE) ? 'w' : '-',

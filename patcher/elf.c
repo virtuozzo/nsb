@@ -69,7 +69,7 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegm
 		prot |= PROT_EXEC;
 	maddr = process_create_map(ctx, fd, off, addr, size, flags, prot);
 	if (maddr > 0)
-		pr_info("  - %#lx-%#lx, prot: %#x, flags: %#x, off: %#lx\n", maddr, maddr + size, prot, flags, off);
+		pr_info("    - %#lx-%#lx, prot: %#x, flags: %#x, off: %#lx\n", maddr, maddr + size, prot, flags, off);
 	return maddr;
 }
 
@@ -93,7 +93,6 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 	if (fd < 0)
 		return -1;
 
-	pr_debug("    Opened %s as fd %d\n", bp->new_path, fd);
 	for (i = 0; i < bp->n_new_segments; i++) {
 		ElfSegment *es = bp->new_segments[i];
 		int64_t addr;
@@ -101,7 +100,7 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 		if (strcmp(es->type, "PT_LOAD"))
 			continue;
 
-		pr_debug("    %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
+		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
 			 es->type, es->offset, es->vaddr, es->paddr, es->mem_sz, es->flags, es->align, es->file_sz);
 
 		addr = elf_map(ctx, fd, load_bias + es->vaddr, es, flags);

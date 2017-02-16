@@ -56,7 +56,7 @@ int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 		return -1;
 	}
 
-	pr_debug("Created map %#lx-%#lx in task %d\n",
+	pr_debug("    Created map %#lx-%#lx in task %d\n",
 		 sret, sret + size, ctx->pid);
 
 	return sret;
@@ -268,8 +268,7 @@ int process_cure(struct process_ctx_s *ctx)
 
 int process_link(struct process_ctx_s *ctx)
 {
-	pr_debug("====================\n");
-	pr_debug("Patching process %d\n", ctx->pid);
+	pr_debug("= Prepare %d\n", ctx->pid);
 
 	ctx->ctl = compel_prepare(ctx->pid);
 	if (!ctx->ctl) {
@@ -460,7 +459,7 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 	};
 	struct backtrace_function_s *bf;
 
-	pr_info("Checking %d stack...\n", t->pid);
+	pr_info("  %d:\n", t->pid);
 
 	err = process_backtrace(t->pid, &bt);
 	if (err) {
@@ -468,9 +467,8 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 		return err;
 	}
 
-	pr_debug("stack depth: %d\n", bt.depth);
 	list_for_each_entry(bf, &bt.calls, list)
-		pr_debug("#%d  %#lx in %s\n", i++, bf->ip, bf->name);
+		pr_debug("    #%d  %#lx in %s\n", i++, bf->ip, bf->name);
 
 	return check(ctx, &bt);
 }
@@ -482,6 +480,7 @@ int process_check_stack(const struct process_ctx_s *ctx,
 	struct thread_s *t;
 	int err;
 
+	pr_info("= Checking %d stack...\n", ctx->pid);
 	list_for_each_entry(t, &ctx->threads, list) {
 		err = task_check_stack(ctx, t, check);
 		if (err)
