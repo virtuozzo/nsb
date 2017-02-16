@@ -840,18 +840,29 @@ err:
 	return ret ? ret : err;
 }
 
+static unsigned increase_timeout(unsigned current_msec)
+{
+	unsigned max_msec_timeout = 1000;
+
+	if (current_msec < max_msec_timeout)
+		current_msec = min(current_msec << 1, max_msec_timeout);
+	return current_msec;
+}
+
 static int process_suspend(struct process_ctx_s *ctx)
 {
 	int try = 0, tries = 25;
-	int timeout_msec = 20;
+	unsigned timeout_msec = 1;
 	int err;
 
 	do {
 		if (try) {
 			pr_info("Failed to catch process in a suitable time/place.\n"
 				"Retry in %d msec\n", timeout_msec);
+
 			usleep(timeout_msec * 1000);
-			timeout_msec <<= 1;
+
+			timeout_msec = increase_timeout(timeout_msec);
 		}
 		err = process_catch(ctx);
 		if (err != -EAGAIN)
