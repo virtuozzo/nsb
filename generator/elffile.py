@@ -20,10 +20,19 @@ class ElfFile:
 	def get_header(self):
 		return ElfHeader(self.elf['e_type'],
 				 self.elf['e_machine'])
+
+	def __get_section__(self, name):
+		section = self.elf.get_section_by_name(name)
+		if section and section['sh_type'] == "SHT_NOBITS":
+			print "section '%s' type is NOBITS" % name
+			print "Perhabs this ELF was stripped"
+			exit(1)
+		return section
+
 	def __section_symbols__(self, section_name):
 		symbols = {}
 
-		section = self.elf.get_section_by_name(section_name)
+		section = self.__get_section__(section_name)
 		if section is None:
 			return None
 
@@ -63,7 +72,11 @@ class ElfFile:
 
 	def get_rela_plt(self, symbols):
 		rela_plt = {}
-		section = self.elf.get_section_by_name('.rela.plt')
+
+		section = self.__get_section__('.rela.plt')
+		if section is None:
+			return None
+
 		for rel in section.iter_relocations():
 			s = symbols[rel['r_info_sym']]
 			rela_plt[s.name] = ElfRelaPlt(rel['r_offset'],
@@ -73,7 +86,11 @@ class ElfFile:
 
 	def get_rela_dyn(self, symbols):
 		rela_dyn = {}
-		section = self.elf.get_section_by_name('.rela.dyn')
+
+		section = self.__get_section__('.rela.dyn')
+		if section is None:
+			return None
+
 		for rel in section.iter_relocations():
 			s = symbols[rel['r_info_sym']]
 			rela_dyn[s.name] = ElfRelaPlt(rel['r_offset'],
@@ -85,7 +102,11 @@ class ElfFile:
 		section = '.note.gnu.build-id'
 		try:
 			n_type = 'NT_GNU_BUILD_ID'
-			bid = self.elf.get_section_by_name(section)
+
+			bid = self.__get_section__(section)
+			if section is None:
+				return None
+
 			for note in bid.iter_notes():
 				if note['n_type'] == n_type:
 					return note['n_desc']
