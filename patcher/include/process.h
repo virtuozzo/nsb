@@ -1,20 +1,81 @@
 #ifndef __PATCHER_PROCESS_H__
 #define __PATCHER_PROCESS_H__
 
-#include "protobuf.h"
+#include <unistd.h>
+#include <stdint.h>
+#include <fcntl.h>
+
 #include "list.h"
 
+#ifdef STATIC_PATCHING
+struct objinfo_s {
+	char			*name;
+	int32_t			op_size;
+	int32_t			addr_size;
+	int32_t			offset;
+	int32_t			ref_addr;
+};
+#endif
 struct funcpatch_s {
-	struct list_head	list;
-	FuncPatch		 *fp;
-	unsigned long		 addr;
+	char			*name;
+	int64_t			addr;
+	int32_t			size;
+	int			new_:1;
+	int			dyn:1;
+	int			plt:1;
+	int32_t			old_addr;
+
+#ifdef STATIC_PATCHING
+	size_t			n_objinfos;
+	struct objinfo_s	**objinfos;
+	void			*code;
+#endif
+};
+
+struct relocation_s {
+	char			*name;
+	char			*info_type;
+	int32_t			offset;
+	int32_t			addend;
+	int64_t			hint;
+	char			*path;
+};
+
+struct local_var_s {
+	char			*name;
+	int32_t			size;
+	int32_t			offset;
+	int32_t			ref;
+};
+
+struct segment_s {
+	char			*type;
+	int32_t			offset;
+	int32_t			vaddr;
+	int32_t			paddr;
+	int32_t			mem_sz;
+	int32_t			flags;
+	int32_t			align;
+	int32_t			file_sz;
 };
 
 struct binpatch_s {
-	BinPatch		 *bp;
-	unsigned long		 addr;
-	struct list_head	functions;
+	char			*object_type;
+	char			*old_bid;
+	char			*new_path;
 	struct list_head	places;
+
+	size_t			n_relocations;
+	struct relocation_s	**relocations;
+
+	size_t			n_funcpatches;
+	struct funcpatch_s	**funcpatches;
+
+	size_t			n_local_vars;
+	struct local_var_s	**local_vars;
+
+	size_t			n_segments;
+	struct segment_s	**segments;
 };
 
 struct process_ctx_s {

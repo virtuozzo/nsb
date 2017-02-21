@@ -1,4 +1,5 @@
 #include <link.h>
+#include <linux/limits.h>
 
 #include "include/process.h"
 #include "include/log.h"

@@ -12,8 +12,6 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 
-#include <protobuf/segment.pb-c.h>
-
 #define ELF_MIN_ALIGN		PAGE_SIZE
 
 #define TASK_SIZE		((1UL << 47) - PAGE_SIZE)
@@ -48,7 +46,7 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 static int elf_collect_needed(struct elf_info_s *ei);
 static char *elf_get_bid(struct elf_info_s *ei);
 
-static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegment *es, int flags)
+static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct segment_s *es, int flags)
 {
 	unsigned long size = es->file_sz + ELF_PAGEOFFSET(es->vaddr);
 	unsigned long off = es->offset - ELF_PAGEOFFSET(es->vaddr);
@@ -73,8 +71,9 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, ElfSegm
 	return maddr;
 }
 
-int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
+int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 {
+	const struct binpatch_s *bp = &ctx->binpatch;
 	int i, fd;
 	// TODO: there should be bigger offset. 2 or maybe even 4 GB.
 	// But jmpq command construction fails, if map lays ouside 2g offset.
@@ -93,8 +92,8 @@ int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp, uint64_t hint)
 	if (fd < 0)
 		return -1;
 
-	for (i = 0; i < bp->n_new_segments; i++) {
-		ElfSegment *es = bp->new_segments[i];
+	for (i = 0; i < bp->n_segments; i++) {
+		struct segment_s *es = bp->segments[i];
 		int64_t addr;
 
 		if (strcmp(es->type, "PT_LOAD"))

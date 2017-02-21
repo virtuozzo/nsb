@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <linux/limits.h>
 
 #include "include/patch.h"
 #include "include/log.h"
@@ -15,6 +16,7 @@
 #include "include/x86_64.h"
 #include "include/backtrace.h"
 #include "include/rtld.h"
+#include "include/protobuf.h"
 
 #ifdef STATIC_PATCHING
 #include "include/patch_static.h"
@@ -33,8 +35,9 @@ struct patch_ops_s {
 	int (*cleanup_target)(struct process_ctx_s *ctx);
 };
 
-static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
+static int discover_plt_hints(struct process_ctx_s *ctx)
 {
+	struct binpatch_s *bp = &ctx->binpatch;
 	int i, err;
 	void *handle;
 	LIST_HEAD(vmas);
@@ -56,26 +59,26 @@ static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
 	pr_info("= Discovering target PLT hints:\n");
 
 	for (i = 0; i < bp->n_relocations; i++) {
-		RelaPlt *rp = bp->relocations[i];
+		struct relocation_s *rel = bp->relocations[i];
 		unsigned long addr;
 		const struct vma_area *vma;
 
-		if (rp->addend) {
+		if (rel->addend) {
 			// Local symbol. Skip.
 			continue;
 		}
 
-		if (rp->hint) {
+		if (rel->hint) {
 			// Already discovered symbol in previous version of the
 			// library. Skip.
 			continue;
 		}
 
-		pr_info("  - searching external symbol '%s':\n", rp->name);
+		pr_info("  - searching external symbol '%s':\n", rel->name);
 
-		addr = (unsigned long)dlsym(handle, rp->name);
+		addr = (unsigned long)dlsym(handle, rel->name);
 		if (!addr) {
-			pr_err("failed to find symbol %s: %s\n", rp->name, dlerror());
+			pr_err("failed to find symbol %s: %s\n", rel->name, dlerror());
 			return 1;
 		}
 
@@ -85,11 +88,11 @@ static int discover_plt_hints(struct process_ctx_s *ctx, const BinPatch *bp)
 			goto err;
 		}
 
-		rp->hint = addr - vma->start;
-		rp->path = vma->path;
+		rel->hint = addr - vma->start;
+		rel->path = vma->path;
 
-		pr_info("     file   : %s\n", rp->path);
-		pr_info("     offset : %#lx\n", rp->hint);
+		pr_info("     file   : %s\n", rel->path);
+		pr_info("     offset : %#lx\n", rel->hint);
 	}
 	// TODO: need to:
 	// 1) get all external symbol addresses
@@ -104,8 +107,9 @@ err:
 	return err;
 }
 
-static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
+static int apply_rela_plt(struct process_ctx_s *ctx)
 {
+	struct binpatch_s *bp = &ctx->binpatch;
 	int i;
 	int err;
 	int64_t load_addr = ctx->new_base;
@@ -113,7 +117,7 @@ static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 	pr_info("= Applying destination PLT relocations:\n");
 
 	for (i = 0; i < bp->n_relocations; i++) {
-		RelaPlt *rp = bp->relocations[i];
+		struct relocation_s *rp = bp->relocations[i];
 		uint64_t plt_addr;
 		uint64_t func_addr;
 
@@ -158,7 +162,7 @@ static int apply_rela_plt(struct process_ctx_s *ctx, const BinPatch *bp)
 	return 0;
 }
 
-static int fix_dyn_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
+static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
 {
 	unsigned char jump[X86_MAX_SIZE];
 	unsigned long old_addr, new_addr;
@@ -166,7 +170,7 @@ static int fix_dyn_entry(struct process_ctx_s *ctx, BinPatch *bp, FuncPatch *fp)
 	int err;
 
 	pr_info("  - Entry \"%s\":\n", fp->name);
-	if (!fp->has_old_addr) {
+	if (!fp->old_addr) {
 		pr_debug("   New function. Skip\n");
 		return 0;
 	}
@@ -248,17 +252,14 @@ static int process_copy_data(pid_t pid, unsigned long dst, unsigned long src, si
 	return 0;
 }
 
-static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
+static int copy_local_data(struct process_ctx_s *ctx)
 {
+	struct binpatch_s *bp = &ctx->binpatch;
 	int i;
 
-	// TODO: either all (!) functions have to be redirected from old library to new one,
-	// or at least all the functions, accessing local data.
-	// Otherwise some of the functions in the old library can modify old copy of the data, 
-	// while some of the functions in the new library will modify new copy.
 	pr_info("= Copy global variables:\n");
 	for (i = 0; i < bp->n_local_vars; i++) {
-		DataSym *ds = bp->local_vars[i];
+		struct local_var_s *ds = bp->local_vars[i];
 		unsigned long from, to;
 		int err;
 
@@ -277,15 +278,14 @@ static int copy_local_data(struct process_ctx_s *ctx, BinPatch *bp)
 static int set_dyn_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
-	struct binpatch_s *binpatch = &ctx->binpatch;
-	BinPatch *bp = binpatch->bp;
+	struct binpatch_s *bp = &ctx->binpatch;
 
 	pr_info("= Apply jumps:\n");
-	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
+	for (i = 0; i < bp->n_funcpatches; i++) {
+		struct funcpatch_s *fp = bp->funcpatches[i];
 
 		if (fp->dyn) {
-			err = fix_dyn_entry(ctx, bp, fp);
+			err = fix_dyn_entry(ctx, fp);
 			if (err)
 				return err;
 		}
@@ -300,7 +300,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 	int err;
 	struct elf_info_s *ei;
 
-	ei = elf_create_info(ctx->binpatch.bp->new_path);
+	ei = elf_create_info(ctx->binpatch.new_path);
 	if (!ei)
 		return -1;
 
@@ -349,23 +349,21 @@ static int fix_target_references(struct process_ctx_s *ctx)
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
-	struct binpatch_s *binpatch = &ctx->binpatch;
-	BinPatch *bp = binpatch->bp;
 	int err;
 
-	err = discover_plt_hints(ctx, bp);
+	err = discover_plt_hints(ctx);
 	if (err)
 		return err;
 
-	ctx->new_base = load_elf(ctx, bp, ctx->pvma->start);
+	ctx->new_base = load_elf(ctx, ctx->pvma->start);
 	if (ctx->new_base < 0)
 		return ctx->new_base;
 
-	err = apply_rela_plt(ctx, bp);
+	err = apply_rela_plt(ctx);
 	if (err)
 		return err;
 
-	err = copy_local_data(ctx, bp);
+	err = copy_local_data(ctx);
 	if (err)
 		return err;
 
@@ -563,16 +561,16 @@ static int process_collect_dependable_vmas(struct process_ctx_s *ctx)
 	return iterate_file_vmas(&ctx->vmas, ctx, check_file_vma);
 }
 
-static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
+static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
 {
 	const struct vma_area *pvma;
 
 	pr_info("= Searching source VMA:\n");
 
-	pvma = find_vma_by_bid(&ctx->vmas, bp->old_bid);
+	pvma = find_vma_by_bid(&ctx->vmas, bid);
 	if (!pvma) {
 		pr_err("failed to find process %d vma with Build ID %s\n",
-				ctx->pid, bp->old_bid);
+				ctx->pid, bid);
 		return -ENOENT;
 	}
 	pr_info("  - path   : %s\n", pvma->path);
@@ -582,11 +580,17 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, BinPatch *bp)
 	return 0;
 }
 
+static int set_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
+{
+	INIT_LIST_HEAD(&binpatch->places);
+
+	return parse_protbuf_binpatch(binpatch, patchfile);
+}
+
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile, const char *how)
 {
-	struct binpatch_s *binpatch = &ctx->binpatch;
-	BinPatch *bp;
+	struct binpatch_s *bp = &ctx->binpatch;
 
 	pr_info("Patch context:\n");
 	pr_info("  Pid        : %d\n", pid);
@@ -596,12 +600,8 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	INIT_LIST_HEAD(&ctx->objdeps);
 	INIT_LIST_HEAD(&ctx->threads);
 
-	INIT_LIST_HEAD(&binpatch->functions);
-	INIT_LIST_HEAD(&binpatch->places);
-
-	bp = read_binpatch(patchfile);
-	if (!bp)
-		return -1;
+	if (set_binpatch_info(bp, patchfile))
+		goto err;
 
 	ctx->ops = set_patch_ops(how, bp->object_type);
 	if (!ctx->ops)
@@ -617,7 +617,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 	}
 
-	if (process_find_patchable_vma(ctx, bp))
+	if (process_find_patchable_vma(ctx, bp->old_bid))
 		goto err;
 
 	if (get_ctx_deplist(ctx))
@@ -628,11 +628,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 	}
 
-	binpatch->bp = bp;
 	return 0;
 
 err:
-	bin_patch__free_unpacked(bp, NULL);
 	return -1;
 }
 
@@ -661,12 +659,11 @@ static int process_call_in_map(const struct list_head *calls,
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt)
 {
-	const struct binpatch_s *binpatch = &ctx->binpatch;
-	const BinPatch *bp = binpatch->bp;
+	const struct binpatch_s *bp = &ctx->binpatch;
 	int i;
 
-	for (i = 0; i < bp->n_patches; i++) {
-		FuncPatch *fp = bp->patches[i];
+	for (i = 0; i < bp->n_funcpatches; i++) {
+		struct funcpatch_s *fp = bp->funcpatches[i];
 		uint64_t start, end;
 
 		/* Skip new functions: they are outside stack by default */
@@ -770,7 +767,7 @@ int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
 	LIST_HEAD(vmas);
-	BinPatch *bp;
+	char *bid;
 
 	err = collect_vmas(pid, &vmas);
 	if (err) {
@@ -778,11 +775,11 @@ int check_process(pid_t pid, const char *patchfile)
 		return err;
 	}
 
-	bp = read_binpatch(patchfile);
-	if (!bp)
+	bid = protobuf_get_bid(patchfile);
+	if (!bid)
 		return -1;
 
-	return !find_vma_by_bid(&vmas, bp->old_bid);
+	return !find_vma_by_bid(&vmas, bid);
 }
 
 struct patch_ops_s patch_jump_ops = {

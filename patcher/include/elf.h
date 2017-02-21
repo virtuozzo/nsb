@@ -4,13 +4,10 @@
 #include <unistd.h>
 #include <stdint.h>
 
-#include <protobuf/binpatch.pb-c.h>
-
 #include "list.h"
 
 struct process_ctx_s;
-int64_t load_elf(struct process_ctx_s *ctx, const BinPatch *bp,
-			  uint64_t hint);
+int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint);
 
 struct elf_info_s;
 struct elf_info_s *elf_create_info(const char *path);
