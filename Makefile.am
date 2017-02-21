@@ -55,6 +55,7 @@ nsb_SOURCES =						\
 			patcher/include/elf.h		\
 			patcher/include/backtrace.h	\
 			patcher/include/rtld.h		\
+			patcher/include/patch_static.h	\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -65,6 +66,7 @@ nsb_SOURCES =						\
 			patcher/elf.c			\
 			patcher/backtrace.c		\
 			patcher/rtld.c			\
+			patcher/patch_static.c		\
 			patcher/patch.c
 
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
