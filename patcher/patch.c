@@ -1,3 +1,5 @@
+#include "nsb_config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -13,7 +15,10 @@
 #include "include/x86_64.h"
 #include "include/backtrace.h"
 #include "include/rtld.h"
+
+#ifdef STATIC_PATCHING
 #include "include/patch_static.h"
+#endif
 
 struct process_ctx_s process_context;
 
@@ -842,10 +847,13 @@ static const struct patch_ops_s *set_patch_ops(const char *how, const char *type
 	struct patch_ops_s *ops;
 	int (*apply)(struct process_ctx_s *ctx);
 
+#ifdef STATIC_PATCHING
 	if (!strcmp(type, "ET_EXEC")) {
 		how = "jump";
 		apply = apply_exec_binpatch;
-	} else if (!strcmp(type, "ET_DYN"))
+	} else
+#endif
+	if (!strcmp(type, "ET_DYN"))
 		apply = apply_dyn_binpatch;
 	else {
 		pr_err("Unknown patch type: %s\n", type);

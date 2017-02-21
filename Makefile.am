@@ -55,7 +55,6 @@ nsb_SOURCES =						\
 			patcher/include/elf.h		\
 			patcher/include/backtrace.h	\
 			patcher/include/rtld.h		\
-			patcher/include/patch_static.h	\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -66,21 +65,16 @@ nsb_SOURCES =						\
 			patcher/elf.c			\
 			patcher/backtrace.c		\
 			patcher/rtld.c			\
-			patcher/patch_static.c		\
 			patcher/patch.c
+
+if STATIC_PATCHING
+nsb_SOURCES += patcher/include/patch_static.h patcher/patch_static.c
+endif
 
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
 TESTS = 								\
-			tests/static_a_to_static_b.py			\
-			tests/static_a_to_static_c.py			\
-			tests/static_a_to_static_f.py			\
-			tests/static_d_to_static_g.py			\
-			tests/static_e_to_static_h.py			\
-			tests/static_j_to_static_i.py			\
-			tests/static_i_to_static_j.py			\
-									\
 			tests/shared_a_to_shared_b__jump.py		\
 			tests/shared_a_to_shared_c__jump.py		\
 			tests/shared_a_to_shared_f__jump.py		\
@@ -108,6 +102,17 @@ TESTS = 								\
 			tests/shared_mta_to_shared_mtcombined__swap.py	\
 									\
 			tests/shared_pvar_to_shared_pvar__jump.py
+
+if STATIC_PATCHING
+TESTS +=								\
+			tests/static_a_to_static_b.py			\
+			tests/static_a_to_static_c.py			\
+			tests/static_a_to_static_f.py			\
+			tests/static_d_to_static_g.py			\
+			tests/static_e_to_static_h.py			\
+			tests/static_j_to_static_i.py			\
+			tests/static_i_to_static_j.py
+endif
 
 XFAIL_TESTS = 								\
 			tests/shared_mta_to_shared_mtcombined__swap.py	\

@@ -5,13 +5,14 @@ m4_ifdef([AM_SILENT_RULES],
 	 [AC_SUBST([AM_DEFAULT_VERBOSITY], [1])])
 
 AM_INIT_AUTOMAKE([subdir-objects foreign])
-AC_CONFIG_MACRO_DIR([m4])
 AM_PROG_CC_C_O
 
 AC_PATH_PROG([M4], [m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_GNU_SOURCE
 LT_INIT
+AC_CONFIG_HEADERS([nsb_config.h])
 AC_CONFIG_FILES([
 		 Makefile
 		 protobuf/Makefile
@@ -76,6 +77,24 @@ AC_CHECK_LIB(
 ])
 
 AC_PYTHON_MODULE(elftools.elf.elffile)
+
+
+AC_MSG_CHECKING([for static code patching support])
+AC_ARG_ENABLE([static_patching],
+	      [  --enable_static-patching    Turn on static code patching support],
+	      [case "${enableval}" in
+	         yes) static_patching=yes ;;
+		 no)  static_patching=no ;;
+		 *) AC_MSG_ERROR([bad value ${enableval} for --enable-static-patching]) ;;
+	      esac],
+	      [static_patching=no])
+AM_CONDITIONAL([STATIC_PATCHING], [test x$static_patching = xyes])
+AS_IF([test x$static_patching = xyes],
+      [
+       AC_DEFINE(STATIC_PATCHING,[],[Static code pathing support])
+       ],
+      [])
+AC_MSG_RESULT([$static_patching])
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/nsbgen.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
