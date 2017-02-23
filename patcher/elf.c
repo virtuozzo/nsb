@@ -494,6 +494,9 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname)
 
 	err = find_dyn_sym(ei, &soname_dyn, find_soname, NULL);
 	if (err < 0) {
+		if (err == -ENOENT)
+			return 0;
+
 		pr_debug("Failed to find DT_SONAME tag\n");
 		return err;
 	}

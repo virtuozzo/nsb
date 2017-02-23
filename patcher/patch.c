@@ -554,7 +554,7 @@ static int check_file_vma(struct vma_area *vma, void *data)
 
 static int process_collect_dependable_vmas(struct process_ctx_s *ctx)
 {
-	if (!elf_type_dyn(ctx->pvma->ei))
+	if (!vma_soname(ctx->pvma))
 		return 0;
 
 	pr_info("= Searching mappings, depending on \"%s\":\n", vma_soname(ctx->pvma));
