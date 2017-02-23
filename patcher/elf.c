@@ -46,6 +46,15 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 static int elf_collect_needed(struct elf_info_s *ei);
 static char *elf_get_bid(struct elf_info_s *ei);
 
+int elf_library_status(void)
+{
+	if (elf_version(EV_CURRENT) == EV_NONE) {
+		pr_err("ELF library initialization failed: %s\n", elf_errmsg(-1));
+		return -EFAULT;
+	}
+	return 0;
+}
+
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct segment_s *es, int flags)
 {
 	unsigned long size = es->file_sz + ELF_PAGEOFFSET(es->vaddr);
@@ -122,11 +131,6 @@ static Elf *elf_open(const char *path)
 {
 	int fd;
 	Elf *e;
-
-	if (elf_version(EV_CURRENT) == EV_NONE) {
-		pr_err("ELF library initialization failed: %s\n", elf_errmsg(-1));
-		return NULL;
-	}
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {

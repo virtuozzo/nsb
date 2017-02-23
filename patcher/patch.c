@@ -592,6 +592,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 {
 	struct binpatch_s *bp = &ctx->binpatch;
 
+	if (elf_library_status())
+		return -1;
+
 	pr_info("Patch context:\n");
 	pr_info("  Pid        : %d\n", pid);
 
