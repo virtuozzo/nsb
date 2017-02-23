@@ -569,8 +569,8 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 
 	pvma = find_vma_by_bid(&ctx->vmas, bid);
 	if (!pvma) {
-		pr_err("failed to find process %d vma with Build ID %s\n",
-				ctx->pid, bid);
+		pr_err("failed to find vma with Build ID %s in process %d\n",
+				bid, ctx->pid);
 		return -ENOENT;
 	}
 	pr_info("  - path   : %s\n", pvma->path);

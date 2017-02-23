@@ -136,7 +136,7 @@ static Elf *elf_fd(const char *path, int fd)
 		return NULL;
 
 	if (elf_kind(e) != ELF_K_ELF) {
-		pr_info("%s if not and regular ELF file\n", path);
+		pr_debug("    %s is not and regular ELF file\n", path);
 		goto end_elf;
 	}
 
