@@ -586,7 +586,8 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 
 static int init_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
 {
-	int is_elf;
+	int is_elf, err;
+	char *patch_bid;
 
 	is_elf = is_elf_file(patchfile);
 	if (is_elf < 0) {
@@ -595,8 +596,23 @@ static int init_binpatch_info(struct binpatch_s *binpatch, const char *patchfile
 	}
 
 	if (is_elf)
-		return parse_elf_binpatch(binpatch, patchfile);
-	return parse_protobuf_binpatch(binpatch, patchfile);
+		err = parse_elf_binpatch(binpatch, patchfile);
+	else
+		err = parse_protobuf_binpatch(binpatch, patchfile);
+	if (err)
+		return err;
+
+	patch_bid = elf_build_id(binpatch->new_path);
+	if (!patch_bid)
+		return -ENOMEM;
+
+	if (strcmp(patch_bid, binpatch->new_bid)) {
+		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
+				binpatch->new_path, patch_bid,
+				binpatch->new_bid);
+		return -EINVAL;
+	}
+	return 0;
 }
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,

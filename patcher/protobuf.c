@@ -224,12 +224,20 @@ int unpack_protobuf_binpatch(struct binpatch_s *binpatch, const void *data, size
 	binpatch->object_type = strdup(bp->object_type);
 	if (!binpatch->object_type)
 		goto free_unpacked;
+
 	binpatch->old_bid = strdup(bp->old_bid);
 	if (!binpatch->old_bid)
 		goto free_object_type;
-	binpatch->new_path = strdup(bp->new_path);
-	if (!binpatch->new_path)
+
+	binpatch->new_bid = strdup(bp->new_bid);
+	if (!binpatch->new_bid)
 		goto free_old_bid;
+
+	if (bp->new_path) {
+		binpatch->new_path = strdup(bp->new_path);
+		if (!binpatch->new_path)
+			goto free_new_bid;
+	}
 
 	if (set_binpatch_relocations(binpatch, bp))
 		goto free_new_path;
@@ -256,7 +264,10 @@ free_funcpatches:
 free_relocations:
 	// TODO
 free_new_path:
-	free(binpatch->new_path);
+	if (bp->new_path)
+		free(binpatch->new_path);
+free_new_bid:
+	free(binpatch->new_bid);
 free_old_bid:
 	free(binpatch->old_bid);
 free_object_type:

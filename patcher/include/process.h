@@ -62,6 +62,7 @@ struct segment_s {
 struct binpatch_s {
 	char			*object_type;
 	char			*old_bid;
+	char			*new_bid;
 	char			*new_path;
 	struct list_head	places;
 

@@ -906,7 +906,16 @@ int parse_elf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
 		goto destroy_elf_info;
 
 	err = unpack_protobuf_binpatch(binpatch, edata->d_buf, edata->d_size);
+	if (err)
+		goto free_data;
 
+	if (!binpatch->new_path) {
+		binpatch->new_path = strdup(patchfile);
+		if (!binpatch->new_path)
+			err = -ENOMEM;
+	}
+
+free_data:
 	free(data);
 destroy_elf_info:
 	elf_destroy_info(ei);
