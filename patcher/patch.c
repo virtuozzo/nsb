@@ -22,7 +22,11 @@
 #include "include/patch_static.h"
 #endif
 
-struct process_ctx_s process_context;
+struct process_ctx_s process_context = {
+	.binpatch = {
+		.places = LIST_HEAD_INIT(process_context.binpatch.places),
+	},
+};
 
 static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
 
@@ -580,10 +584,8 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 	return 0;
 }
 
-static int set_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
+static int init_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
 {
-	INIT_LIST_HEAD(&binpatch->places);
-
 	return parse_protobuf_binpatch(binpatch, patchfile);
 }
 
@@ -603,7 +605,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	INIT_LIST_HEAD(&ctx->objdeps);
 	INIT_LIST_HEAD(&ctx->threads);
 
-	if (set_binpatch_info(bp, patchfile))
+	if (init_binpatch_info(bp, patchfile))
 		goto err;
 
 	ctx->ops = set_patch_ops(how, bp->object_type);
