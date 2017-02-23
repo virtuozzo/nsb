@@ -7,6 +7,7 @@
 #include "list.h"
 
 int elf_library_status(void);
+int is_elf_file(const char *path);
 
 struct process_ctx_s;
 int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint);

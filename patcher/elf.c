@@ -127,6 +127,26 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 	return load_bias;
 }
 
+static Elf *elf_fd(const char *path, int fd)
+{
+	Elf *e;
+
+	e = elf_begin(fd, ELF_C_READ, NULL );
+	if (!e)
+		return NULL;
+
+	if (elf_kind(e) != ELF_K_ELF) {
+		pr_info("%s if not and regular ELF file\n", path);
+		goto end_elf;
+	}
+
+	return e;
+
+end_elf:
+	(void)elf_end(e);
+	return NULL;
+}
+
 static Elf *elf_open(const char *path)
 {
 	int fd;
@@ -138,23 +158,14 @@ static Elf *elf_open(const char *path)
 		return NULL;
 	}
 
-	e = elf_begin(fd, ELF_C_READ, NULL );
+	e = elf_fd(path, fd);
 	if (!e)
 		goto close_fd;
-
-	if (elf_kind(e) != ELF_K_ELF) {
-		pr_info("%s if not and regular ELF file\n", path);
-		goto end_elf;
-	}
 
 	return e;
 
 close_fd:
 	close(fd);
-	return NULL;
-
-end_elf:
-	(void)elf_end(e);
 	return NULL;
 }
 
@@ -203,6 +214,25 @@ void elf_destroy_info(struct elf_info_s *ei)
 	free(ei->soname);
 	(void)elf_end(ei->e);
 	free(ei);
+}
+
+int is_elf_file(const char *path)
+{
+	int fd;
+	Elf *e;
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		pr_perror("failed to open %s", path);
+		return -errno;
+	}
+
+	e = elf_fd(path, fd);
+	if (e)
+		(void)elf_end(e);
+
+	close(fd);
+	return e != NULL;
 }
 
 struct elf_info_s *elf_create_info(const char *path)
