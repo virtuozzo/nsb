@@ -516,21 +516,6 @@ char *elf_get_soname(struct elf_info_s *ei)
 	return ei->soname;
 }
 
-int path_get_soname(const char *path, char **soname)
-{
-	struct elf_info_s *ei;
-	int err;
-
-	ei = elf_create_info(path);
-	if (!ei)
-		return -EINVAL;
-
-	err = __elf_get_soname(ei, soname);
-
-	elf_destroy_info(ei);
-	return err;
-}
-
 static int iter_dyn_sym(struct elf_info_s *ei,
 			int (*actor)(struct elf_info_s *ei,
 				     const GElf_Dyn *dyn, void *data),
