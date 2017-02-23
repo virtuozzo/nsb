@@ -23,7 +23,6 @@ class BinPatch:
 		self.patches_list = []
 
 		self.applicable = False
-		self.name = os.path.basename(self.bf_old.filename)
 
 	def create(self):
 		if self.bf_old.header.type != self.bf_new.header.type:
@@ -160,7 +159,7 @@ class BinPatch:
 		if self.patchfile:
 			filename = self.patchfile
 		else:
-			filename = "./" + self.name + ".patch"
+			filename = "./" + os.path.basename(self.bf_old.filename) + ".patchinfo"
 
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
 
@@ -170,6 +169,11 @@ class BinPatch:
 
 		os.write(pfile, data)
 		print "Written %d bytes to %s" % (len(data), filename)
+
+		if self.patchfile is None:
+			self.bf_new.add_section("vzpatch", filename)
+			os.unlink(filename)
+			print "Temporary file %s removed" % filename
 
 
 class StaticBinPatch(BinPatch):

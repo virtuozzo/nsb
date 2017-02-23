@@ -120,3 +120,11 @@ class BinFile:
 		with open(self.filename, 'rb') as stream:
 			stream.seek(rodata.offset)
 			return stream.read(rodata.size)
+
+	def add_section(self, sname, filename):
+		cmd = "objcopy --remove-section=%s %s" % (sname, self.filename)
+		self.__exec__(cmd)
+		print "Removed old \"%s\" ELF section from %s" % (sname, self.filename)
+		cmd = "objcopy --add-section %s=%s %s" % (sname, filename, self.filename)
+		self.__exec__(cmd)
+		print "Added %s as ELF section \"%s\" to %s" % (filename, sname, self.filename)

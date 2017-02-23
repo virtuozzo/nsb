@@ -83,8 +83,7 @@ def gen_patch(args):
 		exit(1)
 
 	print "\nPatch is applicable\n"
-	print "SUCCESS"
 
 	binpatch.write()
 
-
+	print "SUCCESS"
