@@ -10,7 +10,6 @@ genp = sp.add_parser("generate", help = "Create binary patch")
 genp.set_defaults(action = gen_patch)
 genp.add_argument("elfa", help="Old ELF file")
 genp.add_argument("elfb", help="New ELF file")
-genp.add_argument("--patchdir", help="Output directory")
 genp.add_argument("--outfile", help="Output file")
 
 bid = sp.add_parser("build-id", help = "Get ELF file Build ID")

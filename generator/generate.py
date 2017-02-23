@@ -9,13 +9,12 @@ def gen_patch(args):
 	print "ELF B: %s" % args.elfb
 	bfb = BinFile(args.elfb)
 
-	print args.patchdir
 	print args.outfile
 
 	if bfa.header.type == 'ET_DYN':
-		binpatch = SharedBinPatch(bfa, bfb, args.patchdir, args.outfile)
+		binpatch = SharedBinPatch(bfa, bfb, args.outfile)
 	else:
-		binpatch = StaticBinPatch(bfa, bfb, args.patchdir, args.outfile)
+		binpatch = StaticBinPatch(bfa, bfb, args.outfile)
 
 	binpatch.create()
 

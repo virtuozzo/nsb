@@ -7,10 +7,9 @@ from build_id import get_build_id
 class BinPatch:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, bf_old, bf_new, patchdir, patchfile):
+	def __init__(self, bf_old, bf_new, patchfile):
 		self.bf_old = bf_old
 		self.bf_new = bf_new
-		self.patchdir = patchdir
 		self.patchfile = patchfile
 
 		self.common_func = []
@@ -161,7 +160,7 @@ class BinPatch:
 		if self.patchfile:
 			filename = self.patchfile
 		else:
-			filename = self.patchdir + "/" + self.name + ".patch"
+			filename = "./" + self.name + ".patch"
 
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
 
@@ -174,8 +173,8 @@ class BinPatch:
 
 
 class StaticBinPatch(BinPatch):
-	def __init__(self, bf_old, bf_new, patchdir, patchfile):
-		BinPatch.__init__(self, bf_old, bf_new, patchdir, patchfile)
+	def __init__(self, bf_old, bf_new, patchfile):
+		BinPatch.__init__(self, bf_old, bf_new, patchfile)
 
 	def create(self):
 		if self.bf_old.read_rodata() != self.bf_new.read_rodata():
@@ -217,8 +216,8 @@ class StaticBinPatch(BinPatch):
 
 
 class SharedBinPatch(BinPatch):
-	def __init__(self, bf_old, bf_new, patchdir, patchfile):
-		BinPatch.__init__(self, bf_old, bf_new, patchdir, patchfile)
+	def __init__(self, bf_old, bf_new, patchfile):
+		BinPatch.__init__(self, bf_old, bf_new, patchfile)
 
 	def __applicable__(self, p):
 		return True
