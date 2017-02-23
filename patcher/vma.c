@@ -108,9 +108,11 @@ int collect_vmas(pid_t pid, struct list_head *head)
 			goto free_vma_path;
 		}
 
-		vma->ei = elf_create_info(vma->map_file);
-		if (!vma->ei)
-			goto free_map_file;
+		if (is_elf_file(vma->map_file)) {
+			vma->ei = elf_create_info(vma->map_file);
+			if (!vma->ei)
+				goto free_map_file;
+		}
 
 		INIT_LIST_HEAD(&vma->target_syms);
 add:
@@ -216,14 +218,25 @@ unsigned long find_vma_hole(const struct list_head *vmas,
 	return vma ? vma->end : 0;
 }
 
+static const char *vma_elf_bid(const struct vma_area *vma)
+{
+	if (vma->ei)
+		return elf_bid(vma->ei);
+	return NULL;
+}
+
+
 static int compare_bid(const struct vma_area *vma, const void *data)
 {
 	const char *bid = data;
+	const char *vma_bid;
 
-	if (!elf_bid(vma->ei))
+	vma_bid = vma_elf_bid(vma);
+
+	if (!vma_bid)
 		return 0;
 
-	return !strcmp(elf_bid(vma->ei), bid);
+	return !strcmp(vma_bid, bid);
 }
 
 const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char *bid)
