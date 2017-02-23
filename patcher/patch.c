@@ -584,7 +584,7 @@ static int set_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
 {
 	INIT_LIST_HEAD(&binpatch->places);
 
-	return parse_protbuf_binpatch(binpatch, patchfile);
+	return parse_protobuf_binpatch(binpatch, patchfile);
 }
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,

@@ -43,35 +43,36 @@ close_fd:
 	return res;
 }
 
-static BinPatch *read_binpatch(const char *path)
+static ssize_t read_protobuf_binpatch(const char *path, void **patch)
 {
 	uint8_t *data;
 	ssize_t res;
-	BinPatch *patch = NULL;
 	struct stat st;
 
 	if (stat(path, &st)) {
 		pr_perror("failed to stat %s", path);
-		return NULL;
+		return -errno;
+	}
+
+	if (!st.st_size) {
+		pr_err("patch %s has zero size\n", path);
+		return -EINVAL;
 	}
 
 	data = xzalloc(st.st_size);
 	if (!data)
-		return NULL;
+		return -ENOMEM;
 
 	res = read_image(path, data, 0, st.st_size);
 	if (res < 0)
 		goto free_data;
 
-	patch = bin_patch__unpack(NULL, res, data); // Deserialize the serialized input
-	if (patch == NULL) {
-		pr_err("failed to unpack binpatch\n");
-		return NULL;
-	}
+	*patch = data;
+	return res;
 
 free_data:
 	free(data);
-	return patch;
+	return res;
 }
 
 static struct relocation_s *create_relocation(const RelaPlt *rp)
@@ -236,14 +237,16 @@ static int set_binpatch_segments(struct binpatch_s *binpatch, BinPatch *bp)
 	return 0;
 }
 
-int parse_protbuf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
+int unpack_protobuf_binpatch(struct binpatch_s *binpatch, const void *data, size_t size)
 {
 	int err = -ENOMEM;
 	BinPatch *bp;
 
-	bp = read_binpatch(patchfile);
-	if (!bp)
-		return -1;
+	bp = bin_patch__unpack(NULL, size, data);
+	if (!bp) {
+		pr_err("failed to unpack binpatch\n");
+		return -ENOMEM;
+	}
 
 	binpatch->object_type = strdup(bp->object_type);
 	if (!binpatch->object_type)
@@ -288,17 +291,43 @@ free_object_type:
 	goto free_unpacked;
 }
 
+int parse_protobuf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
+{
+	int err = -ENOMEM;
+	void *data;
+	ssize_t size;
+
+	size = read_protobuf_binpatch(patchfile, &data);
+	if (size < 0)
+		return size;
+
+	err = unpack_protobuf_binpatch(binpatch, data, size);
+
+	free(data);
+	return err;
+}
+
 char *protobuf_get_bid(const char *patchfile)
 {
-	char *bid;
+	char *bid = NULL;
 	BinPatch *bp;
+	void *data;
+	ssize_t res;
 
-	bp = read_binpatch(patchfile);
-	if (!bp)
+	res = read_protobuf_binpatch(patchfile, &data);
+	if (res < 0)
 		return NULL;
+
+	bp = bin_patch__unpack(NULL, res, data);
+	if (!bp) {
+		pr_err("failed to unpack binpatch\n");
+		goto free_data;
+	}
 
 	bid = xstrdup(bp->old_bid);
 
 	bin_patch__free_unpacked(bp, NULL);
+free_data:
+	free(data);
 	return bid;
 }
