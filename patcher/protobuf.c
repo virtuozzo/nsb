@@ -15,7 +15,7 @@
 #include <protobuf/segment.pb-c.h>
 #include <protobuf/relaplt.pb-c.h>
 
-static ssize_t read_image(const char *path, uint8_t *buf, size_t max_len)
+static ssize_t read_image(const char *path, uint8_t *buf, off_t offset, size_t max_len)
 {
 	int fd;
 	ssize_t res;
@@ -26,32 +26,51 @@ static ssize_t read_image(const char *path, uint8_t *buf, size_t max_len)
 		return -errno;
 	}
 
+	if (offset && lseek(fd, offset, SEEK_SET)) {
+		pr_perror("failed to set offset %ld for %s fd", offset, path);
+		res = -errno;
+		goto close_fd;
+	}
+
 	res = read(fd, buf, max_len);
 	if (res < 0) {
 		pr_perror("failed to read %s", path);
 		res = -errno;
 	}
 
+close_fd:
 	close(fd);
 	return res;
 }
 
 static BinPatch *read_binpatch(const char *path)
 {
-	uint8_t page[4096];
+	uint8_t *data;
 	ssize_t res;
-	BinPatch *patch;
+	BinPatch *patch = NULL;
+	struct stat st;
 
-	res = read_image(path, page, 4096);
-	if (res < 0)
+	if (stat(path, &st)) {
+		pr_perror("failed to stat %s", path);
+		return NULL;
+	}
+
+	data = xzalloc(st.st_size);
+	if (!data)
 		return NULL;
 
-	patch = bin_patch__unpack(NULL, res, page); // Deserialize the serialized input
+	res = read_image(path, data, 0, st.st_size);
+	if (res < 0)
+		goto free_data;
+
+	patch = bin_patch__unpack(NULL, res, data); // Deserialize the serialized input
 	if (patch == NULL) {
 		pr_err("failed to unpack binpatch\n");
 		return NULL;
 	}
 
+free_data:
+	free(data);
 	return patch;
 }
 
