@@ -9,6 +9,7 @@ from abc import ABCMeta, abstractmethod
 sys.path.append("generator/")
 from check import map_by_build_id
 from build_id import get_build_id
+import traceback
 
 
 class Test:
@@ -194,7 +195,37 @@ class LivePatchTest:
 		self.bp_out = source + "_to_" + os.path.basename(target) + ".binpatch"
 		self.src_res = src_res
 		self.tgt_res = tgt_res
-		self.lp_failed = False
+
+	def __do_test__(self, test):
+		try:
+			bid = self.get_elf_bid(self.src_elf)
+		except:
+			traceback.print_exc()
+			print "failed to get \"%s\" Build-ID" % self.src_elf
+			raise
+
+		print "ELF \"%s\" Build-ID: %s" % (self.src_elf, bid)
+
+		try:
+			source = test.get_map_path(bid)
+		except:
+			traceback.print_exc()
+			print "failed to find map by \" Build-ID" % bid
+			raise
+
+		print "Test map by Build-ID: %s" % source
+
+		patch = BinPatch(source, self.tgt_elf, self.how, self.bp_out)
+
+		if patch.generate() != 0:
+			print "Failed to generate binary patch\n"
+			raise
+
+		if patch.apply(test) != 0:
+			print "Failed to apply binary patch:\n%s" % patch.apply_stderr
+			raise
+
+		return
 
 	def run(self):
 		print "Starting test %s" % self.test_bin
@@ -204,27 +235,13 @@ class LivePatchTest:
 			print "Failed to start process %s\n" % test.path
 			return 1
 
-		bid = self.get_elf_bid(self.src_elf)
-		print "ELF \"%s\" Build-ID: %s" % (self.src_elf, bid)
-
-		source = test.get_map_path(bid)
-		print "Test map by Build-ID: %s" % source
-
-		patch = BinPatch(source, self.tgt_elf, self.how, self.bp_out)
-
-		if patch.generate() != 0:
-			print "Failed to generate binary patch\n"
+		try:
+			self.__do_test__(test)
+		except:
 			test.kill()
 			return 1
 
-		if patch.apply(test) != 0:
-			print "Failed to apply binary patch:\n%s" % patch.apply_stderr
-			self.lp_failed = True
-
 		if test.stop() != 0:
-			self.lp_failed = True
-
-		if self.lp_failed:
 			return 1
 
 		return test.check_result(self.tgt_res)
