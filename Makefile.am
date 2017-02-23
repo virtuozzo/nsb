@@ -55,6 +55,7 @@ nsb_SOURCES =						\
 			patcher/include/elf.h		\
 			patcher/include/backtrace.h	\
 			patcher/include/rtld.h		\
+			patcher/include/util.h		\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -65,6 +66,7 @@ nsb_SOURCES =						\
 			patcher/elf.c			\
 			patcher/backtrace.c		\
 			patcher/rtld.c			\
+			patcher/util.c			\
 			patcher/patch.c
 
 if STATIC_PATCHING

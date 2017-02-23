@@ -8,40 +8,13 @@
 #include "include/protobuf.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/util.h"
 
 #include <protobuf/funcpatch.pb-c.h>
 #include <protobuf/binpatch.pb-c.h>
 #include <protobuf/objinfo.pb-c.h>
 #include <protobuf/segment.pb-c.h>
 #include <protobuf/relaplt.pb-c.h>
-
-static ssize_t read_image(const char *path, uint8_t *buf, off_t offset, size_t max_len)
-{
-	int fd;
-	ssize_t res;
-
-	fd = open(path, O_RDONLY);
-	if (fd < 0) {
-		pr_perror("failed to open %s", path);
-		return -errno;
-	}
-
-	if (offset && lseek(fd, offset, SEEK_SET)) {
-		pr_perror("failed to set offset %ld for %s fd", offset, path);
-		res = -errno;
-		goto close_fd;
-	}
-
-	res = read(fd, buf, max_len);
-	if (res < 0) {
-		pr_perror("failed to read %s", path);
-		res = -errno;
-	}
-
-close_fd:
-	close(fd);
-	return res;
-}
 
 static ssize_t read_protobuf_binpatch(const char *path, void **patch)
 {
@@ -63,7 +36,7 @@ static ssize_t read_protobuf_binpatch(const char *path, void **patch)
 	if (!data)
 		return -ENOMEM;
 
-	res = read_image(path, data, 0, st.st_size);
+	res = read_file(path, data, 0, st.st_size);
 	if (res < 0)
 		goto free_data;
 
