@@ -11,6 +11,8 @@
 #include "include/process.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/protobuf.h"
+#include "include/util.h"
 
 #define ELF_MIN_ALIGN		PAGE_SIZE
 
@@ -20,6 +22,8 @@
 #define ELF_PAGESTART(_v)	((_v) & ~(unsigned long)(ELF_MIN_ALIGN-1))
 #define ELF_PAGEOFFSET(_v)	((_v) & (ELF_MIN_ALIGN-1))
 #define ELF_PAGEALIGN(_v)	(((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
+
+#define VZPATCH_SECTION		"vzpatch"
 
 typedef struct elf_scn_s {
 	Elf_Scn		*scn;
@@ -859,4 +863,52 @@ int elf_contains_sym(struct elf_info_s *ei, const char *symname)
 int elf_weak_sym(const struct extern_symbol *es)
 {
 	return es->bind == STB_WEAK;
+}
+
+int parse_elf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
+{
+	struct elf_info_s *ei;
+	Elf_Scn *scn;
+	Elf_Data *edata;
+	GElf_Shdr shdr;
+	int err = -EINVAL;
+	const char *sname = VZPATCH_SECTION;
+	void *data;
+
+	ei = elf_create_info(patchfile);
+	if (!ei)
+		return -EINVAL;
+
+	scn = elf_get_section(ei, sname);
+	if (!scn)
+		goto destroy_elf_info;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("failed to get %s section header\n", sname);
+		goto destroy_elf_info;
+	}
+
+	if (!shdr.sh_size) {
+		pr_err("section %s has 0 size\n", sname);
+		goto destroy_elf_info;
+	}
+
+	edata = elf_getdata(scn, NULL);
+	if (!edata) {
+		pr_err("%s section doesn't have data\n", sname);
+		err = -ENODATA;
+		goto destroy_elf_info;
+	}
+
+	err = -ENOMEM;
+	data = xzalloc(edata->d_size);
+	if (!data)
+		goto destroy_elf_info;
+
+	err = unpack_protobuf_binpatch(binpatch, edata->d_buf, edata->d_size);
+
+	free(data);
+destroy_elf_info:
+	elf_destroy_info(ei);
+	return err;
 }

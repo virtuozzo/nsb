@@ -586,6 +586,16 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 
 static int init_binpatch_info(struct binpatch_s *binpatch, const char *patchfile)
 {
+	int is_elf;
+
+	is_elf = is_elf_file(patchfile);
+	if (is_elf < 0) {
+		pr_err("failed to get patch information\n");
+		return is_elf;
+	}
+
+	if (is_elf)
+		return parse_elf_binpatch(binpatch, patchfile);
 	return parse_protobuf_binpatch(binpatch, patchfile);
 }
 
