@@ -81,13 +81,17 @@ class BinPatch:
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
 
-		image.old_bid = get_build_id(self.bf_old.filename)
-		image.new_path = self.bf_new.filename
 		image.object_type = self.bf_old.header.type
+		image.old_bid = get_build_id(self.bf_old.filename)
+		image.new_bid = get_build_id(self.bf_new.filename)
 
-		print "image.old_bid    : %s" % image.old_bid
-		print "image.new_path   : %s" % image.new_path
 		print "image.object_type: %s" % image.object_type
+		print "image.old_bid    : %s" % image.old_bid
+		print "image.new_bid    : %s" % image.new_bid
+
+		if self.patchfile:
+			image.new_path = self.bf_new.filename
+			print "image.new_path   : %s" % image.new_path
 
 		for patch in self.patches_list:
 			code = self.bf_new.function_code(patch.func_b.start,

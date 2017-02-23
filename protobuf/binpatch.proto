@@ -4,11 +4,12 @@ import "relaplt.proto";
 import "datasym.proto";
 
 message BinPatch {
-	required string		new_path	= 1;
-	required string		object_type	= 2;
-	repeated FuncPatch	patches		= 3;
-	repeated RelaPlt	relocations	= 4;
-	repeated ElfSegment	new_segments	= 5;
-	repeated DataSym	local_vars	= 6;
-	required string		old_bid		= 7;
+	required string		object_type	= 1;
+	repeated FuncPatch	patches		= 2;
+	repeated RelaPlt	relocations	= 3;
+	repeated ElfSegment	new_segments	= 4;
+	repeated DataSym	local_vars	= 5;
+	required string		old_bid		= 6;
+	required string		new_bid		= 7;
+	optional string		new_path	= 8;
 }
