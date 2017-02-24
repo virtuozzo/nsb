@@ -86,7 +86,6 @@ struct process_ctx_s {
 	struct list_head	vmas;
 	struct binpatch_s	binpatch;
 	int64_t			remote_map;
-	int64_t			old_base;
 	int64_t			new_base;
 	const struct vma_area	*pvma;
 	struct list_head	objdeps;

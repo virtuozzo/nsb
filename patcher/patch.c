@@ -181,7 +181,7 @@ static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
 		return 0;
 	}
 
-	old_addr = ctx->old_base + fp->old_addr;
+	old_addr = ctx->pvma->start + fp->old_addr;
 	new_addr = ctx->new_base + fp->addr;
 
 	pr_info("      old address: %#lx\n", old_addr);
@@ -269,7 +269,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 		unsigned long from, to;
 		int err;
 
-		from = ctx->old_base + ds->ref;
+		from = ctx->pvma->start + ds->ref;
 		to = ctx->new_base + ds->offset;
 
 		pr_info("  - %s (size: %d): %#lx ---> %#lx\n",
@@ -584,7 +584,6 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 	pr_info("  - path   : %s\n", pvma->path);
 	pr_info("  - address: %#lx\n", pvma->start);
 	ctx->pvma = pvma;
-	ctx->old_base = ctx->pvma->start;
 	return 0;
 }
 
@@ -705,7 +704,7 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 		if (fp->new_)
 			continue;
 
-		start = ctx->old_base + fp->addr;
+		start = ctx->pvma->start + fp->addr;
 		end = start + fp->size;
 
 		pr_debug("      Patch: %#lx - %#lx\n", start, end);
