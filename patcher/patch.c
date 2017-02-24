@@ -588,10 +588,9 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 	return 0;
 }
 
-static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
+static int init_patch_info(struct patch_info_s *pi, const char *patchfile)
 {
-	int is_elf, err;
-	char *patch_bid;
+	int is_elf;
 
 	is_elf = is_elf_file(patchfile);
 	if (is_elf < 0) {
@@ -600,20 +599,29 @@ static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
 	}
 
 	if (is_elf)
-		err = parse_elf_binpatch(pi, patchfile);
+		return parse_elf_binpatch(pi, patchfile);
 	else
-		err = parse_protobuf_binpatch(pi, patchfile);
+		return parse_protobuf_binpatch(pi, patchfile);
+}
+
+static int init_patch(struct process_ctx_s *ctx)
+{
+	int err;
+	struct patch_s *p = &ctx->p;
+
+	err = init_patch_info(PI(ctx), ctx->patchfile);
 	if (err)
 		return err;
 
-	patch_bid = elf_build_id(pi->path);
-	if (!patch_bid)
-		return -ENOMEM;
 
-	if (strcmp(patch_bid, pi->new_bid)) {
+	p->ei = elf_create_info(PI(ctx)->path);
+	if (!p->ei)
+		return -EINVAL;
+
+	if (strcmp(elf_bid(p->ei), PI(ctx)->new_bid)) {
 		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				pi->path, patch_bid,
-				pi->new_bid);
+				PI(ctx)->path, elf_bid(p->ei),
+				PI(ctx)->new_bid);
 		return -EINVAL;
 	}
 	return 0;
@@ -622,8 +630,6 @@ static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile, const char *how)
 {
-	struct patch_info_s *pi = PI(ctx);
-
 	if (elf_library_status())
 		return -1;
 
@@ -631,20 +637,21 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	pr_info("  Pid        : %d\n", pid);
 
 	ctx->pid = pid;
+	ctx->patchfile = patchfile;
 	INIT_LIST_HEAD(&ctx->vmas);
 	INIT_LIST_HEAD(&ctx->objdeps);
 	INIT_LIST_HEAD(&ctx->threads);
 
-	if (init_binpatch_info(pi, patchfile))
+	if (init_patch(ctx))
 		goto err;
 
-	ctx->ops = set_patch_ops(how, pi->object_type);
+	ctx->ops = set_patch_ops(how, PI(ctx)->object_type);
 	if (!ctx->ops)
 		goto err;
 
-	pr_info("  source BID : %s\n", pi->old_bid);
-	pr_info("  target path: %s\n", pi->path);
-	pr_info("  object type: %s\n", pi->object_type);
+	pr_info("  source BID : %s\n", PI(ctx)->old_bid);
+	pr_info("  target path: %s\n", PI(ctx)->path);
+	pr_info("  object type: %s\n", PI(ctx)->object_type);
 	pr_info("  patch mode : %s\n", ctx->ops->name);
 
 	if (collect_vmas(ctx->pid, &ctx->vmas)) {
@@ -652,7 +659,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 	}
 
-	if (process_find_patchable_vma(ctx, pi->old_bid))
+	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
 		goto err;
 
 	if (get_ctx_deplist(ctx))

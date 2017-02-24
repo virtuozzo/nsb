@@ -82,10 +82,12 @@ struct patch_info_s {
 struct patch_s {
 	struct patch_info_s	pi;
 	int64_t			load_addr;
+	struct elf_info_s	*ei;
 };
 
 struct process_ctx_s {
 	pid_t			pid;
+	const char		*patchfile;
 	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
 	struct list_head	vmas;
