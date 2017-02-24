@@ -303,11 +303,6 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 	struct extern_symbol *es;
 	int64_t address;
 	int err;
-	struct elf_info_s *ei;
-
-	ei = elf_create_info(ctx->p.pi.path);
-	if (!ei)
-		return -1;
 
 	list_for_each_entry(es, &vma->target_syms, list) {
 		unsigned long offset = es->offset;
@@ -319,7 +314,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 
 		pr_debug("       GOT address: %#lx\n", offset);
 
-		address = elf_dsym_offset(ei, es->name);
+		address = elf_dsym_offset(ctx->p.ei, es->name);
 
 		address += PLA(ctx);
 		pr_debug("       new address: %#lx\n", address);
