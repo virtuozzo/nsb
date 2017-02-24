@@ -36,6 +36,8 @@ struct patch_ops_s {
 	int (*set_jumps)(struct process_ctx_s *ctx);
 	int (*check_backtrace)(const struct process_ctx_s *ctx,
 			       const struct backtrace_s *bt);
+	int (*copy_data)(struct process_ctx_s *ctx);
+	int (*fix_references)(struct process_ctx_s *ctx);
 	int (*cleanup_target)(struct process_ctx_s *ctx);
 };
 
@@ -367,9 +369,11 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	err = copy_local_data(ctx);
-	if (err)
-		return err;
+	if (ctx->ops->copy_data) {
+		err = ctx->ops->copy_data(ctx);
+		if (err)
+			return err;
+	}
 
 	if (ctx->ops->set_jumps) {
 		err = ctx->ops->set_jumps(ctx);
@@ -377,9 +381,11 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 			return err;
 	}
 
-	err = fix_target_references(ctx);
-	if (err)
-		return err;
+	if (ctx->ops->fix_references) {
+		err = ctx->ops->fix_references(ctx);
+		if (err)
+			return err;
+	}
 
 	if (ctx->ops->cleanup_target) {
 		err = ctx->ops->cleanup_target(ctx);
@@ -816,7 +822,9 @@ int check_process(pid_t pid, const char *patchfile)
 struct patch_ops_s patch_jump_ops = {
 	.name = "jump",
 	.set_jumps = set_dyn_jumps,
+	.copy_data = NULL,
 	.check_backtrace = jumps_check_backtrace,
+	.fix_references = NULL,
 	.cleanup_target = NULL,
 };
 
@@ -856,7 +864,9 @@ static int swap_check_backtrace(const struct process_ctx_s *ctx,
 struct patch_ops_s patch_swap_ops = {
 	.name = "swap",
 	.set_jumps = NULL,
+	.copy_data = copy_local_data,
 	.check_backtrace = swap_check_backtrace,
+	.fix_references = fix_target_references,
 	.cleanup_target = unmap_old_lib,
 };
 
