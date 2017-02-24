@@ -63,7 +63,7 @@ struct patch_info_s {
 	char			*object_type;
 	char			*old_bid;
 	char			*new_bid;
-	char			*new_path;
+	char			*path;
 	struct list_head	places;
 
 	size_t			n_relocations;

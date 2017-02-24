@@ -234,8 +234,8 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 		goto free_old_bid;
 
 	if (bp->new_path) {
-		patch_info->new_path = strdup(bp->new_path);
-		if (!patch_info->new_path)
+		patch_info->path = strdup(bp->new_path);
+		if (!patch_info->path)
 			goto free_new_bid;
 	}
 
@@ -265,7 +265,7 @@ free_relocations:
 	// TODO
 free_new_path:
 	if (bp->new_path)
-		free(patch_info->new_path);
+		free(patch_info->path);
 free_new_bid:
 	free(patch_info->new_bid);
 free_old_bid:

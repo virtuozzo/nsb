@@ -94,14 +94,14 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 	uint64_t load_bias = hint & 0xfffffffff0000000;
 	int flags = MAP_PRIVATE;
 
-	pr_info("= Loading %s:\n", pi->new_path);
-	fd = open(pi->new_path, O_RDONLY);
+	pr_info("= Loading %s:\n", pi->path);
+	fd = open(pi->path, O_RDONLY);
 	if (fd < 0) {
-		pr_perror("failed to open %s for read", pi->new_path);
+		pr_perror("failed to open %s for read", pi->path);
 		return -1;
 	}
 
-	fd = process_open_file(ctx, pi->new_path, O_RDONLY, 0);
+	fd = process_open_file(ctx, pi->path, O_RDONLY, 0);
 	if (fd < 0)
 		return -1;
 
@@ -909,9 +909,9 @@ int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 	if (err)
 		goto free_data;
 
-	if (!binpatch->new_path) {
-		binpatch->new_path = strdup(patchfile);
-		if (!binpatch->new_path)
+	if (!binpatch->path) {
+		binpatch->path = strdup(patchfile);
+		if (!binpatch->path)
 			err = -ENOMEM;
 	}
 

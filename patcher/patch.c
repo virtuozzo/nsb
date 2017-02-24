@@ -50,12 +50,12 @@ static int discover_plt_hints(struct process_ctx_s *ctx)
 	void *handle;
 	LIST_HEAD(vmas);
 
-	pr_info("= Map %s:\n", pi->new_path);
+	pr_info("= Map %s:\n", pi->path);
 
-	pr_debug("  - Dlopen %s\n", pi->new_path);
-	handle = dlopen(pi->new_path, RTLD_NOW);
+	pr_debug("  - Dlopen %s\n", pi->path);
+	handle = dlopen(pi->path, RTLD_NOW);
 	if (!handle) {
-		pr_err("failed to dlopen %s: %s\n",pi->new_path, dlerror());
+		pr_err("failed to dlopen %s: %s\n",pi->path, dlerror());
 		return 1;
 	}
 
@@ -305,7 +305,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 	int err;
 	struct elf_info_s *ei;
 
-	ei = elf_create_info(ctx->p.pi.new_path);
+	ei = elf_create_info(ctx->p.pi.path);
 	if (!ei)
 		return -1;
 
@@ -606,13 +606,13 @@ static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
 	if (err)
 		return err;
 
-	patch_bid = elf_build_id(pi->new_path);
+	patch_bid = elf_build_id(pi->path);
 	if (!patch_bid)
 		return -ENOMEM;
 
 	if (strcmp(patch_bid, pi->new_bid)) {
 		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				pi->new_path, patch_bid,
+				pi->path, patch_bid,
 				pi->new_bid);
 		return -EINVAL;
 	}
@@ -643,7 +643,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 
 	pr_info("  source BID : %s\n", pi->old_bid);
-	pr_info("  target path: %s\n", pi->new_path);
+	pr_info("  target path: %s\n", pi->path);
 	pr_info("  object type: %s\n", pi->object_type);
 	pr_info("  patch mode : %s\n", ctx->ops->name);
 
