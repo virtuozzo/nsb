@@ -97,6 +97,7 @@ struct process_ctx_s {
 };
 
 #define PI(ctx)			(&ctx->p.pi)
+#define PLA(ctx)		(ctx->p.load_addr)
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);
 int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size);

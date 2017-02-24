@@ -131,13 +131,13 @@ static int apply_rela_plt(struct process_ctx_s *ctx)
 		pr_info("  - Entry \"%s\" (%s at %#x):\n",
 			 rp->name, rp->info_type, rp->offset);
 
-		plt_addr = ctx->p.load_addr + rp->offset;
+		plt_addr = PLA(ctx) + rp->offset;
 
 		if (rp->addend) {
 			pr_info("      Locality      : internal\n");
-			func_addr = ctx->p.load_addr + rp->addend;
+			func_addr = PLA(ctx) + rp->addend;
 			pr_info("      Object address: %#lx (%#lx + %#x)\n",
-					func_addr, ctx->p.load_addr, rp->addend);
+					func_addr, PLA(ctx), rp->addend);
 		} else {
 			const struct vma_area *vma;
 
@@ -183,7 +183,7 @@ static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
 	}
 
 	old_addr = ctx->pvma->start + fp->old_addr;
-	new_addr = ctx->p.load_addr + fp->addr;
+	new_addr = PLA(ctx) + fp->addr;
 
 	pr_info("      old address: %#lx\n", old_addr);
 	pr_info("      new address: %#lx\n", new_addr);
@@ -271,7 +271,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 		int err;
 
 		from = ctx->pvma->start + ds->ref;
-		to = ctx->p.load_addr + ds->offset;
+		to = PLA(ctx) + ds->offset;
 
 		pr_info("  - %s (size: %d): %#lx ---> %#lx\n",
 				ds->name, ds->size, from, to);
@@ -321,7 +321,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 
 		address = elf_dsym_offset(ei, es->name);
 
-		address += ctx->p.load_addr;
+		address += PLA(ctx);
 		pr_debug("       new address: %#lx\n", address);
 
 		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es->offset);
