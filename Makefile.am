@@ -76,12 +76,15 @@ endif
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-TESTS =
+TESTS = tests/lib_global_func.py
+TESTS += tests/lib_static_func.py
+TESTS += tests/ext_global_func.py
+TESTS += tests/lib_global_func_cb.py
 
-XFAIL_TESTS =
+XFAIL_TESTS = tests/lib_global_func_cb.py
 
 $(TESTS): $(TESTS_DIR)/testgen.py
-	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
+	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@
 
 
 TEST_EXTENSIONS = .py
