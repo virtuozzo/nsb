@@ -23,9 +23,11 @@
 #endif
 
 struct process_ctx_s process_context = {
-	.pi = {
-		.places = LIST_HEAD_INIT(process_context.pi.places),
-	},
+	.p = {
+		.pi = {
+			.places = LIST_HEAD_INIT(process_context.p.pi.places),
+		},
+	}
 };
 
 static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
@@ -43,7 +45,7 @@ struct patch_ops_s {
 
 static int discover_plt_hints(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 	int i, err;
 	void *handle;
 	LIST_HEAD(vmas);
@@ -115,7 +117,7 @@ err:
 
 static int apply_rela_plt(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 	int i;
 	int err;
 
@@ -259,7 +261,7 @@ static int process_copy_data(pid_t pid, unsigned long dst, unsigned long src, si
 
 static int copy_local_data(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 	int i;
 
 	pr_info("= Copy global variables:\n");
@@ -283,7 +285,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 static int set_dyn_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 
 	pr_info("= Apply jumps:\n");
 	for (i = 0; i < pi->n_funcpatches; i++) {
@@ -303,7 +305,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 	int err;
 	struct elf_info_s *ei;
 
-	ei = elf_create_info(ctx->pi.new_path);
+	ei = elf_create_info(ctx->p.pi.new_path);
 	if (!ei)
 		return -1;
 
@@ -620,7 +622,7 @@ static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile, const char *how)
 {
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 
 	if (elf_library_status())
 		return -1;
@@ -692,7 +694,7 @@ static int process_call_in_map(const struct list_head *calls,
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt)
 {
-	const struct patch_info_s *pi = &ctx->pi;
+	const struct patch_info_s *pi = &ctx->p.pi;
 	int i;
 
 	for (i = 0; i < pi->n_funcpatches; i++) {

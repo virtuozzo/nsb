@@ -86,7 +86,7 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct 
 
 int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 {
-	const struct patch_info_s *pi = &ctx->pi;
+	const struct patch_info_s *pi = &ctx->p.pi;
 	int i, fd;
 	// TODO: there should be bigger offset. 2 or maybe even 4 GB.
 	// But jmpq command construction fails, if map lays ouside 2g offset.

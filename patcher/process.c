@@ -154,7 +154,7 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 {
 	long ret;
 	unsigned long addr;
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 	struct patch_place_s *p;
 
 	size = round_up(size, PAGE_SIZE);
@@ -204,7 +204,7 @@ destroy_place:
 
 long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size)
 {
-	struct patch_info_s *pi = &ctx->pi;
+	struct patch_info_s *pi = &ctx->p.pi;
 	struct patch_place_s *place;
 	long addr;
 
