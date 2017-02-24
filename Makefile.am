@@ -76,50 +76,9 @@ endif
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-TESTS = 								\
-			tests/shared_a_to_shared_b__jump.py		\
-			tests/shared_a_to_shared_c__jump.py		\
-			tests/shared_a_to_shared_f__jump.py		\
-			tests/shared_d_to_shared_g__jump.py		\
-			tests/shared_e_to_shared_h__jump.py		\
-			tests/shared_j_to_shared_i__jump.py		\
-			tests/shared_i_to_shared_j__jump.py		\
-			tests/shared_k_to_shared_l__jump.py		\
-			tests/shared_l_to_shared_k__jump.py		\
-			tests/shared_m_to_shared_n__jump.py		\
-			tests/shared_a_to_shared_combined__jump.py	\
-			tests/shared_mta_to_shared_mtcombined__jump.py	\
-									\
-			tests/shared_a_to_shared_b__swap.py		\
-			tests/shared_a_to_shared_c__swap.py		\
-			tests/shared_a_to_shared_f__swap.py		\
-			tests/shared_d_to_shared_g__swap.py		\
-			tests/shared_e_to_shared_h__swap.py		\
-			tests/shared_j_to_shared_i__swap.py		\
-			tests/shared_i_to_shared_j__swap.py		\
-			tests/shared_k_to_shared_l__swap.py		\
-			tests/shared_l_to_shared_k__swap.py		\
-			tests/shared_m_to_shared_n__swap.py		\
-			tests/shared_a_to_shared_combined__swap.py	\
-			tests/shared_mta_to_shared_mtcombined__swap.py	\
-									\
-			tests/shared_pvar_to_shared_pvar__jump.py
+TESTS =
 
-if STATIC_PATCHING
-TESTS +=								\
-			tests/static_a_to_static_b.py			\
-			tests/static_a_to_static_c.py			\
-			tests/static_a_to_static_f.py			\
-			tests/static_d_to_static_g.py			\
-			tests/static_e_to_static_h.py			\
-			tests/static_j_to_static_i.py			\
-			tests/static_i_to_static_j.py
-endif
-
-XFAIL_TESTS = 								\
-			tests/shared_mta_to_shared_mtcombined__swap.py	\
-									\
-			tests/shared_pvar_to_shared_pvar__jump.py
+XFAIL_TESTS =
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@  --outfile $@
