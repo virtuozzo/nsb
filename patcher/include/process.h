@@ -79,6 +79,10 @@ struct patch_info_s {
 	struct segment_s	**segments;
 };
 
+struct patch_s {
+	int64_t			load_addr;
+};
+
 struct process_ctx_s {
 	pid_t			pid;
 	const struct patch_ops_s *ops;
@@ -86,10 +90,10 @@ struct process_ctx_s {
 	struct list_head	vmas;
 	struct patch_info_s	pi;
 	int64_t			remote_map;
-	int64_t			new_base;
 	const struct vma_area	*pvma;
 	struct list_head	objdeps;
 	struct list_head	threads;
+	struct patch_s		p;
 };
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);

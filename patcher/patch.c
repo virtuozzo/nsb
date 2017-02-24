@@ -118,7 +118,6 @@ static int apply_rela_plt(struct process_ctx_s *ctx)
 	struct patch_info_s *pi = &ctx->pi;
 	int i;
 	int err;
-	int64_t load_addr = ctx->new_base;
 
 	pr_info("= Applying destination PLT relocations:\n");
 
@@ -130,13 +129,13 @@ static int apply_rela_plt(struct process_ctx_s *ctx)
 		pr_info("  - Entry \"%s\" (%s at %#x):\n",
 			 rp->name, rp->info_type, rp->offset);
 
-		plt_addr = load_addr + rp->offset;
+		plt_addr = ctx->p.load_addr + rp->offset;
 
 		if (rp->addend) {
 			pr_info("      Locality      : internal\n");
-			func_addr = load_addr + rp->addend;
+			func_addr = ctx->p.load_addr + rp->addend;
 			pr_info("      Object address: %#lx (%#lx + %#x)\n",
-					func_addr, load_addr, rp->addend);
+					func_addr, ctx->p.load_addr, rp->addend);
 		} else {
 			const struct vma_area *vma;
 
@@ -182,7 +181,7 @@ static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
 	}
 
 	old_addr = ctx->pvma->start + fp->old_addr;
-	new_addr = ctx->new_base + fp->addr;
+	new_addr = ctx->p.load_addr + fp->addr;
 
 	pr_info("      old address: %#lx\n", old_addr);
 	pr_info("      new address: %#lx\n", new_addr);
@@ -270,7 +269,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 		int err;
 
 		from = ctx->pvma->start + ds->ref;
-		to = ctx->new_base + ds->offset;
+		to = ctx->p.load_addr + ds->offset;
 
 		pr_info("  - %s (size: %d): %#lx ---> %#lx\n",
 				ds->name, ds->size, from, to);
@@ -320,7 +319,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 
 		address = elf_dsym_offset(ei, es->name);
 
-		address += ctx->new_base;
+		address += ctx->p.load_addr;
 		pr_debug("       new address: %#lx\n", address);
 
 		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es->offset);
@@ -359,9 +358,9 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	ctx->new_base = load_elf(ctx, ctx->pvma->start);
-	if (ctx->new_base < 0)
-		return ctx->new_base;
+	ctx->p.load_addr = load_elf(ctx, ctx->pvma->start);
+	if (ctx->p.load_addr < 0)
+		return ctx->p.load_addr;
 
 	err = apply_rela_plt(ctx);
 	if (err)
