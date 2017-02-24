@@ -290,11 +290,9 @@ static int set_dyn_jumps(struct process_ctx_s *ctx)
 	for (i = 0; i < bp->n_funcpatches; i++) {
 		struct funcpatch_s *fp = bp->funcpatches[i];
 
-		if (fp->dyn) {
-			err = fix_dyn_entry(ctx, fp);
-			if (err)
-				return err;
-		}
+		err = fix_dyn_entry(ctx, fp);
+		if (err)
+			return err;
 	}
 	return 0;
 }
