@@ -71,7 +71,7 @@ static struct relocation_s *create_relocation(const RelaPlt *rp)
 	return rel;
 }
 
-static int set_binpatch_relocations(struct binpatch_s *binpatch, BinPatch *bp)
+static int set_binpatch_relocations(struct patch_info_s *patch_info, BinPatch *bp)
 {
 	int i;
 	struct relocation_s **relocations;
@@ -85,8 +85,8 @@ static int set_binpatch_relocations(struct binpatch_s *binpatch, BinPatch *bp)
 		if (!relocations[i])
 			return -ENOMEM;
 	}
-	binpatch->n_relocations = bp->n_relocations;
-	binpatch->relocations = relocations;
+	patch_info->n_relocations = bp->n_relocations;
+	patch_info->relocations = relocations;
 	return 0;
 }
 
@@ -113,7 +113,7 @@ static struct funcpatch_s *create_funcpatch(const FuncPatch *fp)
 	return funcpatch;
 }
 
-static int set_binpatch_funcpatches(struct binpatch_s *binpatch, BinPatch *bp)
+static int set_binpatch_funcpatches(struct patch_info_s *patch_info, BinPatch *bp)
 {
 	int i;
 	struct funcpatch_s **funcpatches;
@@ -127,8 +127,8 @@ static int set_binpatch_funcpatches(struct binpatch_s *binpatch, BinPatch *bp)
 		if (!funcpatches[i])
 			return -ENOMEM;
 	}
-	binpatch->n_funcpatches = bp->n_patches;
-	binpatch->funcpatches = funcpatches;
+	patch_info->n_funcpatches = bp->n_patches;
+	patch_info->funcpatches = funcpatches;
 	return 0;
 }
 
@@ -150,7 +150,7 @@ static struct local_var_s *create_local_var(const DataSym *lv)
 	return local_var;
 }
 
-static int set_binpatch_local_vars(struct binpatch_s *binpatch, BinPatch *bp)
+static int set_binpatch_local_vars(struct patch_info_s *patch_info, BinPatch *bp)
 {
 	int i;
 	struct local_var_s **local_vars;
@@ -164,8 +164,8 @@ static int set_binpatch_local_vars(struct binpatch_s *binpatch, BinPatch *bp)
 		if (!local_vars[i])
 			return -ENOMEM;
 	}
-	binpatch->n_local_vars = bp->n_local_vars;
-	binpatch->local_vars = local_vars;
+	patch_info->n_local_vars = bp->n_local_vars;
+	patch_info->local_vars = local_vars;
 	return 0;
 }
 
@@ -191,7 +191,7 @@ static struct segment_s *create_segment(const ElfSegment *seg)
 	return segment;
 }
 
-static int set_binpatch_segments(struct binpatch_s *binpatch, BinPatch *bp)
+static int set_patch_info_segments(struct patch_info_s *patch_info, BinPatch *bp)
 {
 	int i;
 	struct segment_s **segments;
@@ -205,50 +205,50 @@ static int set_binpatch_segments(struct binpatch_s *binpatch, BinPatch *bp)
 		if (!segments[i])
 			return -ENOMEM;
 	}
-	binpatch->n_segments = bp->n_new_segments;
-	binpatch->segments = segments;
+	patch_info->n_segments = bp->n_new_segments;
+	patch_info->segments = segments;
 	return 0;
 }
 
-int unpack_protobuf_binpatch(struct binpatch_s *binpatch, const void *data, size_t size)
+int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, size_t size)
 {
 	int err = -ENOMEM;
 	BinPatch *bp;
 
 	bp = bin_patch__unpack(NULL, size, data);
 	if (!bp) {
-		pr_err("failed to unpack binpatch\n");
+		pr_err("failed to unpack patch info\n");
 		return -ENOMEM;
 	}
 
-	binpatch->object_type = strdup(bp->object_type);
-	if (!binpatch->object_type)
+	patch_info->object_type = strdup(bp->object_type);
+	if (!patch_info->object_type)
 		goto free_unpacked;
 
-	binpatch->old_bid = strdup(bp->old_bid);
-	if (!binpatch->old_bid)
+	patch_info->old_bid = strdup(bp->old_bid);
+	if (!patch_info->old_bid)
 		goto free_object_type;
 
-	binpatch->new_bid = strdup(bp->new_bid);
-	if (!binpatch->new_bid)
+	patch_info->new_bid = strdup(bp->new_bid);
+	if (!patch_info->new_bid)
 		goto free_old_bid;
 
 	if (bp->new_path) {
-		binpatch->new_path = strdup(bp->new_path);
-		if (!binpatch->new_path)
+		patch_info->new_path = strdup(bp->new_path);
+		if (!patch_info->new_path)
 			goto free_new_bid;
 	}
 
-	if (set_binpatch_relocations(binpatch, bp))
+	if (set_binpatch_relocations(patch_info, bp))
 		goto free_new_path;
 
-	if (set_binpatch_funcpatches(binpatch, bp))
+	if (set_binpatch_funcpatches(patch_info, bp))
 		goto free_relocations;
 
-	if (set_binpatch_local_vars(binpatch, bp))
+	if (set_binpatch_local_vars(patch_info, bp))
 		goto free_funcpatches;
 
-	if (set_binpatch_segments(binpatch, bp))
+	if (set_patch_info_segments(patch_info, bp))
 		goto free_local_vars;
 
 	err = 0;
@@ -265,17 +265,17 @@ free_relocations:
 	// TODO
 free_new_path:
 	if (bp->new_path)
-		free(binpatch->new_path);
+		free(patch_info->new_path);
 free_new_bid:
-	free(binpatch->new_bid);
+	free(patch_info->new_bid);
 free_old_bid:
-	free(binpatch->old_bid);
+	free(patch_info->old_bid);
 free_object_type:
-	free(binpatch->object_type);
+	free(patch_info->object_type);
 	goto free_unpacked;
 }
 
-int parse_protobuf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
+int parse_protobuf_binpatch(struct patch_info_s *patch_info, const char *patchfile)
 {
 	int err = -ENOMEM;
 	void *data;
@@ -285,7 +285,7 @@ int parse_protobuf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
 	if (size < 0)
 		return size;
 
-	err = unpack_protobuf_binpatch(binpatch, data, size);
+	err = unpack_protobuf_binpatch(patch_info, data, size);
 
 	free(data);
 	return err;
@@ -304,7 +304,7 @@ char *protobuf_get_bid(const char *patchfile)
 
 	bp = bin_patch__unpack(NULL, res, data);
 	if (!bp) {
-		pr_err("failed to unpack binpatch\n");
+		pr_err("failed to unpack patch_info\n");
 		goto free_data;
 	}
 

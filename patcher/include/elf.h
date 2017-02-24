@@ -8,8 +8,8 @@
 
 int elf_library_status(void);
 int is_elf_file(const char *path);
-struct binpatch_s;
-int parse_elf_binpatch(struct binpatch_s *binpatch, const char *patchfile);
+struct patch_info_s;
+int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile);
 
 struct process_ctx_s;
 int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint);

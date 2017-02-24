@@ -5,7 +5,7 @@
 #include "include/process.h"
 #include "include/x86_64.h"
 
-static const struct funcpatch_s *search_func_by_name(const struct binpatch_s *bp, const char *name)
+static const struct funcpatch_s *search_func_by_name(const struct patch_info_s *bp, const char *name)
 {
 	const struct funcpatch_s *funcpatch;
 
@@ -117,7 +117,7 @@ static int apply_funcpatch(struct process_ctx_s *ctx, unsigned long addr, FuncPa
 int apply_exec_binpatch(struct process_ctx_s *ctx)
 {
 	int i, err = 0;
-	struct binpatch_s *binpatch = &ctx->binpatch;
+	struct patch_info_s *binpatch = &ctx->binpatch;
 	BinPatch *bp = binpatch->bp;
 	struct funcpatch_s *funcpatch;
 

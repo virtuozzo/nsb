@@ -109,11 +109,11 @@ int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mo
 	return (int)(long)sret;
 }
 
-static struct patch_place_s *find_place(struct binpatch_s *bp, unsigned long hint)
+static struct patch_place_s *find_place(struct patch_info_s *pi, unsigned long hint)
 {
 	struct patch_place_s *place;
 
-	list_for_each_entry(place, &bp->places, list) {
+	list_for_each_entry(place, &pi->places, list) {
 		if ((place->start & 0xffffffff00000000) == (hint & 0xffffffff00000000)) {
 			pr_debug("found place for patch: %#lx (hint: %#lx)\n",
 					place->start, hint);
@@ -154,7 +154,7 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 {
 	long ret;
 	unsigned long addr;
-	struct binpatch_s *bp = &ctx->binpatch;
+	struct patch_info_s *pi = &ctx->pi;
 	struct patch_place_s *p;
 
 	size = round_up(size, PAGE_SIZE);
@@ -187,7 +187,7 @@ static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
 		goto unmap_remote;
 	}
 
-	list_add_tail(&p->list, &bp->places);
+	list_add_tail(&p->list, &pi->places);
 
 	pr_debug("created new place for patch: %#lx-%#lx (hint: %#lx)\n",
 			p->start, p->start + p->size, hint);
@@ -204,14 +204,14 @@ destroy_place:
 
 long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size)
 {
-	struct binpatch_s *bp = &ctx->binpatch;
+	struct patch_info_s *pi = &ctx->pi;
 	struct patch_place_s *place;
 	long addr;
 
 	/* Aling function size by 16 bytes */
 	size = round_up(size, 16);
 
-	place = find_place(bp, hint);
+	place = find_place(pi, hint);
 	if (!place) {
 		int ret;
 

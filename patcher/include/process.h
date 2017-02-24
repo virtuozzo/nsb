@@ -59,7 +59,7 @@ struct segment_s {
 	int32_t			file_sz;
 };
 
-struct binpatch_s {
+struct patch_info_s {
 	char			*object_type;
 	char			*old_bid;
 	char			*new_bid;
@@ -84,7 +84,7 @@ struct process_ctx_s {
 	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
 	struct list_head	vmas;
-	struct binpatch_s	binpatch;
+	struct patch_info_s	pi;
 	int64_t			remote_map;
 	int64_t			new_base;
 	const struct vma_area	*pvma;

@@ -86,7 +86,7 @@ static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct 
 
 int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 {
-	const struct binpatch_s *bp = &ctx->binpatch;
+	const struct patch_info_s *pi = &ctx->pi;
 	int i, fd;
 	// TODO: there should be bigger offset. 2 or maybe even 4 GB.
 	// But jmpq command construction fails, if map lays ouside 2g offset.
@@ -94,19 +94,19 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 	uint64_t load_bias = hint & 0xfffffffff0000000;
 	int flags = MAP_PRIVATE;
 
-	pr_info("= Loading %s:\n", bp->new_path);
-	fd = open(bp->new_path, O_RDONLY);
+	pr_info("= Loading %s:\n", pi->new_path);
+	fd = open(pi->new_path, O_RDONLY);
 	if (fd < 0) {
-		pr_perror("failed to open %s for read", bp->new_path);
+		pr_perror("failed to open %s for read", pi->new_path);
 		return -1;
 	}
 
-	fd = process_open_file(ctx, bp->new_path, O_RDONLY, 0);
+	fd = process_open_file(ctx, pi->new_path, O_RDONLY, 0);
 	if (fd < 0)
 		return -1;
 
-	for (i = 0; i < bp->n_segments; i++) {
-		struct segment_s *es = bp->segments[i];
+	for (i = 0; i < pi->n_segments; i++) {
+		struct segment_s *es = pi->segments[i];
 		int64_t addr;
 
 		if (strcmp(es->type, "PT_LOAD"))
@@ -865,7 +865,7 @@ int elf_weak_sym(const struct extern_symbol *es)
 	return es->bind == STB_WEAK;
 }
 
-int parse_elf_binpatch(struct binpatch_s *binpatch, const char *patchfile)
+int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 {
 	struct elf_info_s *ei;
 	Elf_Scn *scn;
