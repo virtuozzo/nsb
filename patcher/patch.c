@@ -45,7 +45,7 @@ struct patch_ops_s {
 
 static int discover_plt_hints(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->p.pi;
+	struct patch_info_s *pi = PI(ctx);
 	int i, err;
 	void *handle;
 	LIST_HEAD(vmas);
@@ -117,7 +117,7 @@ err:
 
 static int apply_rela_plt(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->p.pi;
+	struct patch_info_s *pi = PI(ctx);
 	int i;
 	int err;
 
@@ -261,7 +261,7 @@ static int process_copy_data(pid_t pid, unsigned long dst, unsigned long src, si
 
 static int copy_local_data(struct process_ctx_s *ctx)
 {
-	struct patch_info_s *pi = &ctx->p.pi;
+	struct patch_info_s *pi = PI(ctx);
 	int i;
 
 	pr_info("= Copy global variables:\n");
@@ -285,7 +285,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 static int set_dyn_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
-	struct patch_info_s *pi = &ctx->p.pi;
+	struct patch_info_s *pi = PI(ctx);
 
 	pr_info("= Apply jumps:\n");
 	for (i = 0; i < pi->n_funcpatches; i++) {
@@ -622,7 +622,7 @@ static int init_binpatch_info(struct patch_info_s *pi, const char *patchfile)
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile, const char *how)
 {
-	struct patch_info_s *pi = &ctx->p.pi;
+	struct patch_info_s *pi = PI(ctx);
 
 	if (elf_library_status())
 		return -1;
@@ -694,7 +694,7 @@ static int process_call_in_map(const struct list_head *calls,
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt)
 {
-	const struct patch_info_s *pi = &ctx->p.pi;
+	const struct patch_info_s *pi = PI(ctx);
 	int i;
 
 	for (i = 0; i < pi->n_funcpatches; i++) {
