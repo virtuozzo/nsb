@@ -1,0 +1,100 @@
+==== How to run tests
+1) By issuing "make check". This command will execute all tests in the list.
+Issue: parallel run ("make check -jN") fails in test engine internals.
+
+2) By issuing "python tests/<test_name".
+
+Example: python tests/ext_global_func.py
+
+
+==== How to add a new test
+
+All variable parts are indicated with "<>".
+Vocabulary:
+	<test_name> - an arbitrary name for new test.
+	<TEST_TYPE> - must be equal to "test_name", but in upper case 
+	<func_name> - some new function to patch.
+
+
+== How to create a new test:
+
+1) Select a test name.
+
+Example: lib_global_func
+
+2) Create a C-source file named <test_name>.c in "tests/" directory.
+
+Example: tests/lib_global_func.c
+
+3) Test source file has to include "test_types.h"
+
+4) Function prototype has to be like the following:
+
+	int <func_name>(int type)
+
+5) Function has to exit normally with:
+
+	return function_result(type);
+
+6) Function can return TEST_FAILED is case some internal logic is broken. 
+
+
+
+== How to link new test to test engine
+
+1) New unique test type has to be defined in tests/test_types.h as part of
+test_type_t enum in a form:
+
+	TEST_TYPE_<TEST_TYPE>
+
+2) Test file has to be included (!) to tests/library.c to be built as
+part of the library to patch. The reason is to prevent convertion of static
+functions into global on linking.
+
+3) The following hunk has to be to tests/library.c:
+
+int run_test(int tt)
+{
+        switch (tt) {
+	<....>
+	case TEST_TYPE_<TEST_TYPE>:
+		return <func_name>(tt) != patched_result(tt);
+	<....>
+	}
+}
+
+
+
+== How to build new test
+
+1) Add new patch target to tests/Makefile.am by following this pattern:
+
+	patch_<test_name>.so: <test_name>.c
+
+Example: patch_lib_global_func.so: lib_global_func.c
+
+2) Add patch target to "check_PROGRAMS" goal in tests/Makefile.am
+
+Example: check_PROGRAMS += patch_ext_global_func.so
+
+
+
+== How to add new test to automake check engine
+
+1) Add test file to Makefile.am TESTS goal by following this pattern:
+
+	tests/<test_name>.py
+
+Example: TESTS += tests/ext_global_func.py
+
+
+
+== How to mark test as XFAIL:
+
+1) Add test name to XFAIL_TESTS goal in Makefile.am
+
+Example: XFAIL_TESTS += tests/ext_global_func.py
+
+Notes:
+1. test has to be a part of TESTS goal in Makefile.am.
+2. test will be executed and marked as XPASS if succeded.
