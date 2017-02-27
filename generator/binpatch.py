@@ -96,9 +96,7 @@ class BinPatch:
 		for patch in self.patches_list:
 			code = self.bf_new.function_code(patch.func_b.start,
 							 patch.func_b.size)
-			dyn = self.bf_old.is_dyn_symbol(patch.func_b.funcname)
-			plt = self.bf_new.is_plt_symbol(patch.func_b.funcname)
-			fpatch = patch.get_patch(code, dyn, plt)
+			fpatch = patch.get_patch(code)
 			image.patches.extend([fpatch])
 
 		print "\nimage.new_relocations:"

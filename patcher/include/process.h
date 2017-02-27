@@ -21,10 +21,7 @@ struct funcpatch_s {
 	int64_t			addr;
 	int32_t			size;
 	int			new_:1;
-	int			dyn:1;
-	int			plt:1;
 	int32_t			old_addr;
-
 #ifdef STATIC_PATCHING
 	size_t			n_objinfos;
 	struct objinfo_s	**objinfos;

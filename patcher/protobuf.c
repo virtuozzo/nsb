@@ -105,8 +105,6 @@ static struct funcpatch_s *create_funcpatch(const FuncPatch *fp)
 	funcpatch->addr = fp->addr;
 	funcpatch->size = fp->size;
 	funcpatch->new_ = fp->new_;
-	funcpatch->dyn = fp->dyn;
-	funcpatch->plt = fp->plt;
 	funcpatch->old_addr = 0;
 	if (fp->has_old_addr)
 		funcpatch->old_addr = fp->old_addr;

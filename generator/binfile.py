@@ -64,14 +64,6 @@ class BinFile:
 				return s
 		return None
 
-	def is_dyn_symbol(self, name):
-		if self.dynsym_by_name(name):
-			return True
-		return False
-
-	def is_plt_symbol(self, name):
-		return name in self.rela_plt.keys()
-
 	def __parse__(self):
 		with open(self.filename, 'rb') as stream:
 			elf = elffile.ElfFile(stream)
