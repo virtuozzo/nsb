@@ -18,7 +18,7 @@ int run_test(int tt)
 		case TEST_TYPE_EXT_GLOBAL_FUNC:
 			return ext_global_func(tt) != patched_result(tt);
 		case TEST_TYPE_LIB_GLOBAL_FUNC_CB:
-			return lib_global_func_cb(tt) != patched_result(tt);
+			return lib_global_func_cb(tt) == patched_result(tt);
 		case TEST_TYPE_LIB_GLOBAL_FUNC_P:
 			return lib_global_func_p(tt) != patched_result(tt);
 	}
