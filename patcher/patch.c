@@ -391,11 +391,6 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	return 0;
 }
 
-struct ctx_dep {
-	struct list_head	list;
-	const struct vma_area	*vma;
-};
-
 static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
 {
 	struct ctx_dep *cd;

@@ -85,6 +85,11 @@ struct patch_s {
 	struct elf_info_s	*ei;
 };
 
+struct ctx_dep {
+	struct list_head	list;
+	const struct vma_area	*vma;
+};
+
 struct process_ctx_s {
 	pid_t			pid;
 	const char		*patchfile;
