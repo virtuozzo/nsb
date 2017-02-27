@@ -17,6 +17,7 @@
 #include "include/backtrace.h"
 #include "include/rtld.h"
 #include "include/protobuf.h"
+#include "include/relocations.h"
 
 #ifdef STATIC_PATCHING
 #include "include/patch_static.h"
@@ -45,132 +46,6 @@ struct patch_ops_s {
 	int (*fix_references)(struct process_ctx_s *ctx);
 	int (*cleanup_target)(struct process_ctx_s *ctx);
 };
-
-static int discover_plt_hints(struct process_ctx_s *ctx)
-{
-	struct patch_info_s *pi = PI(ctx);
-	int i, err;
-	void *handle;
-	LIST_HEAD(vmas);
-
-	pr_info("= Map %s:\n", pi->path);
-
-	pr_debug("  - Dlopen %s\n", pi->path);
-	handle = dlopen(pi->path, RTLD_NOW);
-	if (!handle) {
-		pr_err("failed to dlopen %s: %s\n",pi->path, dlerror());
-		return 1;
-	}
-
-	if (collect_vmas(getpid(), &vmas)) {
-		pr_err("Can't collect local mappings\n");
-		goto err;
-	}
-
-	pr_info("= Discovering target PLT hints:\n");
-
-	for (i = 0; i < pi->n_relocations; i++) {
-		struct relocation_s *rel = pi->relocations[i];
-		unsigned long addr;
-		const struct vma_area *vma;
-
-		if (rel->addend) {
-			// Local symbol. Skip.
-			continue;
-		}
-
-		if (rel->hint) {
-			// Already discovered symbol in previous version of the
-			// library. Skip.
-			continue;
-		}
-
-		pr_info("  - searching external symbol '%s':\n", rel->name);
-
-		addr = (unsigned long)dlsym(handle, rel->name);
-		if (!addr) {
-			pr_err("failed to find symbol %s: %s\n", rel->name, dlerror());
-			return 1;
-		}
-
-		vma = find_vma_by_addr(&vmas, addr);
-		if (!vma) {
-			pr_err("failed to find local vma with address %#lx\n", addr);
-			goto err;
-		}
-
-		rel->hint = addr - vma->start;
-		rel->path = vma->path;
-
-		pr_info("     file   : %s\n", rel->path);
-		pr_info("     offset : %#lx\n", rel->hint);
-	}
-	// TODO: need to:
-	// 1) get all external symbol addresses
-	// 2) get libraries by addresses.
-	// 3) make sure, that all these libraries are mapped within the process by names
-	// 4) make sure, that inodes of external libraries in nsb are equal to corresponding in the process.
-	// 5) discover symbols offsets within mappings.
-	// 6) use them to patch the new library.
-	err = 0;
-err:
-	dlclose(handle);
-	return err;
-}
-
-static int apply_rela_plt(struct process_ctx_s *ctx)
-{
-	struct patch_info_s *pi = PI(ctx);
-	int i;
-	int err;
-
-	pr_info("= Applying destination PLT relocations:\n");
-
-	for (i = 0; i < pi->n_relocations; i++) {
-		struct relocation_s *rp = pi->relocations[i];
-		uint64_t plt_addr;
-		uint64_t func_addr;
-
-		pr_info("  - Entry \"%s\" (%s at %#x):\n",
-			 rp->name, rp->info_type, rp->offset);
-
-		plt_addr = PLA(ctx) + rp->offset;
-
-		if (rp->addend) {
-			pr_info("      Locality      : internal\n");
-			func_addr = PLA(ctx) + rp->addend;
-			pr_info("      Object address: %#lx (%#lx + %#x)\n",
-					func_addr, PLA(ctx), rp->addend);
-		} else {
-			const struct vma_area *vma;
-
-			pr_info("      Locality      : external\n");
-
-			vma = find_vma_by_path(&ctx->vmas, rp->path);
-			if (!vma) {
-				pr_err("failed to find %s map\n", rp->path);
-				return -EINVAL;
-			}
-			pr_info("      Mapped file   : %s at %#lx\n", vma->path, vma->start);
-			pr_debug("    %s start: %#lx\n", rp->path, vma->start);
-			func_addr = vma->start + rp->hint;
-			pr_info("      Object address: %#lx (%#lx + %#lx)\n",
-					func_addr, vma->start, rp->hint);
-		}
-
-		pr_info("      PLT address   : %#lx\n", plt_addr);
-		pr_info("        Overwrite .got.plt entry: %#lx ---> %#lx\n",
-				func_addr, plt_addr);
-
-		err = process_write_data(ctx->pid, plt_addr, &func_addr, sizeof(func_addr));
-		if (err) {
-			pr_err("failed to write to addr %#lx in process %d\n",
-					plt_addr, ctx->pid);
-			return err;
-		}
-	}
-	return 0;
-}
 
 static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
 {
@@ -354,15 +229,11 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
 
-	err = discover_plt_hints(ctx);
-	if (err)
-		return err;
-
 	P(ctx)->load_addr = load_elf(ctx, ctx->pvma->start);
 	if (P(ctx)->load_addr < 0)
 		return P(ctx)->load_addr;
 
-	err = apply_rela_plt(ctx);
+	err = apply_relocations(ctx);
 	if (err)
 		return err;
 
@@ -658,6 +529,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (get_ctx_deplist(ctx))
 		goto err;
 
+	if (collect_relocations(ctx))
+		goto err;
+
 	if (ctx->ops->collect_deps) {
 		if (ctx->ops->collect_deps(ctx)) {
 			pr_err("failed to find dependable VMAs\n");
@@ -785,6 +659,10 @@ int patch_process(pid_t pid, const char *patchfile, const char *how)
 	}
 
 	ret = process_link(ctx);
+	if (ret)
+		goto resume;
+
+	ret = resolve_relocations(ctx);
 	if (ret)
 		goto resume;
 
