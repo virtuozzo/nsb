@@ -82,6 +82,7 @@ TESTS = tests/lib_global_func.py
 TESTS += tests/lib_static_func.py
 TESTS += tests/ext_global_func.py
 TESTS += tests/lib_global_func_cb.py
+TESTS += tests/lib_global_func_p.py
 
 XFAIL_TESTS =
 
