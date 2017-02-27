@@ -1,12 +1,10 @@
 import "segment.proto";
 import "funcpatch.proto";
-import "relaplt.proto";
 import "datasym.proto";
 
 message BinPatch {
 	required string		object_type	= 1;
 	repeated FuncPatch	patches		= 2;
-	repeated RelaPlt	relocations	= 3;
 	repeated ElfSegment	new_segments	= 4;
 	repeated DataSym	local_vars	= 5;
 	required string		old_bid		= 6;

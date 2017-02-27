@@ -72,9 +72,6 @@ class BinFile:
 			self.dyn_symbols = elf.get_dyn_symbols()
 			self.sections = elf.get_sections()
 			self.segments = elf.get_segments()
-			rela_plt = elf.get_rela_plt(self.dyn_symbols)
-			rela_dyn = elf.get_rela_dyn(self.dyn_symbols)
-			self.rela_plt = dict(rela_plt, **rela_dyn)
 
 		if self.header.type != 'ET_DYN' and self.header.type != 'ET_EXEC':
 			print "Wrong object file type: %s" % self.header.type

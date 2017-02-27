@@ -70,34 +70,6 @@ class ElfFile:
 			segments.append(segment)
 		return segments
 
-	def get_rela_plt(self, symbols):
-		rela_plt = {}
-
-		section = self.__get_section__('.rela.plt')
-		if section is None:
-			return None
-
-		for rel in section.iter_relocations():
-			s = symbols[rel['r_info_sym']]
-			rela_plt[s.name] = ElfRelaPlt(rel['r_offset'],
-						describe_reloc_type(rel['r_info_type'], self.elf),
-						s.value)
-		return rela_plt
-
-	def get_rela_dyn(self, symbols):
-		rela_dyn = {}
-
-		section = self.__get_section__('.rela.dyn')
-		if section is None:
-			return None
-
-		for rel in section.iter_relocations():
-			s = symbols[rel['r_info_sym']]
-			rela_dyn[s.name] = ElfRelaPlt(rel['r_offset'],
-						describe_reloc_type(rel['r_info_type'], self.elf),
-						s.value)
-		return rela_dyn
-
 	def build_id(self):
 		section = '.note.gnu.build-id'
 		try:

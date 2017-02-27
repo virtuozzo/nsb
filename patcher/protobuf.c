@@ -48,48 +48,6 @@ free_data:
 	return res;
 }
 
-static struct relocation_s *create_relocation(const RelaPlt *rp)
-{
-	struct relocation_s *rel;
-
-	rel = xmalloc(sizeof(struct relocation_s));
-	if (!rel)
-		return rel;
-
-	rel->name = strdup(rp->name);
-	if (!rel->name)
-		return NULL;
-	rel->info_type = strdup(rp->info_type);
-	if (!rel->info_type)
-		return NULL;
-	rel->path = strdup(rp->path);
-	if (!rel->path)
-		return NULL;
-	rel->offset = rp->offset;
-	rel->addend = rp->addend;
-	rel->hint = rp->hint;
-	return rel;
-}
-
-static int set_binpatch_relocations(struct patch_info_s *patch_info, BinPatch *bp)
-{
-	int i;
-	struct relocation_s **relocations;
-
-	relocations = xmalloc(sizeof(struct relocation_s *) * bp->n_relocations);
-	if (!relocations)
-		return -ENOMEM;
-
-	for (i = 0; i < bp->n_relocations; i++) {
-		relocations[i] = create_relocation(bp->relocations[i]);
-		if (!relocations[i])
-			return -ENOMEM;
-	}
-	patch_info->n_relocations = bp->n_relocations;
-	patch_info->relocations = relocations;
-	return 0;
-}
-
 static struct funcpatch_s *create_funcpatch(const FuncPatch *fp)
 {
 	struct funcpatch_s *funcpatch;
@@ -237,11 +195,8 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 			goto free_new_bid;
 	}
 
-	if (set_binpatch_relocations(patch_info, bp))
-		goto free_new_path;
-
 	if (set_binpatch_funcpatches(patch_info, bp))
-		goto free_relocations;
+		goto free_new_path;
 
 	if (set_binpatch_local_vars(patch_info, bp))
 		goto free_funcpatches;
@@ -258,8 +213,6 @@ free_unpacked:
 free_local_vars:
 	// TODO
 free_funcpatches:
-	// TODO
-free_relocations:
 	// TODO
 free_new_path:
 	if (bp->new_path)

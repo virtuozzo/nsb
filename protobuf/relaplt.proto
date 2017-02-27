@@ -1,8 +1,0 @@
-message RelaPlt {
-	required string name		= 1;
-	required string info_type	= 2;
-	required int32	offset		= 3;
-	required int32	addend		= 4;
-	required int64	hint		= 5;
-	required string path		= 6;
-}
