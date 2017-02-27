@@ -27,6 +27,8 @@ struct process_ctx_s process_context = {
 		.pi = {
 			.places = LIST_HEAD_INIT(process_context.p.pi.places),
 		},
+		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
+		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 	}
 };
 

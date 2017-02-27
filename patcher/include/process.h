@@ -82,6 +82,8 @@ struct patch_info_s {
 struct patch_s {
 	struct patch_info_s	pi;
 	int64_t			load_addr;
+	struct list_head	rela_plt;
+	struct list_head	rela_dyn;
 	struct elf_info_s	*ei;
 };
 

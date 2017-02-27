@@ -56,6 +56,7 @@ nsb_SOURCES =						\
 			patcher/include/backtrace.h	\
 			patcher/include/rtld.h		\
 			patcher/include/util.h		\
+			patcher/include/relocations.h	\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -67,6 +68,7 @@ nsb_SOURCES =						\
 			patcher/backtrace.c		\
 			patcher/rtld.c			\
 			patcher/util.c			\
+			patcher/relocations.c		\
 			patcher/patch.c
 
 if STATIC_PATCHING
@@ -81,7 +83,7 @@ TESTS += tests/lib_static_func.py
 TESTS += tests/ext_global_func.py
 TESTS += tests/lib_global_func_cb.py
 
-XFAIL_TESTS = tests/lib_global_func_cb.py
+XFAIL_TESTS =
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@
