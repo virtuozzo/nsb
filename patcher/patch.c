@@ -306,7 +306,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 	int err;
 
 	list_for_each_entry(es, &vma->target_syms, list) {
-		unsigned long offset = es->offset;
+		unsigned long offset = es_r_offset(es);
 
 		pr_debug("    \"%s\":\n", es->name);
 
@@ -320,8 +320,8 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 		address += PLA(ctx);
 		pr_debug("       new address: %#lx\n", address);
 
-		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es->offset);
-		err = process_write_data(ctx->pid, es->offset, &address, sizeof(address));
+		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es_r_offset(es));
+		err = process_write_data(ctx->pid, es_r_offset(es), &address, sizeof(address));
 		if (err < 0) {
 			pr_err("failed to patch: %d\n", err);
 			return err;
@@ -512,7 +512,7 @@ static int collect_dependent_vma(struct process_ctx_s *ctx,
 	LIST_HEAD(plt_syms);
 	struct extern_symbol *es, *tmp;
 
-	err = elf_extern_dsyms(vma->ei, &plt_syms);
+	err = elf_rela_plt(vma->ei, &plt_syms);
 	if (err)
 		return err;
 
@@ -528,8 +528,8 @@ static int collect_dependent_vma(struct process_ctx_s *ctx,
 		list_move(&es->list, &vma->target_syms);
 
 		pr_debug("      - %s:\n", es->name);
-		pr_debug("          offset  : %#lx\n", es->offset);
-		pr_debug("          bind    : %d\n", es->bind);
+		pr_debug("          offset  : %#lx\n", es_r_offset(es));
+		pr_debug("          bind    : %d\n", es_s_bind(es));
 		pr_debug("          path    : %s\n", es->vma->path);
 		pr_debug("          map_file: %s\n", es->vma->map_file);
 	}

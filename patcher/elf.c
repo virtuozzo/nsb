@@ -38,12 +38,69 @@ struct elf_info_s {
 	GElf_Ehdr		hdr;
 	Elf_Scn			*strtab;
 	elf_scn_t		*rela_plt;
+	elf_scn_t		*rela_dyn;
 	elf_scn_t		*dynamic;
 	elf_scn_t		*dynsym;
 	Elf_Scn			*dynstr;
 	char			*soname;
 	struct list_head	needed;
 	char			*bid;
+};
+
+struct elf_data_s {
+	GElf_Rela		rela;
+	GElf_Sym		sym;
+};
+
+#define ES_RELA(es)		(&(es->ed->rela))
+#define ES_SYM(es)		(&(es->ed->sym))
+
+const char *symbol_bindings[STB_NUM] = {
+	"STB_LOCAL",
+	"STB_GLOBAL",
+	"STB_WEAK",
+};
+
+const char *relocation_types[R_X86_64_NUM] = {
+	"R_X86_64_NONE",
+	"R_X86_64_64",
+	"R_X86_64_PC32",
+	"R_X86_64_GOT32",
+	"R_X86_64_PLT32",
+	"R_X86_64_COPY",
+	"R_X86_64_GLOB_DAT",
+	"R_X86_64_JUMP_SLOT",
+	"R_X86_64_RELATIVE",
+	"R_X86_64_GOTPCREL",
+	"R_X86_64_32",
+	"R_X86_64_32S",
+	"R_X86_64_16",
+	"R_X86_64_PC16",
+	"R_X86_64_8",
+	"R_X86_64_PC8",
+	"R_X86_64_DTPMOD64",
+	"R_X86_64_DTPOFF64",
+	"R_X86_64_TPOFF64",
+	"R_X86_64_TLSGD",
+	"R_X86_64_TLSLD",
+	"R_X86_64_DTPOFF32",
+	"R_X86_64_GOTTPOFF",
+	"R_X86_64_TPOFF32",
+	"R_X86_64_PC64",
+	"R_X86_64_GOTOFF64",
+	"R_X86_64_GOTPC32",
+	"R_X86_64_GOT64",
+	"R_X86_64_GOTPCREL64",
+	"R_X86_64_GOTPC64",
+	"R_X86_64_GOTPLT64",
+	"R_X86_64_PLTOFF64",
+	"R_X86_64_SIZE32",
+	"R_X86_64_SIZE64",
+	"R_X86_64_GOTPC32_TLSDESC",
+	"R_X86_64_TLSDESC_CALL",
+	"R_X86_64_TLSDESC",
+	"R_X86_64_IRELATIVE",
+	"R_X86_64_RELATIVE64",
 };
 
 static int __elf_get_soname(struct elf_info_s *ei, char **soname);
@@ -642,18 +699,27 @@ const struct list_head *elf_needed_list(struct elf_info_s *ei)
 	return &ei->needed;
 }
 
-static struct extern_symbol *create_ext_sym(char *name, uint64_t offset, int bind)
+static struct extern_symbol *create_ext_sym(char *name, const GElf_Rela *rela,
+					    const GElf_Sym *sym)
 {
 	struct extern_symbol *es;
+	struct elf_data_s *ed;
 
 	es = xmalloc(sizeof(*es));
 	if (!es)
 		return NULL;
 
+	ed = xmalloc(sizeof(*ed));
+	if (!ed) {
+		free(es);
+		return NULL;
+	}
+
+	memcpy(&ed->rela, rela, sizeof(GElf_Rela));
+	memcpy(&ed->sym, sym, sizeof(GElf_Sym));
+	es->ed = ed;
 	es->name = name;
-	es->offset = offset;
-	es->bind = bind;
-	es->soname = NULL;
+	es->address = 0;
 	es->vma = NULL;
 	return es;
 }
@@ -758,7 +824,7 @@ int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name)
 	return sym.st_value;
 }
 
-static elf_scn_t *elf_set_real_plt_scn(struct elf_info_s *ei)
+static elf_scn_t *elf_set_rela_plt_scn(struct elf_info_s *ei)
 {
 	if (!ei->rela_plt) {
 		if (elf_create_scn(ei, &ei->rela_plt, ".rela.plt"))
@@ -767,24 +833,28 @@ static elf_scn_t *elf_set_real_plt_scn(struct elf_info_s *ei)
 	return ei->rela_plt;
 }
 
-static int iter_rela_plt(struct elf_info_s *ei,
-			 int (*actor)(struct elf_info_s *ei,
-				      const GElf_Rela *rela, void *data),
-			 void *data)
+static elf_scn_t *elf_set_rela_dyn_scn(struct elf_info_s *ei)
+{
+	if (!ei->rela_dyn) {
+		if (elf_create_scn(ei, &ei->rela_dyn, ".rela.dyn"))
+			return NULL;
+	}
+	return ei->rela_dyn;
+}
+
+static int iter_rela(struct elf_info_s *ei, const elf_scn_t *escn,
+		     int (*actor)(struct elf_info_s *ei,
+				  const GElf_Rela *rela, void *data),
+		     void *data)
 {
 	int i;
-	elf_scn_t *escn;
 	GElf_Rela rela;
-
-	escn = elf_set_real_plt_scn(ei);
-	if (!escn)
-		return -ENOENT;
 
 	for (i = 0; i < escn->nr_ent; i++) {
 		int ret;
 
 		if (!gelf_getrela(escn->data, i, &rela)) {
-			pr_err("failed to get %d tag from \".rela.plt\" section\n", i);
+			pr_err("failed to get %d tag from \".rela.*\" section\n", i);
 			return -EINVAL;
 		}
 
@@ -818,7 +888,7 @@ static int collect_es(struct elf_info_s *ei, const GElf_Rela *rela, void *data)
 	if (err)
 		return err;
 
-	es = create_ext_sym(name, rela->r_offset, GELF_ST_BIND(sym.st_info));
+	es = create_ext_sym(name, rela, &sym);
 	if (!es)
 		return -ENOMEM;
 
@@ -827,12 +897,12 @@ static int collect_es(struct elf_info_s *ei, const GElf_Rela *rela, void *data)
 	return 0;
 }
 
-int elf_extern_dsyms(struct elf_info_s *ei, struct list_head *head)
+int elf_collect_rela(struct elf_info_s *ei, elf_scn_t *escn, struct list_head *head)
 {
 	int err;
 	struct extern_symbol *es, *tmp;
 
-	err = iter_rela_plt(ei, collect_es, head);
+	err = iter_rela(ei, escn, collect_es, head);
 	if (err)
 		goto free_list;
 	return 0;
@@ -843,6 +913,28 @@ free_list:
 		free(es);
 	}
 	return err;
+}
+
+int elf_rela_plt(struct elf_info_s *ei, struct list_head *head)
+{
+	elf_scn_t *escn;
+
+	escn = elf_set_rela_plt_scn(ei);
+	if (!escn)
+		return -ENOENT;
+
+	return elf_collect_rela(ei, escn, head);
+}
+
+int elf_rela_dyn(struct elf_info_s *ei, struct list_head *head)
+{
+	elf_scn_t *escn;
+
+	escn = elf_set_rela_dyn_scn(ei);
+	if (!escn)
+		return -ENOENT;
+
+	return elf_collect_rela(ei, escn, head);
 }
 
 int elf_contains_sym(struct elf_info_s *ei, const char *symname)
@@ -860,9 +952,160 @@ int elf_contains_sym(struct elf_info_s *ei, const char *symname)
 	return err;
 }
 
+uint32_t es_r_type(const struct extern_symbol *es)
+{
+	return GELF_R_TYPE(ES_RELA(es)->r_info);
+}
+
+uint32_t es_r_sym(const struct extern_symbol *es)
+{
+	return GELF_R_SYM(ES_RELA(es)->r_info);
+}
+
+int64_t es_r_addend(const struct extern_symbol *es)
+{
+	return ES_RELA(es)->r_addend;
+}
+
+uint64_t es_r_offset(const struct extern_symbol *es)
+{
+	return ES_RELA(es)->r_offset;
+}
+
+uint32_t es_s_name(const struct extern_symbol *es)
+{
+	return ES_SYM(es)->st_name;
+}
+
+uint64_t es_s_value(const struct extern_symbol *es)
+{
+	return ES_SYM(es)->st_value;
+}
+
+uint64_t es_s_size(const struct extern_symbol *es)
+{
+	return ES_SYM(es)->st_size;
+}
+
+unsigned char es_s_bind(const struct extern_symbol *es)
+{
+	return GELF_ST_BIND(ES_SYM(es)->st_info);
+}
+
+unsigned char es_s_type(const struct extern_symbol *es)
+{
+	return GELF_ST_TYPE(ES_SYM(es)->st_info);
+}
+
+int elf_glob_sym(const struct extern_symbol *es)
+{
+	return es_s_bind(es) == STB_GLOBAL;
+}
+
 int elf_weak_sym(const struct extern_symbol *es)
 {
-	return es->bind == STB_WEAK;
+	return es_s_bind(es) == STB_WEAK;
+}
+
+const char *es_binding(const struct extern_symbol *es)
+{
+	unsigned char bind;
+
+	bind = es_s_bind(es);
+	if (bind < STB_NUM)
+		return symbol_bindings[bind];
+	pr_err("unknown symbol binding: %d\n", bind);
+	return NULL;
+}
+
+const char *es_relocation(const struct extern_symbol *es)
+{
+	unsigned char type;
+
+	type = es_r_type(es);
+	if (type < R_X86_64_NUM)
+		return relocation_types[type];
+	pr_err("unknown relocation type: %d\n", type);
+	return NULL;
+}
+
+static int64_t elf_has_sym(struct elf_info_s *ei,
+			   const char *name, unsigned char bind)
+{
+	int64_t err;
+	GElf_Sym sym;
+
+	err = elf_find_dsym_by_name(ei, name, &sym);
+	if (err < 0) {
+		return (err != -ENOENT) ? err : 0;
+	}
+
+	if (GELF_ST_BIND(sym.st_info) != bind)
+		return 0;
+
+	return sym.st_value;
+}
+
+int64_t elf_has_glob_sym(struct elf_info_s *ei, const char *name)
+{
+	return elf_has_sym(ei, name, STB_GLOBAL);
+}
+
+int64_t elf_has_weak_sym(struct elf_info_s *ei, const char *name)
+{
+	return elf_has_sym(ei, name, STB_WEAK);
+}
+
+int elf_reloc_sym(struct extern_symbol *es, uint64_t address)
+{
+	switch (es_r_type(es)) {
+		case R_X86_64_GLOB_DAT:
+		case R_X86_64_JUMP_SLOT:
+			es->address = address;
+			return 0;
+		case R_X86_64_NONE:
+		case R_X86_64_64:
+		case R_X86_64_PC32:
+		case R_X86_64_GOT32:
+		case R_X86_64_PLT32:
+		case R_X86_64_COPY:
+		case R_X86_64_RELATIVE:
+		case R_X86_64_GOTPCREL:
+		case R_X86_64_32:
+		case R_X86_64_32S:
+		case R_X86_64_16:
+		case R_X86_64_PC16:
+		case R_X86_64_8:
+		case R_X86_64_PC8:
+		case R_X86_64_DTPMOD64:
+		case R_X86_64_DTPOFF64:
+		case R_X86_64_TPOFF64:
+		case R_X86_64_TLSGD:
+		case R_X86_64_TLSLD:
+		case R_X86_64_DTPOFF32:
+		case R_X86_64_GOTTPOFF:
+		case R_X86_64_TPOFF32:
+		case R_X86_64_PC64:
+		case R_X86_64_GOTOFF64:
+		case R_X86_64_GOTPC32:
+		case R_X86_64_GOT64:
+		case R_X86_64_GOTPCREL64:
+		case R_X86_64_GOTPC64:
+		case R_X86_64_GOTPLT64:
+		case R_X86_64_PLTOFF64:
+		case R_X86_64_SIZE32:
+		case R_X86_64_SIZE64:
+		case R_X86_64_GOTPC32_TLSDESC:
+		case R_X86_64_TLSDESC_CALL:
+		case R_X86_64_TLSDESC:
+		case R_X86_64_IRELATIVE:
+		case R_X86_64_RELATIVE64:
+			break;
+		default:
+			pr_err("unknown relocations type: %d\n", es_r_type(es));
+	}
+	pr_err("relocation \"%s\" is not supported\n", es_relocation(es));
+	return -ENOTSUP;
 }
 
 int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)

@@ -32,18 +32,38 @@ struct elf_needed {
 };
 
 int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name);
-int elf_extern_dsyms(struct elf_info_s *ei, struct list_head *head);
+int elf_rela_plt(struct elf_info_s *ei, struct list_head *head);
+int elf_rela_dyn(struct elf_info_s *ei, struct list_head *head);
 int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 
+struct elf_data_s;
 struct extern_symbol {
 	struct list_head	list;
 	char			*name;
-	uint64_t		offset;
-	int			bind;
-	char			*soname;
+	struct elf_data_s	*ed;
 	const struct vma_area	*vma;
+	uint64_t		address;
 };
+
+uint32_t es_r_type(const struct extern_symbol *es);
+uint32_t es_r_sym(const struct extern_symbol *es);
+int64_t es_r_addend(const struct extern_symbol *es);
+uint64_t es_r_offset(const struct extern_symbol *es);
+uint32_t es_s_name(const struct extern_symbol *es);
+uint64_t es_s_value(const struct extern_symbol *es);
+uint64_t es_s_size(const struct extern_symbol *es);
+unsigned char es_s_bind(const struct extern_symbol *es);
+unsigned char es_s_type(const struct extern_symbol *es);
+
+int elf_glob_sym(const struct extern_symbol *es);
 int elf_weak_sym(const struct extern_symbol *es);
+const char *es_binding(const struct extern_symbol *es);
+const char *es_relocation(const struct extern_symbol *es);
+
+int64_t elf_has_glob_sym(struct elf_info_s *ei, const char *name);
+int64_t elf_has_weak_sym(struct elf_info_s *ei, const char *name);
+
+int elf_reloc_sym(struct extern_symbol *es, uint64_t address);
 
 int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 
