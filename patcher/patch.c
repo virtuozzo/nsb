@@ -34,6 +34,7 @@ static const struct patch_ops_s *set_patch_ops(const char *how, const char *type
 
 struct patch_ops_s {
 	char *name;
+	int (*collect_deps)(struct process_ctx_s *ctx);
 	int (*apply_patch)(struct process_ctx_s *ctx);
 	int (*set_jumps)(struct process_ctx_s *ctx);
 	int (*check_backtrace)(const struct process_ctx_s *ctx,
@@ -660,9 +661,11 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (get_ctx_deplist(ctx))
 		goto err;
 
-	if (process_collect_dependable_vmas(ctx)) {
-		pr_err("failed to find dependable VMAs\n");
-		goto err;
+	if (ctx->ops->collect_deps) {
+		if (ctx->ops->collect_deps(ctx)) {
+			pr_err("failed to find dependable VMAs\n");
+			goto err;
+		}
 	}
 
 	return 0;
@@ -821,6 +824,7 @@ int check_process(pid_t pid, const char *patchfile)
 
 struct patch_ops_s patch_jump_ops = {
 	.name = "jump",
+	.collect_deps = NULL,
 	.set_jumps = set_dyn_jumps,
 	.copy_data = NULL,
 	.check_backtrace = jumps_check_backtrace,
@@ -863,6 +867,7 @@ static int swap_check_backtrace(const struct process_ctx_s *ctx,
 
 struct patch_ops_s patch_swap_ops = {
 	.name = "swap",
+	.collect_deps = process_collect_dependable_vmas,
 	.set_jumps = NULL,
 	.copy_data = copy_local_data,
 	.check_backtrace = swap_check_backtrace,
