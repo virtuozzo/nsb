@@ -315,7 +315,7 @@ static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area 
 
 		pr_debug("       GOT address: %#lx\n", offset);
 
-		address = elf_dsym_offset(ctx->p.ei, es->name);
+		address = elf_dsym_offset(P(ctx)->ei, es->name);
 
 		address += PLA(ctx);
 		pr_debug("       new address: %#lx\n", address);
@@ -356,9 +356,9 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	ctx->p.load_addr = load_elf(ctx, ctx->pvma->start);
-	if (ctx->p.load_addr < 0)
-		return ctx->p.load_addr;
+	P(ctx)->load_addr = load_elf(ctx, ctx->pvma->start);
+	if (P(ctx)->load_addr < 0)
+		return P(ctx)->load_addr;
 
 	err = apply_rela_plt(ctx);
 	if (err)
@@ -603,7 +603,7 @@ static int init_patch_info(struct patch_info_s *pi, const char *patchfile)
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;
-	struct patch_s *p = &ctx->p;
+	struct patch_s *p = P(ctx);
 
 	err = init_patch_info(PI(ctx), ctx->patchfile);
 	if (err)

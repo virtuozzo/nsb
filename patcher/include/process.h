@@ -98,6 +98,7 @@ struct process_ctx_s {
 	struct patch_s		p;
 };
 
+#define P(ctx)			(&ctx->p)
 #define PI(ctx)			(&ctx->p.pi)
 #define PLA(ctx)		(ctx->p.load_addr)
 
