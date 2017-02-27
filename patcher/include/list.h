@@ -5,6 +5,7 @@
  * Double linked lists.
  */
 
+#include <libio.h>
 #include "compiler.h"
 
 #define POISON_POINTER_DELTA 0
