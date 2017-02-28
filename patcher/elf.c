@@ -1074,8 +1074,10 @@ int elf_reloc_sym(struct extern_symbol *es, uint64_t address)
 		case R_X86_64_JUMP_SLOT:
 			es->address = address;
 			return 0;
-		case R_X86_64_NONE:
 		case R_X86_64_64:
+			es->address = address + es_r_addend(es);
+			return 0;
+		case R_X86_64_NONE:
 		case R_X86_64_PC32:
 		case R_X86_64_GOT32:
 		case R_X86_64_PLT32:
