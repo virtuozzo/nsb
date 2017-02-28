@@ -1,6 +1,8 @@
 #include "test_types.h"
 
-int lib_global_func_cb(int type)
+extern long lib_global_func(int type);
+
+long lib_global_func_cb(int type)
 {
 	return lib_global_func(type);
 }

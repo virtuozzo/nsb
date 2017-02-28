@@ -1,6 +1,6 @@
 #include "test_types.h"
 
-int ext_global_func(int type)
+long ext_global_func(int type)
 {
 	if (atoi("3") == 3)
 		return function_result(type);

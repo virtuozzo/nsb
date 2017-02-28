@@ -1,12 +1,12 @@
 #include "test_types.h"
 
 #ifdef PATCH
-extern int global_var;
+extern long global_var;
 #else
-int global_var = TEST_TYPE_LIB_GLOBAL_VAR;
+long global_var = original_result(TEST_TYPE_LIB_GLOBAL_VAR);
 #endif
 
-int lib_global_var(int type)
+long lib_global_var(int type)
 {
 	return global_var;
 }

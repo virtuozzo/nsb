@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "test_types.h"
 
@@ -11,24 +12,67 @@
 #include "lib_global_var_addr.c"
 #include "lib_global_var_addend.c"
 
+typedef long (*test_actor_t)(int tt);
+
+struct test_info_s {
+	test_actor_t	actor;
+	bool		match;
+} tst_info[TEST_TYPE_MAX] = {
+	[TEST_TYPE_LIB_GLOBAL_FUNC] = {
+		.actor = lib_global_func,
+		.match = false,
+	},
+	[TEST_TYPE_LIB_STATIC_FUNC] = {
+		.actor = lib_static_func,
+		.match = false,
+	},
+	[TEST_TYPE_EXT_GLOBAL_FUNC] = {
+		.actor = ext_global_func,
+		.match = false,
+	},
+	[TEST_TYPE_LIB_GLOBAL_FUNC_CB] = {
+		.actor = lib_global_func_cb,
+		.match = true,
+	},
+	[TEST_TYPE_LIB_GLOBAL_FUNC_P] = {
+		.actor = lib_global_func_p,
+		.match = false,
+	},
+	[TEST_TYPE_LIB_GLOBAL_VAR] = {
+		.actor = lib_global_var,
+		.match = true,
+	},
+	[TEST_TYPE_LIB_GLOBAL_VAR_ADDR] = {
+		.actor = lib_global_var_addr,
+		.match = true,
+	},
+	[TEST_TYPE_LIB_GLOBAL_VAR_ADDEND] = {
+		.actor = lib_global_var_addend,
+		.match = true,
+	},
+};
+
+static const struct test_info_s *get_test_info(int tt)
+{
+	if ((tt < TEST_TYPE_LIB_GLOBAL_FUNC) ||
+	    (tt >= TEST_TYPE_MAX)) {
+		printf("wrong test type: %d\n", tt);
+		return NULL;
+	}
+	return &tst_info[tt];
+}
+
 int run_test(int tt)
 {
-	switch (tt) {
-		case TEST_TYPE_LIB_GLOBAL_FUNC:
-			return lib_global_func(tt) != patched_result(tt);
-		case TEST_TYPE_LIB_STATIC_FUNC:
-			return lib_static_func(tt) != patched_result(tt);
-		case TEST_TYPE_EXT_GLOBAL_FUNC:
-			return ext_global_func(tt) != patched_result(tt);
-		case TEST_TYPE_LIB_GLOBAL_FUNC_CB:
-			return lib_global_func_cb(tt) == patched_result(tt);
-		case TEST_TYPE_LIB_GLOBAL_FUNC_P:
-			return lib_global_func_p(tt) != patched_result(tt);
-		case TEST_TYPE_LIB_GLOBAL_VAR:
-			return lib_global_var(tt) == patched_result(tt);
-		case TEST_TYPE_LIB_GLOBAL_VAR_ADDR:
-			return lib_global_var_addr(tt) == patched_addr_result(tt, &global_var);
-		case TEST_TYPE_LIB_GLOBAL_VAR_ADDEND:
-			return lib_global_var_addend(tt) == patched_result(tt);
-	}
+	const struct test_info_s *ti = get_test_info(tt);
+	bool failed;
+
+	if (!ti)
+		return TEST_ERROR;
+
+	if (ti->match)
+		failed = ti->actor(tt) != original_result(tt);
+	else
+		failed = ti->actor(tt) != patched_result(tt);
+	return failed;
 }
