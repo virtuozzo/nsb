@@ -5,6 +5,14 @@
 #include "include/process.h"
 #include "include/vma.h"
 
+static void print_relocation(const struct extern_symbol *es)
+{
+	pr_debug("      %012lx  %012lx  %17.17s  %016lx  %s + %ld:\n",
+			es_r_offset(es), es_r_info(es),
+			es_relocation(es), es_s_value(es),
+			es->name, es_r_addend(es));
+}
+
 int collect_relocations(struct process_ctx_s *ctx)
 {
 	int err;
@@ -17,84 +25,98 @@ int collect_relocations(struct process_ctx_s *ctx)
 		return err;
 
 	pr_debug("    .rela.plt:\n");
-	list_for_each_entry(es, &P(ctx)->rela_plt, list) {
-		pr_debug("      - %d:\n", es_r_sym(es));
-		pr_debug("          name    : %s:\n", es->name);
-		pr_debug("          offset  : %#lx\n", es_r_offset(es));
-		pr_debug("          bind    : %d (%s)\n", es_s_bind(es), es_binding(es));
-		pr_debug("          r_type  : %d (%s)\n", es_r_type(es), es_relocation(es));
-	}
+	pr_debug("      Offset        Info          Type               "
+		 "Symbol value      Name + Addend\n");
+	list_for_each_entry(es, &P(ctx)->rela_plt, list)
+		print_relocation(es);
 
 	err = elf_rela_dyn(P(ctx)->ei, &P(ctx)->rela_dyn);
 	if (err)
 		return err;
 
 	pr_debug("    .rela.dyn:\n");
-	list_for_each_entry(es, &P(ctx)->rela_dyn, list) {
-		pr_debug("      - %d:\n", es_r_sym(es));
-		pr_debug("          name    : %s:\n", es->name);
-		pr_debug("          offset  : %#lx\n", es_r_offset(es));
-		pr_debug("          bind    : %d (%s)\n", es_s_bind(es), es_binding(es));
-		pr_debug("          r_type  : %d (%s)\n", es_r_type(es), es_relocation(es));
-	}
+	pr_debug("      Offset        Info          Type               "
+		 "Symbol value      Name + Addend\n");
+	list_for_each_entry(es, &P(ctx)->rela_dyn, list)
+		print_relocation(es);
 
 	return 0;
 }
 
-static int find_global_sym(const struct process_ctx_s *ctx, struct extern_symbol *es)
+static int64_t find_dym_sym(const struct process_ctx_s *ctx,
+			    struct extern_symbol *es,
+			    const struct vma_area **vma_area,
+			    uint64_t patch_value)
 {
-	int64_t ret;
+	int64_t value;
 	const struct ctx_dep *n;
 
+	es->vma = NULL;
 	list_for_each_entry(n, &ctx->objdeps, list) {
 		const struct vma_area *vma = n->vma;
 
-		ret = elf_has_glob_sym(vma->ei, es->name);
-		if (ret < 0)
-			return ret;
-		if (ret) {
+		/* If symbol is defined in the patch and we reached the old
+		 * library, stop and returm patch value.
+		 * The reason is that with new library linked, this symbol will
+		 * be found in it.
+		 * Without this check we can find the symbol not in the patch,
+		 * but somewhere else in soname list, which is wrong.
+		 */
+		if (patch_value && (vma == ctx->pvma))
+			/* Note, that VMA remains NULL. It will be used is
+			 * patch marker in apply_es()
+			 */
+			return patch_value;
+
+		value = elf_dyn_sym_value(vma->ei, es->name);
+		if (value < 0)
+			return value;
+		if (value) {
 			es->vma = vma;
-			return ret;
+			return value;
 		}
 	}
 	return -ENOENT;
 }
 
-static int resolve_global(const struct process_ctx_s *ctx, struct extern_symbol *es)
+static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol *es)
 {
-	int64_t ret;
+	int err;
+	int64_t value;
+	const struct vma_area *vma = NULL;
 
-	pr_debug("      - %d:\n", es_r_sym(es));
-	pr_debug("          name    : %s:\n", es->name);
+	value = find_dym_sym(ctx, es, &vma, es_s_value(es));
+	if (value < 0)
+		return value;
 
-	ret = find_global_sym(ctx, es);
-	if (ret < 0)
-		return ret;
+	err = elf_reloc_sym(es, value);
+	if (err < 0)
+		return err;
 
-	return elf_reloc_sym(es, es->vma->start + ret);
+	return 0;
 }
 
-static int resolve_weak(const struct process_ctx_s *ctx, struct extern_symbol *es)
+static void print_resolution(const struct process_ctx_s *ctx,
+			     const struct extern_symbol *es)
 {
-	int ret;
-
-	ret = resolve_global(ctx, es);
-	if (ret == -ENOENT)
-		return elf_reloc_sym(es, P(ctx)->load_addr + ret);
-	return ret;
+	pr_debug("    %4d:  %012lx  %4ld  %7.7s  %6.6s  %s  %s\n",
+			es_r_sym(es), es->address,
+			es_s_size(es), es_type(es), es_binding(es),
+			es->name,
+			(es->address == 0) ? "" :
+			((es->vma) ? es->vma->path : ctx->pvma->path));
 }
 
 static int resolve_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 {
 	int err;
-	if (elf_glob_sym(es))
-		err = resolve_global(ctx, es);
-	else if (elf_weak_sym(es))
-		err = resolve_weak(ctx, es);
-	else {
-		pr_err("Uknown symbol bind: %d\n", es_s_bind(es));
-		return -EINVAL;
+
+	if (elf_weak_sym(es) && (es_s_value(es) == 0)) {
+		list_del(&es->list);
+		return 0;
 	}
+
+	err = resolve_symbol(ctx, es);
 	if (err) {
 		pr_err("failed to resolve %s symbol\n", es->name);
 		return -ENOENT;
@@ -105,21 +127,33 @@ static int resolve_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 int resolve_relocations(struct process_ctx_s *ctx)
 {
 	int err;
-	struct extern_symbol *es;
+	struct extern_symbol *es, *tmp;
 
 	pr_debug("= Resolve relocations:\n");
 
-	pr_debug("    .rela.plt:\n");
-	list_for_each_entry(es, &P(ctx)->rela_plt, list) {
+	list_for_each_entry_safe(es, tmp, &P(ctx)->rela_plt, list) {
 		err = resolve_es(ctx, es);
 		if (err)
 			return err;
 	}
-	pr_debug("    .rela.dyn:\n");
-	list_for_each_entry(es, &P(ctx)->rela_dyn, list) {
+
+	list_for_each_entry_safe(es, tmp, &P(ctx)->rela_dyn, list) {
 		err = resolve_es(ctx, es);
 		if (err)
 			return err;
+	}
+
+	if (!list_empty(&P(ctx)->rela_plt)) {
+		pr_debug("    .rela.plt:\n");
+		pr_debug("      Nr:  Value         Size   Type    Bind    Name\n");
+		list_for_each_entry(es, &P(ctx)->rela_plt, list)
+			print_resolution(ctx, es);
+	}
+	if (!list_empty(&P(ctx)->rela_dyn)) {
+		pr_debug("    .rela.dyn:\n");
+		pr_debug("      Nr:  Value         Size   Type    Bind    Name\n");
+		list_for_each_entry(es, &P(ctx)->rela_dyn, list)
+			print_resolution(ctx, es);
 	}
 	return 0;
 }
@@ -130,26 +164,17 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 	uint64_t plt_addr;
 	uint64_t func_addr;
 
-	pr_debug("      - %d:\n", es_r_sym(es));
-
-	if (!es->address) {
-		pr_debug("          Skip\n");
-		return 0;
-	}
-
-	pr_debug("          name     : %s:\n", es->name);
-	pr_debug("          offset   : %#lx\n", es->address);
-	if (es->vma)
-		pr_debug("          vma      : %s\n", es->vma->path);
-
 	plt_addr = PLA(ctx) + es_r_offset(es);
-	pr_debug("          PLT addr : %#lx\n", plt_addr);
 
-	func_addr = es->address;
-	pr_debug("          Func addr: %#lx\n", func_addr);
+	if (es->vma)
+		func_addr = es->vma->start + es->address;
+	else
+		func_addr = PLA(ctx) + es->address;
 
-	pr_info("        Overwrite .got.plt entry: %#lx ---> %#lx\n",
-			func_addr, plt_addr);
+	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
+			es_r_sym(es), plt_addr, func_addr, es->name,
+			((es->vma) ? es->vma->path : ctx->pvma->path),
+			es->address);
 
 	err = process_write_data(ctx->pid, plt_addr, &func_addr, sizeof(func_addr));
 	if (err) {
@@ -167,18 +192,24 @@ int apply_relocations(struct process_ctx_s *ctx)
 
 	pr_info("= Applying patch relocations:\n");
 
-	pr_debug("    .rela.plt:\n");
-	list_for_each_entry(es, &P(ctx)->rela_plt, list) {
-		err = apply_es(ctx, es);
-		if (err)
-			return err;
+	if (!list_empty(&P(ctx)->rela_plt)) {
+		pr_debug("    .rela.plt:\n");
+		pr_debug("      Nr:  PLT             Address        Name: Library + Offset\n");
+		list_for_each_entry(es, &P(ctx)->rela_plt, list) {
+			err = apply_es(ctx, es);
+			if (err)
+				return err;
+		}
 	}
 
-	pr_debug("    .rela.dyn:\n");
-	list_for_each_entry(es, &P(ctx)->rela_dyn, list) {
-		err = apply_es(ctx, es);
-		if (err)
-			return err;
+	if (!list_empty(&P(ctx)->rela_dyn)) {
+		pr_debug("    .rela.dyn:\n");
+		pr_debug("      Nr:  PLT             Address        Name: Library + Offset\n");
+		list_for_each_entry(es, &P(ctx)->rela_dyn, list) {
+			err = apply_es(ctx, es);
+			if (err)
+				return err;
+		}
 	}
 	return 0;
 }

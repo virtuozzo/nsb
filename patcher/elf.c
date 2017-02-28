@@ -56,9 +56,19 @@ struct elf_data_s {
 #define ES_SYM(es)		(&(es->ed->sym))
 
 const char *symbol_bindings[STB_NUM] = {
-	"STB_LOCAL",
-	"STB_GLOBAL",
-	"STB_WEAK",
+	"LOCAL",
+	"GLOBAL",
+	"WEAK",
+};
+
+const char *symbol_types[STT_NUM] = {
+	"NOTYPE",
+	"OBJECT",
+	"FUNC",
+	"SECTION",
+	"FILE",
+	"COMMON",
+	"TLS",
 };
 
 const char *relocation_types[R_X86_64_NUM] = {
@@ -952,14 +962,19 @@ int elf_contains_sym(struct elf_info_s *ei, const char *symname)
 	return err;
 }
 
+uint64_t es_r_info(const struct extern_symbol *es)
+{
+	return ES_RELA(es)->r_info;
+}
+
 uint32_t es_r_type(const struct extern_symbol *es)
 {
-	return GELF_R_TYPE(ES_RELA(es)->r_info);
+	return GELF_R_TYPE(es_r_info(es));
 }
 
 uint32_t es_r_sym(const struct extern_symbol *es)
 {
-	return GELF_R_SYM(ES_RELA(es)->r_info);
+	return GELF_R_SYM(es_r_info(es));
 }
 
 int64_t es_r_addend(const struct extern_symbol *es)
@@ -1005,6 +1020,17 @@ int elf_glob_sym(const struct extern_symbol *es)
 int elf_weak_sym(const struct extern_symbol *es)
 {
 	return es_s_bind(es) == STB_WEAK;
+}
+
+const char *es_type(const struct extern_symbol *es)
+{
+	unsigned char type;
+
+	type = es_s_type(es);
+	if (type < STT_NUM)
+		return symbol_types[type];
+	pr_err("unknown symbol type: %d\n", type);
+	return NULL;
 }
 
 const char *es_binding(const struct extern_symbol *es)

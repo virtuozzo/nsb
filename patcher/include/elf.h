@@ -42,9 +42,10 @@ struct extern_symbol {
 	char			*name;
 	struct elf_data_s	*ed;
 	const struct vma_area	*vma;
-	uint64_t		address;
+	int64_t			address;
 };
 
+uint64_t es_r_info(const struct extern_symbol *es);
 uint32_t es_r_type(const struct extern_symbol *es);
 uint32_t es_r_sym(const struct extern_symbol *es);
 int64_t es_r_addend(const struct extern_symbol *es);
@@ -57,6 +58,7 @@ unsigned char es_s_type(const struct extern_symbol *es);
 
 int elf_glob_sym(const struct extern_symbol *es);
 int elf_weak_sym(const struct extern_symbol *es);
+const char *es_type(const struct extern_symbol *es);
 const char *es_binding(const struct extern_symbol *es);
 const char *es_relocation(const struct extern_symbol *es);
 
