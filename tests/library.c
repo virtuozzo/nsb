@@ -7,6 +7,7 @@
 #include "ext_global_func.c"
 #include "lib_global_func_cb.c"
 #include "lib_global_func_p.c"
+#include "lib_global_var.c"
 
 int run_test(int tt)
 {
@@ -21,5 +22,7 @@ int run_test(int tt)
 			return lib_global_func_cb(tt) == patched_result(tt);
 		case TEST_TYPE_LIB_GLOBAL_FUNC_P:
 			return lib_global_func_p(tt) != patched_result(tt);
+		case TEST_TYPE_LIB_GLOBAL_VAR:
+			return lib_global_var(tt) == patched_result(tt);
 	}
 }

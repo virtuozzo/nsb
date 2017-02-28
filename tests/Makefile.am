@@ -30,11 +30,13 @@ patch_lib_static_func.so: lib_static_func.c
 patch_ext_global_func.so: ext_global_func.c
 patch_lib_global_func_cb.so: lib_global_func_cb.c
 patch_lib_global_func_p.so: lib_global_func_p.c
+patch_lib_global_var.so: lib_global_var.c
 
 check_PROGRAMS += patch_lib_global_func.so
 check_PROGRAMS += patch_lib_static_func.so
 check_PROGRAMS += patch_ext_global_func.so
 check_PROGRAMS += patch_lib_global_func_cb.so
 check_PROGRAMS += patch_lib_global_func_p.so
+check_PROGRAMS += patch_lib_global_var.so
 
 ctags:
