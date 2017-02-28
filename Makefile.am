@@ -84,6 +84,7 @@ TESTS += tests/ext_global_func.py
 TESTS += tests/lib_global_func_cb.py
 TESTS += tests/lib_global_func_p.py
 TESTS += tests/lib_global_var.py
+TESTS += tests/lib_global_var_addr.py
 
 XFAIL_TESTS =
 

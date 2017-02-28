@@ -11,6 +11,7 @@ typedef enum {
 	TEST_TYPE_LIB_GLOBAL_FUNC_P,
 
 	TEST_TYPE_LIB_GLOBAL_VAR,
+	TEST_TYPE_LIB_GLOBAL_VAR_ADDR,
 	TEST_TYPE_MAX,
 } test_type_t;
 
@@ -32,6 +33,25 @@ static inline int __attribute__((always_inline)) function_result(test_type_t typ
 	return patched_result(type);
 #else
 	return original_result(type);
+#endif
+}
+
+static inline void * __attribute__((always_inline)) original_addr_result(test_type_t type, void *addr)
+{
+	return addr + type;
+}
+
+static inline void * __attribute__((always_inline)) patched_addr_result(test_type_t type, void *addr)
+{
+	return original_addr_result(type, addr) + TEST_TYPE_MAX;
+}
+
+static inline void * __attribute__((always_inline)) function_addr_result(test_type_t type, void *addr)
+{
+#ifdef PATCH
+	return original_addr_result(type, addr);
+#else
+	return patched_addr_result(type, addr);
 #endif
 }
 
