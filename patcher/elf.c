@@ -1056,6 +1056,18 @@ int64_t elf_has_weak_sym(struct elf_info_s *ei, const char *name)
 	return elf_has_sym(ei, name, STB_WEAK);
 }
 
+int64_t elf_dyn_sym_value(struct elf_info_s *ei, const char *name)
+{
+	int64_t err;
+	GElf_Sym sym;
+
+	err = elf_find_dsym_by_name(ei, name, &sym);
+	if (err < 0)
+		return (err != -ENOENT) ? err : 0;
+
+	return sym.st_value;
+}
+
 int elf_reloc_sym(struct extern_symbol *es, uint64_t address)
 {
 	switch (es_r_type(es)) {

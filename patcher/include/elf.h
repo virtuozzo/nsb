@@ -62,6 +62,7 @@ const char *es_relocation(const struct extern_symbol *es);
 
 int64_t elf_has_glob_sym(struct elf_info_s *ei, const char *name);
 int64_t elf_has_weak_sym(struct elf_info_s *ei, const char *name);
+int64_t elf_dyn_sym_value(struct elf_info_s *ei, const char *name);
 
 int elf_reloc_sym(struct extern_symbol *es, uint64_t address);
 
