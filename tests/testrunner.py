@@ -142,36 +142,25 @@ class BinPatch:
 		print "Execute: %s" % cmd
 		return subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-	def generate(self):
+	def exec_cmd(self, cmd):
 		try:
-			p = self.__run_cmd__("python %s generate %s %s" % (self.generator, self.source, self.target))
-			self.gen_stdout, self.gen_stderr = p.communicate()
-			print self.gen_stdout
-			self.gen_result = p.returncode
+			p = self.__run_cmd__(cmd)
+			stdout, stderr = p.communicate()
 		except OSError as e:
-			print "Unexpected generate OSError: %s, %s" % (e.filename, e.strerror)
-			return 1
+			print "Unexpected OSError: %s, %s" % (e.filename, e.strerror)
+			raise
 		except:
-			print "Unexpected generate error:", sys.exc_info()[0]
-		print "self.gen_result: %d" % self.gen_result
-		return self.gen_result
+			print "Unexpected error:", sys.exc_info()[0]
+			raise
+		print stdout
+		print stderr
+		return p.returncode
+
+	def generate(self):
+		return self.exec_cmd("python %s generate %s %s" % (self.generator, self.source, self.target))
 
 	def apply(self, test):
-		try:
-			if not test.is_running():
-				print "Test with pid %d is not running" % test.p.pid
-				return 1
-
-			p = self.__run_cmd__("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
-			self.apply_stdout, self.apply_stderr = p.communicate()
-			print self.apply_stdout
-			self.apply_result = p.returncode
-		except OSError as e:
-			print "Unexpected apply OSError: %s, %s" % (e.filename, e.strerror)
-			return 1
-		except:
-			print "Unexpected apply error:", sys.exc_info()[0]
-		return self.apply_result
+		return self.exec_cmd("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
 
 
 class LivePatchTest:
