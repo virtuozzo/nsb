@@ -5,7 +5,7 @@
 
 #include "test_types.h"
 
-extern int run_test(int test_type);
+extern int run_test(int test_type, int print);
 
 int signalled;
 
@@ -18,11 +18,13 @@ int call_loop(int test_type)
 {
 	signal(SIGINT, sighandler);
 
-	while (!signalled) {
-		if (run_test(test_type) == TEST_FAILED)
-			return 1;
-	}
-	return run_test(test_type);
+	if (run_test(test_type, 0) == TEST_ERROR)
+		return 1;
+
+	while (!signalled)
+		(void)run_test(test_type, 0);
+
+	return run_test(test_type, 1);
 }
 
 static int print_usage(int res)

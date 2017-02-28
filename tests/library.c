@@ -62,7 +62,7 @@ static const struct test_info_s *get_test_info(int tt)
 	return &tst_info[tt];
 }
 
-int run_test(int tt)
+int run_test(int tt, int print)
 {
 	const struct test_info_s *ti = get_test_info(tt);
 	bool failed;
@@ -74,5 +74,11 @@ int run_test(int tt)
 		failed = ti->actor(tt) != original_result(tt);
 	else
 		failed = ti->actor(tt) != patched_result(tt);
+
+	if (print) {
+		printf("Original result: %#lx\n", original_result(tt));
+		printf("Patched  result: %#lx\n", patched_result(tt));
+		printf("Actor result   : %#lx\n", ti->actor(tt));
+	}
 	return failed;
 }
