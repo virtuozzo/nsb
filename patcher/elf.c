@@ -1055,33 +1055,6 @@ const char *es_relocation(const struct extern_symbol *es)
 	return NULL;
 }
 
-static int64_t elf_has_sym(struct elf_info_s *ei,
-			   const char *name, unsigned char bind)
-{
-	int64_t err;
-	GElf_Sym sym;
-
-	err = elf_find_dsym_by_name(ei, name, &sym);
-	if (err < 0) {
-		return (err != -ENOENT) ? err : 0;
-	}
-
-	if (GELF_ST_BIND(sym.st_info) != bind)
-		return 0;
-
-	return sym.st_value;
-}
-
-int64_t elf_has_glob_sym(struct elf_info_s *ei, const char *name)
-{
-	return elf_has_sym(ei, name, STB_GLOBAL);
-}
-
-int64_t elf_has_weak_sym(struct elf_info_s *ei, const char *name)
-{
-	return elf_has_sym(ei, name, STB_WEAK);
-}
-
 int64_t elf_dyn_sym_value(struct elf_info_s *ei, const char *name)
 {
 	int64_t err;
