@@ -47,32 +47,28 @@ struct patch_ops_s {
 	int (*cleanup_target)(struct process_ctx_s *ctx);
 };
 
-static int fix_dyn_entry(struct process_ctx_s *ctx, struct funcpatch_s *fp)
+static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
 	unsigned char jump[X86_MAX_SIZE];
-	unsigned long old_addr, new_addr;
+	unsigned long func_addr, patch_addr;
 	ssize_t size;
 	int err;
 
-	pr_info("  - Entry \"%s\":\n", fp->name);
-	if (!fp->old_addr) {
-		pr_debug("   New function. Skip\n");
-		return 0;
-	}
+	pr_info("  - Function \"%s\":\n", fj->name);
 
-	old_addr = ctx->pvma->start + fp->old_addr;
-	new_addr = PLA(ctx) + fp->addr;
+	func_addr = ctx->pvma->start + fj->func_value;
+	patch_addr = PLA(ctx) + fj->patch_value;
 
-	pr_info("      old address: %#lx\n", old_addr);
-	pr_info("      new address: %#lx\n", new_addr);
+	pr_info("      old address: %#lx\n", func_addr);
+	pr_info("      new address: %#lx\n", patch_addr);
 
-	pr_info("        jump: %#lx ---> %#lx\n", old_addr, new_addr);
+	pr_info("        jump: %#lx ---> %#lx\n", func_addr, patch_addr);
 
-	size = x86_jmpq_instruction(jump, old_addr, new_addr);
+	size = x86_jmpq_instruction(jump, func_addr, patch_addr);
 	if (size < 0)
 		return size;
 
-	err = process_write_data(ctx->pid, old_addr, jump, round_up(size, 8));
+	err = process_write_data(ctx->pid, func_addr, jump, round_up(size, 8));
 	if (err < 0) {
 		pr_err("failed to patch: %d\n", err);
 		return err;
@@ -160,16 +156,16 @@ static int copy_local_data(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int set_dyn_jumps(struct process_ctx_s *ctx)
+static int set_func_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
 	struct patch_info_s *pi = PI(ctx);
 
-	pr_info("= Apply jumps:\n");
-	for (i = 0; i < pi->n_funcpatches; i++) {
-		struct funcpatch_s *fp = pi->funcpatches[i];
+	pr_info("= Apply function jumps:\n");
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		struct func_jump_s *fj = pi->func_jumps[i];
 
-		err = fix_dyn_entry(ctx, fp);
+		err = write_func_jump(ctx, fj);
 		if (err)
 			return err;
 	}
@@ -573,16 +569,12 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 	const struct patch_info_s *pi = PI(ctx);
 	int i;
 
-	for (i = 0; i < pi->n_funcpatches; i++) {
-		struct funcpatch_s *fp = pi->funcpatches[i];
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		struct func_jump_s *fj = pi->func_jumps[i];
 		uint64_t start, end;
 
-		/* Skip new functions: they are outside stack by default */
-		if (fp->new_)
-			continue;
-
-		start = ctx->pvma->start + fp->old_addr;
-		end = start + fp->size;
+		start = ctx->pvma->start + fj->func_value;
+		end = start + fj->func_size;
 
 		pr_debug("      Patch: %#lx - %#lx\n", start, end);
 		if (process_call_in_map(&bt->calls, start, end))
@@ -700,7 +692,7 @@ int check_process(pid_t pid, const char *patchfile)
 struct patch_ops_s patch_jump_ops = {
 	.name = "jump",
 	.collect_deps = NULL,
-	.set_jumps = set_dyn_jumps,
+	.set_jumps = set_func_jumps,
 	.copy_data = NULL,
 	.check_backtrace = jumps_check_backtrace,
 	.fix_references = NULL,

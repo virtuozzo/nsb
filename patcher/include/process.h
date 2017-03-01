@@ -29,6 +29,13 @@ struct funcpatch_s {
 #endif
 };
 
+struct func_jump_s {
+	char			*name;
+	int64_t			func_value;
+	int32_t			func_size;
+	int64_t			patch_value;
+};
+
 struct relocation_s {
 	char			*name;
 	char			*info_type;
@@ -74,6 +81,9 @@ struct patch_info_s {
 
 	size_t			n_segments;
 	struct segment_s	**segments;
+
+	size_t			n_func_jumps;
+	struct func_jump_s	**func_jumps;
 };
 
 struct patch_s {

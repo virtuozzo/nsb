@@ -166,6 +166,43 @@ static int set_patch_info_segments(struct patch_info_s *patch_info, BinPatch *bp
 	return 0;
 }
 
+static struct func_jump_s *create_funcjump(const FuncJump *fj)
+{
+	struct func_jump_s *func_jump;
+
+	func_jump = xmalloc(sizeof(struct func_jump_s));
+	if (!func_jump)
+		return NULL;
+
+	func_jump->name = strdup(fj->name);
+	if (!func_jump->name)
+		return NULL;
+
+	func_jump->func_value = fj->func_value;
+	func_jump->func_size = fj->func_size;
+	func_jump->patch_value = fj->patch_value;
+	return func_jump;
+}
+
+static int set_patch_func_jumps(struct patch_info_s *patch_info, BinPatch *bp)
+{
+	int i;
+	struct func_jump_s **func_jumps;
+
+	func_jumps = xmalloc(sizeof(struct func_jump_s *) * bp->n_func_jumps);
+	if (!func_jumps)
+		return -ENOMEM;
+
+	for (i = 0; i < bp->n_func_jumps; i++) {
+		func_jumps[i] = create_funcjump(bp->func_jumps[i]);
+		if (!func_jumps[i])
+			return -ENOMEM;
+	}
+	patch_info->n_func_jumps = bp->n_func_jumps;
+	patch_info->func_jumps = func_jumps;
+	return 0;
+}
+
 int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, size_t size)
 {
 	int err = -ENOMEM;
@@ -204,12 +241,17 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	if (set_patch_info_segments(patch_info, bp))
 		goto free_local_vars;
 
+	if (set_patch_func_jumps(patch_info, bp))
+		goto free_info_segments;
+
 	err = 0;
 
 free_unpacked:
 	bin_patch__free_unpacked(bp, NULL);
 	return err;
 
+free_info_segments:
+	// TODO
 free_local_vars:
 	// TODO
 free_funcpatches:
