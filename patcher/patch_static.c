@@ -5,6 +5,126 @@
 #include "include/process.h"
 #include "include/x86_64.h"
 
+static struct patch_place_s *find_place(struct patch_info_s *pi, unsigned long hint)
+{
+	struct patch_place_s *place;
+
+	list_for_each_entry(place, &pi->places, list) {
+		if ((place->start & 0xffffffff00000000) == (hint & 0xffffffff00000000)) {
+			pr_debug("found place for patch: %#lx (hint: %#lx)\n",
+					place->start, hint);
+			return place;
+		}
+	}
+	return NULL;
+}
+
+static struct patch_place_s *alloc_place(unsigned long addr, size_t size)
+{
+	struct patch_place_s *place;
+
+	place = xmalloc(sizeof(*place));
+	if (!place) {
+		pr_err("failed to allocate\n");
+		return NULL;
+	}
+	place->start = addr;
+	place->size = size;
+	place->used = 0;
+
+	return place;
+}
+
+static unsigned long process_find_hole(struct process_ctx_s *ctx, unsigned long hint, size_t size)
+{
+	unsigned long addr;
+
+	addr = find_vma_hole(&ctx->vmas, hint, size);
+	if (addr)
+		return addr;
+	return -ENOENT;
+}
+
+static int process_create_place(struct process_ctx_s *ctx, unsigned long hint,
+				size_t size, struct patch_place_s **place)
+{
+	long ret;
+	unsigned long addr;
+	struct patch_info_s *pi = PI(ctx);
+	struct patch_place_s *p;
+
+	size = round_up(size, PAGE_SIZE);
+
+	addr = process_find_hole(ctx, hint, size);
+	if (addr < 0) {
+		pr_err("failed to find address hole by hint %#lx\n", hint);
+		return -EFAULT;
+	}
+
+	pr_debug("Found hole: %#lx-%#lx\n", addr, addr + size);
+
+	p = alloc_place(addr, size);
+	if (!p)
+		return -ENOMEM;
+
+	/* TODO: need drop PROT_WRITE at the end */
+	ret = process_create_map(ctx, -1, 0,
+				 p->start, p->size,
+				 MAP_ANONYMOUS | MAP_PRIVATE,
+				 PROT_READ | PROT_WRITE | PROT_EXEC);
+	if ((void *)ret == MAP_FAILED) {
+		pr_err("failed to create remove mem\n");
+		goto destroy_place;
+	}
+
+	if (ret != p->start) {
+		pr_err("mmap result doesn't match expected: %ld != %ld\n",
+				ret, p->start);
+		goto unmap_remote;
+	}
+
+	list_add_tail(&p->list, &pi->places);
+
+	pr_debug("created new place for patch: %#lx-%#lx (hint: %#lx)\n",
+			p->start, p->start + p->size, hint);
+
+	*place = p;
+	return 0;
+
+unmap_remote:
+	/* TODO here remote map has to be unmapped */
+destroy_place:
+	free(p);
+	return ret;
+}
+
+static long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size)
+{
+	struct patch_info_s *pi = PI(ctx);
+	struct patch_place_s *place;
+	long addr;
+
+	/* Aling function size by 16 bytes */
+	size = round_up(size, 16);
+
+	place = find_place(pi, hint);
+	if (!place) {
+		int ret;
+
+		ret = process_create_place(ctx, hint, size, &place);
+		if (ret)
+			return ret;
+	} else if (place->size - place->used < size) {
+		pr_err("No place left for %ld bytes in vma %#lx (free: %ld)\n",
+				size, place->start, place->size - place->used);
+		return -ENOMEM;
+	}
+
+	addr = place->start + round_up(place->used, 16);
+	place->used += size;
+	return addr;
+}
+
 static const struct funcpatch_s *search_func_by_name(const struct patch_info_s *bp, const char *name)
 {
 	const struct funcpatch_s *funcpatch;

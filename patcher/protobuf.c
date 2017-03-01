@@ -10,9 +10,11 @@
 #include "include/xmalloc.h"
 #include "include/util.h"
 
-#include <protobuf/funcpatch.pb-c.h>
 #include <protobuf/binpatch.pb-c.h>
+#ifdef STATIC_PATCHING
+#include <protobuf/funcpatch.pb-c.h>
 #include <protobuf/objinfo.pb-c.h>
+#endif
 #include <protobuf/segment.pb-c.h>
 #include <protobuf/funcjump.pb-c.h>
 
@@ -47,7 +49,7 @@ free_data:
 	free(data);
 	return res;
 }
-
+#ifdef STATIC_PATCHING
 static struct funcpatch_s *create_funcpatch(const FuncPatch *fp)
 {
 	struct funcpatch_s *funcpatch;
@@ -87,6 +89,7 @@ static int set_binpatch_funcpatches(struct patch_info_s *patch_info, BinPatch *b
 	patch_info->funcpatches = funcpatches;
 	return 0;
 }
+#endif
 #ifdef SWAP_PATCHING
 static struct local_var_s *create_local_var(const DataSym *lv)
 {
@@ -232,9 +235,10 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 			goto free_new_bid;
 	}
 
+#ifdef STATIC_PATCHING
 	if (set_binpatch_funcpatches(patch_info, bp))
 		goto free_new_path;
-
+#endif
 #ifdef SWAP_PATCHING
 	if (set_binpatch_local_vars(patch_info, bp))
 		goto free_funcpatches;
@@ -259,7 +263,9 @@ free_local_vars:
 free_funcpatches:
 	// TODO
 #endif
+#ifdef STATIC_PATCHING
 free_new_path:
+#endif
 	if (bp->new_path)
 		free(patch_info->path);
 free_new_bid:
