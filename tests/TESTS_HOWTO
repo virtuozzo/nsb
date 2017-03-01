@@ -73,14 +73,13 @@ original result ("true") on not ("false").
 
 1) Add new patch target to tests/Makefile.am by following this pattern:
 
-	patch_<test_name>.so: <test_name>.c
+	patch_<test_name>.so$(EXEEXT): <test_name>.c
 
-Example: patch_lib_global_func.so: lib_global_func.c
+Example: patch_lib_global_func.so$(EXEEXT): lib_global_func.c
 
 2) Add patch target to "check_PROGRAMS" goal in tests/Makefile.am
 
 Example: check_PROGRAMS += patch_ext_global_func.so
-
 
 
 == How to add new test to automake check engine
