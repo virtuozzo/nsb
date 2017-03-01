@@ -108,8 +108,6 @@ int main(int argc, char **argv)
 				if (nr_threads < 0)
 					return print_usage(1);
 				break;
-			case '?':
-				return print_usage(0);
 			default:
 				return print_usage(1);
 		}
