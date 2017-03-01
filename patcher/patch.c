@@ -581,7 +581,7 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 		if (fp->new_)
 			continue;
 
-		start = ctx->pvma->start + fp->addr;
+		start = ctx->pvma->start + fp->old_addr;
 		end = start + fp->size;
 
 		pr_debug("      Patch: %#lx - %#lx\n", start, end);
