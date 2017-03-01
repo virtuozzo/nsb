@@ -11,6 +11,7 @@
 #include "lib_global_var.c"
 #include "lib_global_var_addr.c"
 #include "lib_global_var_addend.c"
+#include "lib_static_func_cb.c"
 
 typedef long (*test_actor_t)(int tt);
 
@@ -48,6 +49,10 @@ struct test_info_s {
 	},
 	[TEST_TYPE_LIB_GLOBAL_VAR_ADDEND] = {
 		.actor = lib_global_var_addend,
+		.match = true,
+	},
+	[TEST_TYPE_LIB_STATIC_FUNC_CB] = {
+		.actor = lib_static_func_cb,
 		.match = true,
 	},
 };
