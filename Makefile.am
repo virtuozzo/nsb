@@ -24,7 +24,6 @@ generator_PYTHON =						\
 			protobuf/datasym_pb2.py		\
 			protobuf/funcpatch_pb2.py	\
 			protobuf/objinfo_pb2.py		\
-			protobuf/relaplt_pb2.py		\
 			protobuf/segment_pb2.py
 
 bin_PROGRAMS = nsb
@@ -36,8 +35,6 @@ nsb_SOURCES =						\
 			protobuf/binpatch.pb-c.h	\
 			protobuf/objinfo.pb-c.c		\
 			protobuf/objinfo.pb-c.h		\
-			protobuf/relaplt.pb-c.c		\
-			protobuf/relaplt.pb-c.h		\
 			protobuf/segment.pb-c.c		\
 			protobuf/segment.pb-c.h		\
 			protobuf/datasym.pb-c.c		\
