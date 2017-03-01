@@ -15,7 +15,9 @@ int compel_main(void *arg_p, unsigned int arg_s) { return 0; }
 struct options {
 	pid_t		 pid;
 	const char	*patch_path;
+#ifdef SWAP_PATCHING
 	const char	*how;
+#endif
 	int		verbosity;
 	int		(*handler)(const struct options *o);
 };
@@ -39,11 +41,13 @@ static int cmd_patch_process(const struct options *o)
 		pr_msg("Error: patch file has to be provided\n");
 		return 1;
 	}
-
+#ifdef SWAP_PATCHING
 	if (check_patch_mode(o->how))
 		return 1;
-
 	return patch_process(o->pid, o->patch_path, o->how);
+#else
+	return patch_process(o->pid, o->patch_path);
+#endif
 }
 
 static int cmd_check_process(const struct options *o)
@@ -75,13 +79,14 @@ void *cmd_handler(char **argv)
 
 static int parse_options(int argc, char **argv, struct options *o)
 {
-
 	static const char short_opts[] = "p:v:f:";
 	static struct option long_opts[] = {
 		{ "pid",			required_argument,	0, 'p'	},
 		{ "log-level",			required_argument,	0, 'v'	},
 		{ "filename",			required_argument,	0, 'f'	},
+#ifdef SWAP_PATCHING
 		{ "how",			required_argument,	0, 1000	},
+#endif
 		{ },
 	};
 	int opt, idx = -1;
@@ -105,9 +110,11 @@ static int parse_options(int argc, char **argv, struct options *o)
 		case 'f':
 			o->patch_path = optarg;
 			break;
+#ifdef SWAP_PATCHING
 		case 1000:
 			o->how = optarg;
 			break;
+#endif
 		case '?':
 		default:
 			goto usage;
@@ -147,7 +154,9 @@ bad_arg:
 int main(int argc, char *argv[])
 {
 	struct options o = {
+#ifdef SWAP_PATCHING
 		.how = "jump",
+#endif
 	};
 	int err;
 

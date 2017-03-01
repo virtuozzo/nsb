@@ -87,7 +87,7 @@ static int set_binpatch_funcpatches(struct patch_info_s *patch_info, BinPatch *b
 	patch_info->funcpatches = funcpatches;
 	return 0;
 }
-
+#ifdef SWAP_PATCHING
 static struct local_var_s *create_local_var(const DataSym *lv)
 {
 	struct local_var_s *local_var;
@@ -124,7 +124,7 @@ static int set_binpatch_local_vars(struct patch_info_s *patch_info, BinPatch *bp
 	patch_info->local_vars = local_vars;
 	return 0;
 }
-
+#endif
 static struct segment_s *create_segment(const ElfSegment *seg)
 {
 	struct segment_s *segment;
@@ -235,9 +235,10 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	if (set_binpatch_funcpatches(patch_info, bp))
 		goto free_new_path;
 
+#ifdef SWAP_PATCHING
 	if (set_binpatch_local_vars(patch_info, bp))
 		goto free_funcpatches;
-
+#endif
 	if (set_patch_info_segments(patch_info, bp))
 		goto free_local_vars;
 
@@ -254,8 +255,10 @@ free_info_segments:
 	// TODO
 free_local_vars:
 	// TODO
+#ifdef SWAP_PATCHING
 free_funcpatches:
 	// TODO
+#endif
 free_new_path:
 	if (bp->new_path)
 		free(patch_info->path);

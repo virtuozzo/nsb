@@ -33,7 +33,11 @@ struct process_ctx_s process_context = {
 	}
 };
 
+#ifdef SWAP_PATCHING
 static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
+#else
+static const struct patch_ops_s *set_patch_ops(const char *type);
+#endif
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
@@ -63,7 +67,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	}
 	return 0;
 }
-
+#ifdef SWAP_PATCHING
 static int process_copy_lw(pid_t pid, unsigned long dest, unsigned long src)
 {
 	int err;
@@ -143,7 +147,7 @@ static int copy_local_data(struct process_ctx_s *ctx)
 	}
 	return 0;
 }
-
+#endif
 static int set_func_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
@@ -159,7 +163,7 @@ static int set_func_jumps(struct process_ctx_s *ctx)
 	}
 	return 0;
 }
-
+#ifdef SWAP_PATCHING
 static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area *vma)
 {
 	struct extern_symbol *es;
@@ -208,7 +212,7 @@ static int fix_target_references(struct process_ctx_s *ctx)
 	pr_info("= Fix target references:\n");
 	return iterate_file_vmas(&ctx->vmas, ctx, fix_vma_refs);
 }
-
+#endif
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
@@ -332,7 +336,7 @@ static int get_ctx_deplist(struct process_ctx_s *ctx)
 
 	return 0;
 }
-
+#ifdef SWAP_PATCHING
 static int ctx_bind_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 {
 	int ret;
@@ -417,7 +421,7 @@ static int process_collect_dependable_vmas(struct process_ctx_s *ctx)
 	pr_info("= Searching mappings, depending on \"%s\":\n", vma_soname(ctx->pvma));
 	return iterate_file_vmas(&ctx->vmas, ctx, check_file_vma);
 }
-
+#endif
 static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
 {
 	const struct vma_area *pvma;
@@ -476,7 +480,11 @@ static int init_patch(struct process_ctx_s *ctx)
 }
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
+#ifdef SWAP_PATCHING
 			const char *patchfile, const char *how)
+#else
+			const char *patchfile)
+#endif
 {
 	if (elf_library_status())
 		return -1;
@@ -493,7 +501,11 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (init_patch(ctx))
 		goto err;
 
+#ifdef SWAP_PATCHING
 	ctx->ops = set_patch_ops(how, PI(ctx)->object_type);
+#else
+	ctx->ops = set_patch_ops(PI(ctx)->object_type);
+#endif
 	if (!ctx->ops)
 		goto err;
 
@@ -557,12 +569,20 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 	return iterate_jumps(ctx, bt, backtrace_check_func);
 }
 
+#ifdef SWAP_PATCHING
 int patch_process(pid_t pid, const char *patchfile, const char *how)
+#else
+int patch_process(pid_t pid, const char *patchfile)
+#endif
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
 
+#ifdef SWAP_PATCHING
 	err = init_context(ctx, pid, patchfile, how);
+#else
+	err = init_context(ctx, pid, patchfile);
+#endif
 	if (err)
 		return err;
 
@@ -621,7 +641,7 @@ struct patch_ops_s patch_jump_ops = {
 	.fix_references = NULL,
 	.cleanup_target = NULL,
 };
-
+#ifdef SWAP_PATCHING
 static int unmap_file_vma(struct vma_area *vma, void *data)
 {
 	struct process_ctx_s *ctx = data;
@@ -669,8 +689,12 @@ static struct patch_ops_s *get_patch_ops(const char *how)
 	pr_msg("Error: \"how\" option can be either \"jump\" or \"swap\"\n");
 	return NULL;
 }
-
+#endif
+#ifdef SWAP_PATCHING
 static const struct patch_ops_s *set_patch_ops(const char *how, const char *type)
+#else
+static const struct patch_ops_s *set_patch_ops(const char *type)
+#endif
 {
 	struct patch_ops_s *ops;
 	int (*apply)(struct process_ctx_s *ctx);
@@ -687,13 +711,18 @@ static const struct patch_ops_s *set_patch_ops(const char *how, const char *type
 		pr_err("Unknown patch type: %s\n", type);
 		return NULL;
 	}
-
+#ifdef SWAP_PATCHING
 	ops = get_patch_ops(how);
+#else
+	ops = &patch_jump_ops;
+#endif
 	ops->apply_patch = apply;
 	return ops;
 }
 
+#ifdef SWAP_PATCHING
 int check_patch_mode(const char *how)
 {
 	return get_patch_ops(how) ? 0 : -EINVAL;
 }
+#endif

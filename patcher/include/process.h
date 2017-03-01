@@ -44,14 +44,14 @@ struct relocation_s {
 	int64_t			hint;
 	char			*path;
 };
-
+#ifdef SWAP_PATCHING
 struct local_var_s {
 	char			*name;
 	int32_t			size;
 	int32_t			offset;
 	int32_t			ref;
 };
-
+#endif
 struct segment_s {
 	char			*type;
 	int32_t			offset;
@@ -76,9 +76,10 @@ struct patch_info_s {
 	size_t			n_funcpatches;
 	struct funcpatch_s	**funcpatches;
 
+#ifdef SWAP_PATCHING
 	size_t			n_local_vars;
 	struct local_var_s	**local_vars;
-
+#endif
 	size_t			n_segments;
 	struct segment_s	**segments;
 

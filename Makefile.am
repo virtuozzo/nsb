@@ -54,7 +54,6 @@ nsb_SOURCES =						\
 			patcher/include/vma.h		\
 			patcher/include/elf.h		\
 			patcher/include/backtrace.h	\
-			patcher/include/rtld.h		\
 			patcher/include/util.h		\
 			patcher/include/relocations.h	\
 							\
@@ -66,13 +65,20 @@ nsb_SOURCES =						\
 			patcher/vma.c			\
 			patcher/elf.c			\
 			patcher/backtrace.c		\
-			patcher/rtld.c			\
 			patcher/util.c			\
 			patcher/relocations.c		\
 			patcher/patch.c
 
 if STATIC_PATCHING
-nsb_SOURCES += patcher/include/patch_static.h patcher/patch_static.c
+nsb_SOURCES +=						\
+			patcher/include/patch_static.h	\
+			patcher/patch_static.c
+endif
+
+if SWAP_PATCHING
+nsb_SOURCES += 						\
+			patcher/include/rtld.h		\
+			patcher/rtld.c
 endif
 
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
