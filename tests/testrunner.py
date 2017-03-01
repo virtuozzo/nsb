@@ -43,6 +43,11 @@ class Test:
 
 			print "Execute: %s" % ' '.join(args)
 			self.p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			if self.p.poll():
+				stdout, stderr = self.p.communicate()
+				print stdout
+				print stderr
+				return None
 			self.__state__ = "started"
 		except NameError as e:
 			print "Unexpected NameError: %s" % e
