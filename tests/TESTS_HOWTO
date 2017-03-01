@@ -53,16 +53,20 @@ functions into global on linking.
 
 3) The following hunk has to be to tests/library.c:
 
-int run_test(int tt)
-{
-        switch (tt) {
+struct test_info_s {
+        test_actor_t    actor;
+        bool            match;
+} tst_info[TEST_TYPE_MAX] = {
 	<....>
-	case TEST_TYPE_<TEST_TYPE>:
-		return <func_name>(tt) != patched_result(tt);
+        [TEST_TYPE_<TEST_TYPE>] = {
+                .actor = <func_name>,
+                .match = <MATCH_FLAG>,
+        },
 	<....>
-	}
-}
+};
 
+where <MATCH_FLAG> indicates, whether patched result has to be equal to
+original result ("true") on not ("false").
 
 
 == How to build new test
