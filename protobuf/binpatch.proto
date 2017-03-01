@@ -1,5 +1,6 @@
 import "segment.proto";
 import "funcpatch.proto";
+import "funcjump.proto";
 import "datasym.proto";
 
 message BinPatch {
@@ -10,4 +11,5 @@ message BinPatch {
 	required string		old_bid		= 6;
 	required string		new_bid		= 7;
 	optional string		new_path	= 8;
+	repeated FuncJump	func_jumps	= 9;
 }

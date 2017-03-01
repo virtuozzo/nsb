@@ -13,6 +13,7 @@ class BinPatch:
 		self.patchfile = patchfile
 
 		self.common_func = []
+		self.func_jumps = []
 		self.removed_func = []
 		self.new_func = []
 		self.modified_func = []
@@ -39,6 +40,7 @@ class BinPatch:
 
 		new_func = self.bf_new.functions
 		self.common_func = list(set(old_func.keys()) & set(new_func.keys()))
+		self.func_jumps = list(set(old_func.keys()) & set(new_func.keys()))
 		self.removed_func = list(set(old_func.keys()) - set(new_func.keys()))
 		self.new_func = list(set(new_func.keys()) - set(old_func.keys()))
 
@@ -131,6 +133,16 @@ class BinPatch:
 			li.ref = self.bf_old.objects[name].value
 			print "  %s: size: %d, offset: %#x, ref: %#x" % (li.name, li.size, li.offset, li.ref)
 
+		print "\nimage.funcjumps:"
+		for name in self.func_jumps:
+			fj = image.func_jumps.add()
+			fj.name = name
+			fj.func_value = self.bf_old.functions[name].start
+			fj.func_size = self.bf_old.functions[name].size
+			fj.patch_value = self.bf_new.functions[name].start
+			print "  %s: func_value: %#x, func_size: %d, patch_value: %#x" % (name, fj.func_value, fj.func_size, fj.patch_value)
+
+		print"\n"
 		return image
 
 	def write(self):

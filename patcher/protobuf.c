@@ -14,6 +14,7 @@
 #include <protobuf/binpatch.pb-c.h>
 #include <protobuf/objinfo.pb-c.h>
 #include <protobuf/segment.pb-c.h>
+#include <protobuf/funcjump.pb-c.h>
 
 static ssize_t read_protobuf_binpatch(const char *path, void **patch)
 {

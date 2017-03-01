@@ -24,6 +24,7 @@ generator_PYTHON =						\
 			protobuf/datasym_pb2.py		\
 			protobuf/funcpatch_pb2.py	\
 			protobuf/objinfo_pb2.py		\
+			protobuf/funcjump_pb2.py	\
 			protobuf/segment_pb2.py
 
 bin_PROGRAMS = nsb
@@ -39,6 +40,8 @@ nsb_SOURCES =						\
 			protobuf/segment.pb-c.h		\
 			protobuf/datasym.pb-c.c		\
 			protobuf/datasym.pb-c.h		\
+			protobuf/funcjump.pb-c.c	\
+			protobuf/funcjump.pb-c.h	\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\
