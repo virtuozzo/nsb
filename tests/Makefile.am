@@ -7,7 +7,7 @@ libtest_la_SOURCES =	library.c test_types.h
 check_LTLIBRARIES = libtest.la
 
 nsbtest_SOURCES = main.c
-nsbtest_LDADD = libtest.la
+nsbtest_LDADD = libtest.la -lpthread
 
 check_PROGRAMS = nsbtest
 
