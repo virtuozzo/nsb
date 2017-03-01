@@ -14,8 +14,8 @@
 
 #include "include/process.h"
 #include "include/x86_64.h"
-#include "include/backtrace.h"
 #include "include/rtld.h"
+#include "include/backtrace.h"
 #include "include/protobuf.h"
 #include "include/relocations.h"
 
@@ -34,18 +34,6 @@ struct process_ctx_s process_context = {
 };
 
 static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
-
-struct patch_ops_s {
-	char *name;
-	int (*collect_deps)(struct process_ctx_s *ctx);
-	int (*apply_patch)(struct process_ctx_s *ctx);
-	int (*set_jumps)(struct process_ctx_s *ctx);
-	int (*check_backtrace)(const struct process_ctx_s *ctx,
-			       const struct backtrace_s *bt);
-	int (*copy_data)(struct process_ctx_s *ctx);
-	int (*fix_references)(struct process_ctx_s *ctx);
-	int (*cleanup_target)(struct process_ctx_s *ctx);
-};
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
@@ -547,10 +535,10 @@ static int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
-static int iterate_jumps(const struct process_ctx_s *ctx, const void *data,
-			 int (*actor)(const struct process_ctx_s *ctx,
-				      struct func_jump_s *fj,
-				      const void *data))
+int iterate_jumps(const struct process_ctx_s *ctx, const void *data,
+		  int (*actor)(const struct process_ctx_s *ctx,
+			       const struct func_jump_s *fj,
+			       const void *data))
 {
 	const struct patch_info_s *pi = PI(ctx);
 	int i, err;
@@ -563,107 +551,10 @@ static int iterate_jumps(const struct process_ctx_s *ctx, const void *data,
 	return 0;
 }
 
-static uint64_t bt_check_range(const struct backtrace_s *bt,
-			       uint64_t start, uint64_t end)
-{
-	struct backtrace_function_s *bf;
-
-	list_for_each_entry(bf, &bt->calls, list) {
-		if ((start < bf->ip) && (bf->ip < end))
-			return bf->ip;
-	}
-	return 0;
-}
-
-static int bt_check_func(const struct process_ctx_s *ctx,
-			 struct func_jump_s *fj,
-			 const void *data)
-{
-	const struct backtrace_s *bt = data;
-	uint64_t func_start, func_end;
-	uint64_t ip;
-
-	func_start = ctx->pvma->start + fj->func_value;
-	func_end = func_start + fj->func_size;
-
-	ip = bt_check_range(bt, func_start, func_end);
-	if (ip) {
-		pr_debug("    Found call to \"%s\" (%#lx - %lx): %#lx\n",
-			 fj->name, func_start, func_end, ip);
-		return -EAGAIN;
-	}
-	return 0;
-}
-
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt)
 {
-	return iterate_jumps(ctx, bt, bt_check_func);
-}
-
-static int bt_check_vma_range(const struct backtrace_s *bt,
-			      const struct vma_area *vma)
-{
-	uint64_t ip;
-
-	ip = bt_check_range(bt, vma->start, vma->end);
-	if (ip) {
-		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
-			 "%#lx \n", vma->path, vma->start, vma->end, ip);
-		return -EAGAIN;
-	}
-	return 0;
-}
-
-static int process_catch(struct process_ctx_s *ctx)
-{
-	int ret, err;
-
-	err = process_infect(ctx);
-	if (err)
-		return err;
-
-	ret = process_check_stack(ctx, ctx->ops->check_backtrace);
-	if (ret)
-		goto err;
-
-	return 0;
-
-err:
-	err = process_cure(ctx);
-	return ret ? ret : err;
-}
-
-static unsigned increase_timeout(unsigned current_msec)
-{
-	unsigned max_msec_timeout = 1000;
-
-	if (current_msec < max_msec_timeout)
-		current_msec = min(current_msec << 1, max_msec_timeout);
-	return current_msec;
-}
-
-static int process_suspend(struct process_ctx_s *ctx)
-{
-	int try = 0, tries = 25;
-	unsigned timeout_msec = 1;
-	int err;
-
-	do {
-		if (try) {
-			pr_info("  Failed to catch process in a suitable time/place.\n"
-				"  Retry in %d msec\n", timeout_msec);
-
-			usleep(timeout_msec * 1000);
-
-			timeout_msec = increase_timeout(timeout_msec);
-		}
-		err = process_catch(ctx);
-		if (err != -EAGAIN)
-			break;
-	} while (++try < tries);
-
-	return err == -EAGAIN ? -ETIME : err;
+	return iterate_jumps(ctx, bt, backtrace_check_func);
 }
 
 int patch_process(pid_t pid, const char *patchfile, const char *how)
@@ -756,12 +647,7 @@ static int unmap_old_lib(struct process_ctx_s *ctx)
 static int swap_check_backtrace(const struct process_ctx_s *ctx,
 				const struct backtrace_s *bt)
 {
-	if (bt->depth == 1)
-		return -EAGAIN;
-
-	if (bt_check_vma_range(bt, ctx->pvma))
-		return -EAGAIN;
-	return 0;
+	return backtrace_check_vma(bt, ctx->pvma);
 }
 
 struct patch_ops_s patch_swap_ops = {

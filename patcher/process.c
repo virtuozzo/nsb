@@ -11,8 +11,8 @@
 #include "include/xmalloc.h"
 #include "include/vma.h"
 #include "include/backtrace.h"
-
 #include "include/process.h"
+#include "include/patch.h"
 
 struct patch_place_s {
 	struct list_head	list;
@@ -453,29 +453,26 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 			    int (*check)(const struct process_ctx_s *ctx,
 					 const struct backtrace_s *bt))
 {
-	int err, i = 0;
-	struct backtrace_s bt = {
-		.calls = LIST_HEAD_INIT(bt.calls),
-	};
-	struct backtrace_function_s *bf;
+	int err;
+	struct backtrace_s *bt;
 
 	pr_info("  %d:\n", t->pid);
 
-	err = process_backtrace(t->pid, &bt);
+	err = pid_backtrace(t->pid, &bt);
 	if (err) {
 		pr_err("failed to unwind process %d stack\n", t->pid);
 		return err;
 	}
 
-	list_for_each_entry(bf, &bt.calls, list)
-		pr_debug("    #%d  %#lx in %s\n", i++, bf->ip, bf->name);
+	err = check(ctx, bt);
 
-	return check(ctx, &bt);
+	free(bt);
+	return err;
 }
 
-int process_check_stack(const struct process_ctx_s *ctx,
-			int (*check)(const struct process_ctx_s *ctx,
-				      const struct backtrace_s *bt))
+static int process_check_stack(const struct process_ctx_s *ctx,
+			      int (*check)(const struct process_ctx_s *ctx,
+					   const struct backtrace_s *bt))
 {
 	struct thread_s *t;
 	int err;
@@ -488,3 +485,55 @@ int process_check_stack(const struct process_ctx_s *ctx,
 	}
 	return 0;
 }
+
+static int process_catch(struct process_ctx_s *ctx)
+{
+	int ret, err;
+
+	err = process_infect(ctx);
+	if (err)
+		return err;
+
+	ret = process_check_stack(ctx, ctx->ops->check_backtrace);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	err = process_cure(ctx);
+	return ret ? ret : err;
+}
+
+static unsigned increase_timeout(unsigned current_msec)
+{
+	unsigned max_msec_timeout = 1000;
+
+	if (current_msec < max_msec_timeout)
+		current_msec = min(current_msec << 1, max_msec_timeout);
+	return current_msec;
+}
+
+int process_suspend(struct process_ctx_s *ctx)
+{
+	int try = 0, tries = 25;
+	unsigned timeout_msec = 1;
+	int err;
+
+	do {
+		if (try) {
+			pr_info("  Failed to catch process in a suitable time/place.\n"
+				"  Retry in %d msec\n", timeout_msec);
+
+			usleep(timeout_msec * 1000);
+
+			timeout_msec = increase_timeout(timeout_msec);
+		}
+		err = process_catch(ctx);
+		if (err != -EAGAIN)
+			break;
+	} while (++try < tries);
+
+	return err == -EAGAIN ? -ETIME : err;
+}
+

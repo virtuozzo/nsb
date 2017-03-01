@@ -8,8 +8,22 @@
 #include "include/list.h"
 #include "include/xmalloc.h"
 #include "include/backtrace.h"
+#include "include/process.h"
+#include "include/vma.h"
 
 #define MAX_DEPTH	64
+
+struct backtrace_function_s {
+	struct list_head	list;
+	uint64_t		ip;
+	uint64_t		sp;
+	char			*name;
+};
+
+struct backtrace_s {
+	int			depth;
+	struct list_head	calls;
+};
 
 static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp, const char *name)
 {
@@ -87,17 +101,24 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 	return ret;
 }
 
-int process_backtrace(pid_t pid, struct backtrace_s *bt)
+int pid_backtrace(pid_t pid, struct backtrace_s **backtrace)
 {
-	int err = 1;
+	int err = -EFAULT;
 	void *ui;
 	static unw_addr_space_t as;
 	unw_cursor_t c;
+	struct backtrace_s *bt;
+
+	bt = xzalloc(sizeof(*bt));
+	if (!bt)
+		return -ENOMEM;
+
+	INIT_LIST_HEAD(&bt->calls);
 
 	as = unw_create_addr_space (&_UPT_accessors, 0);
 	if (!as) {
 		pr_err("unw_create_addr_space() failed\n");
-		return 1;
+		goto free_bt;
 	}
 
 	ui = _UPT_create (pid);
@@ -114,11 +135,68 @@ int process_backtrace(pid_t pid, struct backtrace_s *bt)
 
 
 	err = do_backtrace(&c, bt);
+	if (err)
+		goto destroy_ui;
+
+	*backtrace = bt;
 
 destroy_ui:
 	_UPT_destroy (ui);
 destroy_as:
 	unw_destroy_addr_space (as);
+free_bt:
+	if (err)
+		free(bt);
 	return err;
 }
 
+static uint64_t bt_check_range(const struct backtrace_s *bt,
+			       uint64_t start, uint64_t end)
+{
+	struct backtrace_function_s *bf;
+	int i = 0;
+
+	list_for_each_entry(bf, &bt->calls, list) {
+		pr_debug("    #%d  %#lx in %s\n", i++, bf->ip, bf->name);
+		if ((start < bf->ip) && (bf->ip < end))
+			return bf->ip;
+	}
+	return 0;
+}
+
+int backtrace_check_func(const struct process_ctx_s *ctx,
+			 const struct func_jump_s *fj,
+			 const void *data)
+{
+	const struct backtrace_s *bt = data;
+	uint64_t func_start, func_end;
+	uint64_t ip;
+
+	func_start = ctx->pvma->start + fj->func_value;
+	func_end = func_start + fj->func_size;
+
+	ip = bt_check_range(bt, func_start, func_end);
+	if (ip) {
+		pr_debug("    Found call to \"%s\" (%#lx - %lx): %#lx\n",
+			 fj->name, func_start, func_end, ip);
+		return -EAGAIN;
+	}
+	return 0;
+}
+
+int backtrace_check_vma(const struct backtrace_s *bt,
+			const struct vma_area *vma)
+{
+	uint64_t ip;
+
+	if (bt->depth == 1)
+		return -EAGAIN;
+
+	ip = bt_check_range(bt, vma->start, vma->end);
+	if (ip) {
+		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
+			 "%#lx \n", vma->path, vma->start, vma->end, ip);
+		return -EAGAIN;
+	}
+	return 0;
+}

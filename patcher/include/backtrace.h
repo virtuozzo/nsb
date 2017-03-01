@@ -1,18 +1,17 @@
 #ifndef __PATCHER_BACKTRACE_H__
 #define __PATCHER_BACKTRACE_H__
 
-struct backtrace_function_s {
-	struct list_head	list;
-	uint64_t		ip;
-	uint64_t		sp;
-	char			*name;
-};
+struct backtrace_s;
+int pid_backtrace(pid_t pid, struct backtrace_s **backtrace);
 
-struct backtrace_s {
-	int			depth;
-	struct list_head	calls;
-};
+struct process_ctx_s;
+struct func_jump_s;
+int backtrace_check_func(const struct process_ctx_s *ctx,
+			 const struct func_jump_s *fj,
+			 const void *data);
 
-int process_backtrace(pid_t pid, struct backtrace_s *bt);
+struct vma_area;
+int backtrace_check_vma(const struct backtrace_s *bt,
+			const struct vma_area *vma);
 
 #endif

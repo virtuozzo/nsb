@@ -131,9 +131,6 @@ int process_open_file(struct process_ctx_s *ctx, const char *path,
 			int flags, mode_t mode);
 int process_close_file(struct process_ctx_s *ctx, int fd);
 
-struct backtrace_s;
-int process_check_stack(const struct process_ctx_s *ctx,
-			int (*check)(const struct process_ctx_s *ctx,
-				      const struct backtrace_s *bt));
+int process_suspend(struct process_ctx_s *ctx);
 
 #endif
