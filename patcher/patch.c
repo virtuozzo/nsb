@@ -547,18 +547,50 @@ static int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
-static int process_call_in_map(const struct list_head *calls,
-			       uint64_t map_start, uint64_t map_end)
+static int iterate_jumps(const struct process_ctx_s *ctx, const void *data,
+			 int (*actor)(const struct process_ctx_s *ctx,
+				      struct func_jump_s *fj,
+				      const void *data))
+{
+	const struct patch_info_s *pi = PI(ctx);
+	int i, err;
+
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		err = actor(ctx, pi->func_jumps[i], data);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
+static uint64_t bt_check_range(const struct backtrace_s *bt,
+			       uint64_t start, uint64_t end)
 {
 	struct backtrace_function_s *bf;
 
-	list_for_each_entry(bf, calls, list) {
-		if ((map_start < bf->ip) && (bf->ip < map_end)) {
-			pr_debug("Found call in stack within "
-				 "patching range: %#lx (%#lx-%lx)\n",
-				 bf->ip, map_start, map_end);
-			return 1;
-		}
+	list_for_each_entry(bf, &bt->calls, list) {
+		if ((start < bf->ip) && (bf->ip < end))
+			return bf->ip;
+	}
+	return 0;
+}
+
+static int bt_check_func(const struct process_ctx_s *ctx,
+			 struct func_jump_s *fj,
+			 const void *data)
+{
+	const struct backtrace_s *bt = data;
+	uint64_t func_start, func_end;
+	uint64_t ip;
+
+	func_start = ctx->pvma->start + fj->func_value;
+	func_end = func_start + fj->func_size;
+
+	ip = bt_check_range(bt, func_start, func_end);
+	if (ip) {
+		pr_debug("    Found call to \"%s\" (%#lx - %lx): %#lx\n",
+			 fj->name, func_start, func_end, ip);
+		return -EAGAIN;
 	}
 	return 0;
 }
@@ -566,19 +598,19 @@ static int process_call_in_map(const struct list_head *calls,
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt)
 {
-	const struct patch_info_s *pi = PI(ctx);
-	int i;
+	return iterate_jumps(ctx, bt, bt_check_func);
+}
 
-	for (i = 0; i < pi->n_func_jumps; i++) {
-		struct func_jump_s *fj = pi->func_jumps[i];
-		uint64_t start, end;
+static int bt_check_vma_range(const struct backtrace_s *bt,
+			      const struct vma_area *vma)
+{
+	uint64_t ip;
 
-		start = ctx->pvma->start + fj->func_value;
-		end = start + fj->func_size;
-
-		pr_debug("      Patch: %#lx - %#lx\n", start, end);
-		if (process_call_in_map(&bt->calls, start, end))
-			return -EAGAIN;
+	ip = bt_check_range(bt, vma->start, vma->end);
+	if (ip) {
+		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
+			 "%#lx \n", vma->path, vma->start, vma->end, ip);
+		return -EAGAIN;
 	}
 	return 0;
 }
@@ -619,8 +651,8 @@ static int process_suspend(struct process_ctx_s *ctx)
 
 	do {
 		if (try) {
-			pr_info("Failed to catch process in a suitable time/place.\n"
-				"Retry in %d msec\n", timeout_msec);
+			pr_info("  Failed to catch process in a suitable time/place.\n"
+				"  Retry in %d msec\n", timeout_msec);
 
 			usleep(timeout_msec * 1000);
 
@@ -727,7 +759,7 @@ static int swap_check_backtrace(const struct process_ctx_s *ctx,
 	if (bt->depth == 1)
 		return -EAGAIN;
 
-	if (process_call_in_map(&bt->calls, ctx->pvma->start, ctx->pvma->end))
+	if (bt_check_vma_range(bt, ctx->pvma))
 		return -EAGAIN;
 	return 0;
 }
