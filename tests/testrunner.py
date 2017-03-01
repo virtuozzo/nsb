@@ -32,17 +32,14 @@ class Test:
 		os.environ['LD_LIBRARY_PATH'] = ld_library_path + ":" + library_path
 
 	def start(self):
-		args = [self.path]
-		args.append("-t");
-		args.append("%d" % self.test_type);
-
+		cmd = "%s -t %d -n %d" % (self.path, self.test_type, 3)
 		try:
 			if self.__state__ != "init":
 				print "Test is not new. State: %s" % self.__state__
 				raise
 
-			print "Execute: %s" % ' '.join(args)
-			self.p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			print "Execute: %s" % cmd
+			self.p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			if self.p.poll():
 				stdout, stderr = self.p.communicate()
 				print stdout
