@@ -17,6 +17,7 @@ struct backtrace_function_s {
 	struct list_head	list;
 	uint64_t		ip;
 	uint64_t		sp;
+	int			sigframe;
 	char			*name;
 };
 
@@ -25,7 +26,8 @@ struct backtrace_s {
 	struct list_head	calls;
 };
 
-static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp, const char *name)
+static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp,
+						   int sigframe, const char *name)
 {
 	struct backtrace_function_s *bf;
 
@@ -36,6 +38,7 @@ static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp,
 
 	bf->ip = ip;
 	bf->sp = sp;
+	bf->sigframe = sigframe;
 	if (strlen(name)) {
 		bf->name = xstrdup(name);
 		if (!bf->name)
@@ -55,6 +58,7 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 
 	while (1) {
 		struct backtrace_function_s *bf;
+		int sigframe;
 
 		*buf = '\0';
 
@@ -71,6 +75,14 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 		}
 
 		(void)unw_get_proc_name(c, buf, sizeof (buf), &off);
+
+		ret = unw_is_signal_frame(c);
+		if (ret < 0) {
+			pr_err("unw_is_signal_frame(c) failed: %d\n", ret);
+			return ret;
+		}
+
+		sigframe = !!ret;
 
 		ret = unw_step(c);
 		if (ret < 0) {
@@ -91,7 +103,7 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 			break;
 		}
 
-		bf = create_bt_func(ip, sp, buf);
+		bf = create_bt_func(ip, sp, sigframe, buf);
 		if (!bf)
 			return -ENOMEM;
 
@@ -150,18 +162,22 @@ free_bt:
 	return err;
 }
 
-static uint64_t bt_check_range(const struct backtrace_s *bt,
-			       uint64_t start, uint64_t end)
+static const struct backtrace_function_s *bt_check_range(const struct backtrace_s *bt,
+							 uint64_t start,
+							 uint64_t end)
 {
-	struct backtrace_function_s *bf;
+	const struct backtrace_function_s *bf;
 	int i = 0;
 
 	list_for_each_entry(bf, &bt->calls, list) {
-		pr_debug("    #%d  %#lx in %s\n", i++, bf->ip, bf->name);
+		pr_debug("    #%d  %#lx in %s (signal frame: %d)\n", i++,
+				bf->ip, bf->name, bf->sigframe);
+		if (bf->sigframe)
+			return bf;
 		if ((start < bf->ip) && (bf->ip < end))
-			return bf->ip;
+			return bf;
 	}
-	return 0;
+	return NULL;
 }
 
 int backtrace_check_func(const struct process_ctx_s *ctx,
@@ -170,33 +186,41 @@ int backtrace_check_func(const struct process_ctx_s *ctx,
 {
 	const struct backtrace_s *bt = data;
 	uint64_t func_start, func_end;
-	uint64_t ip;
+	const struct backtrace_function_s *bf;
 
 	func_start = ctx->pvma->start + fj->func_value;
 	func_end = func_start + fj->func_size;
 
-	ip = bt_check_range(bt, func_start, func_end);
-	if (ip) {
+	bf = bt_check_range(bt, func_start, func_end);
+	if (!bf)
+		return 0;
+
+	if (bf->sigframe)
+		pr_debug("    Found call \"%s\" within signal frame\n",
+			 bf->name);
+	else
 		pr_debug("    Found call to \"%s\" (%#lx - %lx): %#lx\n",
-			 fj->name, func_start, func_end, ip);
-		return -EAGAIN;
-	}
-	return 0;
+			 fj->name, func_start, func_end, bf->ip);
+	return -EAGAIN;
 }
 
 int backtrace_check_vma(const struct backtrace_s *bt,
 			const struct vma_area *vma)
 {
-	uint64_t ip;
+	const struct backtrace_function_s *bf;
 
 	if (bt->depth == 1)
 		return -EAGAIN;
 
-	ip = bt_check_range(bt, vma->start, vma->end);
-	if (ip) {
+	bf = bt_check_range(bt, vma->start, vma->end);
+	if (!bf)
+		return 0;
+
+	if (bf->sigframe)
+		pr_debug("    Found call \"%s\" within signal frame\n",
+			 bf->name);
+	else
 		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
-			 "%#lx \n", vma->path, vma->start, vma->end, ip);
-		return -EAGAIN;
-	}
-	return 0;
+			 "%#lx \n", vma->path, vma->start, vma->end, bf->ip);
+	return -EAGAIN;
 }
