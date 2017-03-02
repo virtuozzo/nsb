@@ -172,13 +172,9 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 		return -ENOMEM;
 	}
 
-	patch_info->object_type = strdup(bp->object_type);
-	if (!patch_info->object_type)
-		goto free_unpacked;
-
 	patch_info->old_bid = strdup(bp->old_bid);
 	if (!patch_info->old_bid)
-		goto free_object_type;
+		goto free_unpacked;
 
 	patch_info->new_bid = strdup(bp->new_bid);
 	if (!patch_info->new_bid)
@@ -220,8 +216,6 @@ free_new_bid:
 	free(patch_info->new_bid);
 free_old_bid:
 	free(patch_info->old_bid);
-free_object_type:
-	free(patch_info->object_type);
 	goto free_unpacked;
 }
 

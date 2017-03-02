@@ -33,7 +33,6 @@ struct segment_s {
 };
 
 struct patch_info_s {
-	char			*object_type;
 	char			*old_bid;
 	char			*new_bid;
 	char			*path;

@@ -59,12 +59,10 @@ class BinPatch:
 
 		pi = binpatch_pb2.BinPatch()
 
-		pi.object_type = self.bf_old.header.type
 		pi.old_bid = get_build_id(self.bf_old.filename)
 		pi.new_bid = get_build_id(self.bf_new.filename)
 
 		print "Header:"
-		print "  Object type   : %s" % pi.object_type
 		print "  Target BuildId: %s" % pi.old_bid
 		print "  Patch BuildId : %s" % pi.new_bid
 

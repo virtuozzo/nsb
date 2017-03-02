@@ -4,7 +4,9 @@
 struct backtrace_s;
 struct process_ctx_s;
 struct patch_ops_s {
+#ifdef SWAP_PATCHING
 	char *name;
+#endif
 	int (*collect_deps)(struct process_ctx_s *ctx);
 	int (*apply_patch)(struct process_ctx_s *ctx);
 	int (*set_jumps)(struct process_ctx_s *ctx);

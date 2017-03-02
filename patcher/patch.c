@@ -27,9 +27,9 @@ struct process_ctx_s process_context = {
 };
 
 #ifdef SWAP_PATCHING
-static const struct patch_ops_s *set_patch_ops(const char *how, const char *type);
+static const struct patch_ops_s *set_patch_ops(const char *how);
 #else
-static const struct patch_ops_s *set_patch_ops(const char *type);
+static const struct patch_ops_s *set_patch_ops(void);
 #endif
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
@@ -495,18 +495,18 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		goto err;
 
 #ifdef SWAP_PATCHING
-	ctx->ops = set_patch_ops(how, PI(ctx)->object_type);
+	ctx->ops = set_patch_ops(how);
 #else
-	ctx->ops = set_patch_ops(PI(ctx)->object_type);
+	ctx->ops = set_patch_ops();
 #endif
 	if (!ctx->ops)
 		goto err;
 
-	pr_info("  source BID : %s\n", PI(ctx)->old_bid);
-	pr_info("  target path: %s\n", PI(ctx)->path);
-	pr_info("  object type: %s\n", PI(ctx)->object_type);
-	pr_info("  patch mode : %s\n", ctx->ops->name);
-
+	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
+	pr_info("  Patch path    : %s\n", PI(ctx)->path);
+#ifdef SWAP_PATCHING
+	pr_info("  Patch mode    : %s\n", ctx->ops->name);
+#endif
 	if (collect_vmas(ctx->pid, &ctx->vmas)) {
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		goto err;
@@ -626,7 +626,9 @@ int check_process(pid_t pid, const char *patchfile)
 }
 
 struct patch_ops_s patch_jump_ops = {
+#ifdef SWAP_PATCHING
 	.name = "jump",
+#endif
 	.collect_deps = NULL,
 	.set_jumps = set_func_jumps,
 	.copy_data = NULL,
@@ -684,26 +686,18 @@ static struct patch_ops_s *get_patch_ops(const char *how)
 }
 #endif
 #ifdef SWAP_PATCHING
-static const struct patch_ops_s *set_patch_ops(const char *how, const char *type)
+static const struct patch_ops_s *set_patch_ops(const char *how)
 #else
-static const struct patch_ops_s *set_patch_ops(const char *type)
+static const struct patch_ops_s *set_patch_ops(void)
 #endif
 {
 	struct patch_ops_s *ops;
-	int (*apply)(struct process_ctx_s *ctx);
-
-	if (!strcmp(type, "ET_DYN"))
-		apply = apply_dyn_binpatch;
-	else {
-		pr_err("Unknown patch type: %s\n", type);
-		return NULL;
-	}
 #ifdef SWAP_PATCHING
 	ops = get_patch_ops(how);
 #else
 	ops = &patch_jump_ops;
 #endif
-	ops->apply_patch = apply;
+	ops->apply_patch = apply_dyn_binpatch;
 	return ops;
 }
 
