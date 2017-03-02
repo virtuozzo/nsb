@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 import binpatch_pb2
 from build_id import get_build_id
+from funcjump import FuncJump
 
 class BinPatch:
 	__metaclass__ = ABCMeta
@@ -11,23 +12,22 @@ class BinPatch:
 		self.bf_old = bf_old
 		self.bf_new = bf_new
 		self.patchfile = patchfile
-
 		self.common_func = []
 
-		self.applicable = True
-
-	def create(self):
 		old_func = self.bf_old.functions
 		new_func = self.bf_new.functions
 
-		self.common_func = list(set(old_func.keys()) & set(new_func.keys()))
+		common_func = list(set(old_func.keys()) & set(new_func.keys()))
+		for name in common_func:
+			fj = FuncJump(name, old_func[name], new_func[name])
+			self.common_func.append(fj)
 
-	def analize(self):
+	def applicable(self):
 		if self.bf_old.header.type != self.bf_new.header.type:
 			print "Binaries have different object types: %s != %s" %	\
 				(self.bf_old.header.type, self.bf_new.header.type)
 			print "Not supported."
-			raise
+			return False
 
 		for k, s in self.bf_new.objects.iteritems():
 			if k.startswith("completed."):
@@ -36,13 +36,27 @@ class BinPatch:
 				print "Patch has object \"%s\" with size: %d" % (k, s.size)
 				print "Patch with data objects (variables) are not supported"
 				print self.bf_new.objects
-				raise
+				return False
 
 		if not self.common_func:
 			print "Nothing to patch"
-			exit(0)
+			return False
+
+		print "\n*************************************************"
+		print "***************** Functions *********************"
+		print "*************************************************\n"
+
+		print "Common functions:"
+		for fj in self.common_func:
+			fj.show()
+
+		return True
 
 	def get_patch(self):
+		print "\n*************************************************"
+		print "***************** Patch info ********************"
+		print "*************************************************\n"
+
 		image = binpatch_pb2.BinPatch()
 
 		image.object_type = self.bf_old.header.type
@@ -72,13 +86,9 @@ class BinPatch:
 				(si.type, si.offset, si.vaddr, si.paddr, si.mem_sz, si.flags, si.align, si.file_sz)
 
 		print "\nimage.funcjumps:"
-		for name in self.common_func:
-			fj = image.func_jumps.add()
-			fj.name = name
-			fj.func_value = self.bf_old.functions[name].value
-			fj.func_size = self.bf_old.functions[name].size
-			fj.patch_value = self.bf_new.functions[name].value
-			print "  %s: func_value: %#x, func_size: %d, patch_value: %#x" % (name, fj.func_value, fj.func_size, fj.patch_value)
+		for fj in self.common_func:
+			funcjump = fj.get_patch()
+			image.func_jumps.extend([funcjump])
 
 		print"\n"
 		return image

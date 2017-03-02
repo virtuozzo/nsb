@@ -14,24 +14,9 @@ def gen_patch(args):
 		print "Only ET_DYN patch creation is supported"
 
 	binpatch = BinPatch(bfa, bfb, args.outfile)
-	binpatch.create()
 
-	print "Common functions: %s" % binpatch.common_func
-
-	if binpatch.bf_old.functions == binpatch.bf_new.functions:
-		print "Binaries function attribues are equal\n"
-	else:
-		print "Binaries function attribues differ\n"
-
-	print "\n*************************************************"
-	print "****************** Patches **********************"
-	print "*************************************************\n"
-
-	binpatch.analize()
-	if not binpatch.applicable:
+	if not binpatch.applicable():
 		exit(1)
-
-	print "\nPatch is applicable\n"
 
 	binpatch.write()
 
