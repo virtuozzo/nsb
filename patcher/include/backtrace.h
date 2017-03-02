@@ -3,6 +3,7 @@
 
 struct backtrace_s;
 int pid_backtrace(pid_t pid, struct backtrace_s **backtrace);
+void destroy_backtrace(struct backtrace_s *bt);
 
 struct process_ctx_s;
 struct func_jump_s;

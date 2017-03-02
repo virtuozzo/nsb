@@ -13,7 +13,7 @@
 
 #define MAX_DEPTH	64
 
-struct backtrace_function_s {
+struct backtrace_frame_s {
 	struct list_head	list;
 	uint64_t		ip;
 	uint64_t		sp;
@@ -26,10 +26,10 @@ struct backtrace_s {
 	struct list_head	calls;
 };
 
-static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp,
-						   int sigframe, const char *name)
+static struct backtrace_frame_s *create_frame(unw_word_t ip, unw_word_t sp,
+					      int sigframe, const char *name)
 {
-	struct backtrace_function_s *bf;
+	struct backtrace_frame_s *bf;
 
 	bf = xzalloc(sizeof(*bf));
 
@@ -47,7 +47,29 @@ static struct backtrace_function_s *create_bt_func(unw_word_t ip, unw_word_t sp,
 	return bf;
 
 free_bf:
+	free(bf);
 	return NULL;
+}
+
+static void destroy_frame(struct backtrace_frame_s *bf)
+{
+	list_del(&bf->list);
+	free(bf->name);
+	free(bf);
+}
+
+static void destroy_bt_frames(struct backtrace_s *bt)
+{
+	struct backtrace_frame_s *bf, *tmp;
+
+	list_for_each_entry_safe(bf, tmp, &bt->calls, list)
+		destroy_frame(bf);
+}
+
+void destroy_backtrace(struct backtrace_s *bt)
+{
+	destroy_bt_frames(bt);
+	free(bt);
 }
 
 static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
@@ -57,7 +79,7 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 	char buf[512];
 
 	while (1) {
-		struct backtrace_function_s *bf;
+		struct backtrace_frame_s *bf;
 		int sigframe;
 
 		*buf = '\0';
@@ -65,13 +87,13 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 		ret = unw_get_reg(c, UNW_REG_IP, &ip);
 		if (ret < 0) {
 			pr_err("unw_get_reg(ip) failed: %d\n", ret);
-			return ret;
+			goto free_backtrace;
 		}
 
 		ret = unw_get_reg(c, UNW_REG_SP, &sp);
 		if (ret < 0) {
 			pr_err("unw_get_reg(sp) failed: %d\n", ret);
-			return ret;
+			goto free_backtrace;
 		}
 
 		(void)unw_get_proc_name(c, buf, sizeof (buf), &off);
@@ -79,7 +101,7 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 		ret = unw_is_signal_frame(c);
 		if (ret < 0) {
 			pr_err("unw_is_signal_frame(c) failed: %d\n", ret);
-			return ret;
+			goto free_backtrace;
 		}
 
 		sigframe = !!ret;
@@ -89,7 +111,7 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 			unw_get_reg(c, UNW_REG_IP, &ip);
 			pr_err ("unw_step failed: %d (ip=%lx, start ip=%lx)\n",
 					ret, ip, list_first_entry(&bt->calls, typeof(*bf), list)->ip);
-			return ret;
+			goto free_backtrace;
 		}
 
 		/* It it the top frame? */
@@ -100,16 +122,21 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 			/* guard against bad unwind info in old libraries... */
 			pr_err ("too deeply nested ---assuming bogus unwind (start ip=%#lx)\n",
 				list_first_entry(&bt->calls, typeof(*bf), list)->ip);
-			break;
+			goto free_backtrace;
 		}
 
-		bf = create_bt_func(ip, sp, sigframe, buf);
+		ret = -ENOMEM;
+		bf = create_frame(ip, sp, sigframe, buf);
 		if (!bf)
-			return -ENOMEM;
+			goto free_backtrace;
 
 		list_add_tail(&bf->list, &bt->calls);
 		bt->depth++;
 	}
+	return 0;
+
+free_backtrace:
+	destroy_bt_frames(bt);
 	return ret;
 }
 
@@ -162,11 +189,10 @@ free_bt:
 	return err;
 }
 
-static const struct backtrace_function_s *bt_check_range(const struct backtrace_s *bt,
-							 uint64_t start,
-							 uint64_t end)
+static const struct backtrace_frame_s *bt_check_range(const struct backtrace_s *bt,
+						      uint64_t start, uint64_t end)
 {
-	const struct backtrace_function_s *bf;
+	const struct backtrace_frame_s *bf;
 	int i = 0;
 
 	list_for_each_entry(bf, &bt->calls, list) {
@@ -186,7 +212,7 @@ int backtrace_check_func(const struct process_ctx_s *ctx,
 {
 	const struct backtrace_s *bt = data;
 	uint64_t func_start, func_end;
-	const struct backtrace_function_s *bf;
+	const struct backtrace_frame_s *bf;
 
 	func_start = ctx->pvma->start + fj->func_value;
 	func_end = func_start + fj->func_size;
@@ -207,7 +233,7 @@ int backtrace_check_func(const struct process_ctx_s *ctx,
 int backtrace_check_vma(const struct backtrace_s *bt,
 			const struct vma_area *vma)
 {
-	const struct backtrace_function_s *bf;
+	const struct backtrace_frame_s *bf;
 
 	if (bt->depth == 1)
 		return -EAGAIN;

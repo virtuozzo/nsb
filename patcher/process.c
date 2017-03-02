@@ -346,7 +346,7 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 
 	err = check(ctx, bt);
 
-	free(bt);
+	destroy_backtrace(bt);
 	return err;
 }
 
