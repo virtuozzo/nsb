@@ -15,19 +15,34 @@ static void stop_handler(int dummy)
 	test_stop = 1;
 }
 
+static void delay_handler(int dummy)
+{
+	usleep(1);
+}
+
 int call_loop(int test_type)
 {
+	long iter = 1;
+
 	if (signal(SIGINT, stop_handler) == SIG_ERR) {
 		perror("failed to register SIGINT handler");
+		return TEST_ERROR;
+	}
+
+	if (signal(SIGUSR1, delay_handler) == SIG_ERR) {
+		perror("failed to register SIGUSR1 handler");
 		return TEST_ERROR;
 	}
 
 	if (run_test(test_type, 0) == TEST_ERROR)
 		return 1;
 
-	while (!test_stop)
+	while (!test_stop) {
+		if (!(iter % 1000000))
+			kill(getpid(), SIGUSR1);
 		(void)run_test(test_type, 0);
-
+		iter++;
+	}
 	return run_test(test_type, 1);
 }
 
