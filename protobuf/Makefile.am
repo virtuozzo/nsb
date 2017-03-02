@@ -1,9 +1,7 @@
-dist_noinst_DATA = funcpatch.proto	\
+dist_noinst_DATA =			\
 		   binpatch.proto	\
-		   objinfo.proto	\
 		   segment.proto	\
-		   funcjump.proto	\
-		   datasym.proto
+		   funcjump.proto
 
 DEPS	= $(dist_noinst_DATA:.proto=.dep)
 

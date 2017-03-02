@@ -13,72 +13,34 @@ class BinPatch:
 		self.patchfile = patchfile
 
 		self.common_func = []
-		self.func_jumps = []
-		self.removed_func = []
-		self.new_func = []
-		self.modified_func = []
 
-		self.common_obj = []
-		self.removed_obj = []
-		self.new_obj = []
-		self.patches_list = []
-
-		self.applicable = False
+		self.applicable = True
 
 	def create(self):
+		old_func = self.bf_old.functions
+		new_func = self.bf_new.functions
+
+		self.common_func = list(set(old_func.keys()) & set(new_func.keys()))
+
+	def analize(self):
 		if self.bf_old.header.type != self.bf_new.header.type:
 			print "Binaries have different object types: %s != %s" %	\
 				(self.bf_old.header.type, self.bf_new.header.type)
 			print "Not supported."
 			raise
 
-		if self.bf_old:
-			old_func = self.bf_old.functions
-			old_obj = self.bf_old.objects
-			old_dyn_func = self.bf_old.dyn_functions
-			old_dyn_obj = self.bf_old.dyn_objects
+		for k, s in self.bf_new.objects.iteritems():
+			if k.startswith("completed."):
+				continue
+			if s.size != 0:
+				print "Patch has object \"%s\" with size: %d" % (k, s.size)
+				print "Patch with data objects (variables) are not supported"
+				print self.bf_new.objects
+				raise
 
-		new_func = self.bf_new.functions
-		self.common_func = list(set(old_func.keys()) & set(new_func.keys()))
-		self.func_jumps = list(set(old_func.keys()) & set(new_func.keys()))
-		self.removed_func = list(set(old_func.keys()) - set(new_func.keys()))
-		self.new_func = list(set(new_func.keys()) - set(old_func.keys()))
-
-		new_obj = self.bf_new.objects
-		self.common_obj = list(set(old_obj.keys()) & set(new_obj.keys()))
-		self.removed_obj = list(set(old_obj.keys()) - set(new_obj.keys()))
-		self.new_obj = list(set(new_obj.keys()) - set(old_obj.keys()))
-
-		new_dyn_func = self.bf_new.dyn_functions
-		self.common_dyn_func = list(set(old_dyn_func.keys()) & set(new_dyn_func.keys()))
-		self.new_dyn_func = list(set(new_dyn_func.keys()) - set(old_dyn_func.keys()))
-
-		new_dyn_obj = self.bf_new.dyn_objects
-		self.common_dyn_obj = list(set(old_dyn_obj.keys()) & set(new_dyn_obj.keys()))
-		self.new_dyn_obj = list(set(new_dyn_obj.keys()) - set(old_dyn_obj.keys()))
-
-	@abstractmethod
-	def __applicable__(self, p): pass
-
-	def analize(self):
-		if not self.patches_list:
+		if not self.common_func:
 			print "Nothing to patch"
 			exit(0)
-
-		# This has to be done differently. Function object has to be
-		# marked as modified instead of redundant "modified" list.
-		for p in self.patches_list:
-			if p.func_b.funcname in self.common_func:
-				self.common_func.remove(p.func_b.funcname)
-				self.modified_func.append(p.func_b.funcname)
-				print "Modified function: %s" % p.func_b.funcname
-
-		for p in self.patches_list:
-			print "*************************************************\n"
-			p.show()
-			self.applicable = self.__applicable__(p)
-			if not self.applicable:
-				return
 
 	def get_patch(self):
 		image = binpatch_pb2.BinPatch()
@@ -95,12 +57,6 @@ class BinPatch:
 			image.new_path = self.bf_new.filename
 			print "image.new_path   : %s" % image.new_path
 
-		for patch in self.patches_list:
-			code = self.bf_new.function_code(patch.func_b.start,
-							 patch.func_b.size)
-			fpatch = patch.get_patch(code)
-			image.patches.extend([fpatch])
-
 		print "\nimage.new_segments:"
 		for s in self.bf_new.segments:
 			si = image.new_segments.add()
@@ -115,31 +71,13 @@ class BinPatch:
 			print "  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x" %  \
 				(si.type, si.offset, si.vaddr, si.paddr, si.mem_sz, si.flags, si.align, si.file_sz)
 
-		print "\nimage.datasym:"
-		for name in self.common_obj:
-			if self.bf_old.objects[name].size != self.bf_new.objects[name].size:
-				print "Object %s has different size: %d != %d" % (name, self.bf_old.objects[name].size, self.bf_new.objects[name].size)
-				raise
-			if self.bf_old.objects[name].size == 0:
-				continue
-
-			if "." in name:
-				continue
-
-			li = image.local_vars.add()
-			li.name = name
-			li.size = self.bf_new.objects[name].size
-			li.offset = self.bf_new.objects[name].value
-			li.ref = self.bf_old.objects[name].value
-			print "  %s: size: %d, offset: %#x, ref: %#x" % (li.name, li.size, li.offset, li.ref)
-
 		print "\nimage.funcjumps:"
-		for name in self.func_jumps:
+		for name in self.common_func:
 			fj = image.func_jumps.add()
 			fj.name = name
-			fj.func_value = self.bf_old.functions[name].start
+			fj.func_value = self.bf_old.functions[name].value
 			fj.func_size = self.bf_old.functions[name].size
-			fj.patch_value = self.bf_new.functions[name].start
+			fj.patch_value = self.bf_new.functions[name].value
 			print "  %s: func_value: %#x, func_size: %d, patch_value: %#x" % (name, fj.func_value, fj.func_size, fj.patch_value)
 
 		print"\n"
@@ -164,54 +102,3 @@ class BinPatch:
 			self.bf_new.add_section("vzpatch", filename)
 			os.unlink(filename)
 			print "Temporary file %s removed" % filename
-
-
-class StaticBinPatch(BinPatch):
-	def __init__(self, bf_old, bf_new, patchfile):
-		BinPatch.__init__(self, bf_old, bf_new, patchfile)
-
-	def create(self):
-		if self.bf_old.read_rodata() != self.bf_new.read_rodata():
-			print "Binaries have different .rodata segments."
-			print "Not supported."
-			raise
-		BinPatch.create(self)
-
-	def __applicable__(self, p):
-		p.analize()
-		for ci in p.code_info:
-			if ci.command_info.is_jump:
-				if ci.access_name in self.common_func:
-					ci.access_addr = self.bf_old.functions[ci.access_name].start 
-					print "%s to COMMON function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-				elif ci.access_name in self.modified_func:
-					print "%s to MODIFIED function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-				elif ci.access_name in self.common_dyn_func:
-					ci.access_addr = self.bf_old.dyn_functions[ci.access_name].start 
-					print "%s to COMMON PLT function: '%s', '%s', '0x%x'" % (ci.command_info.name, ci.access_name, ci.access_plt, ci.access_addr)
-				else:
-					print "%s to NEW function: '%s', '%s'" % (ci.command_info.name, ci.access_name, ci.access_plt)
-					if ci.access_plt and self.bf_old.header.type != 'ET_DYN':
-						print "New PLT entry.\nUnsupported"
-						return False
-			else:
-				if ci.access_name in self.common_obj:
-					ci.access_addr = self.bf_old.objects[ci.access_name].value
-					print "Access to COMMON object: '%s', '%s'" % (ci.access_addr, ci.access_name)
-				elif ci.access_name in self.common_func:
-					ci.access_addr = self.bf_old.functions[ci.access_name].start
-					print "Access to COMMON function: '%s', '%s'" % (ci.access_addr, ci.access_name)
-				else:
-					print "Access to NEW object: '%s', '%s'" % (ci.access_addr, ci.access_name)
-					ci.show()
-					print "Unsupported"
-					return False
-		return True
-
-
-class SharedBinPatch(BinPatch):
-	def __init__(self, bf_old, bf_new, patchfile):
-		BinPatch.__init__(self, bf_old, bf_new, patchfile)
-
-	def __applicable__(self, p):
-		return True

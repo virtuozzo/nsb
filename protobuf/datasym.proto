@@ -1,6 +1,0 @@
-message DataSym {
-	required string	name	= 1;
-	required int32	size	= 2;
-	required int32	offset	= 3;
-	required int32	ref	= 4;
-}

@@ -30,16 +30,10 @@ generator_PYTHON =						\
 bin_PROGRAMS = nsb
 
 nsb_SOURCES =						\
-			protobuf/funcpatch.pb-c.c	\
-			protobuf/funcpatch.pb-c.h	\
 			protobuf/binpatch.pb-c.c	\
 			protobuf/binpatch.pb-c.h	\
-			protobuf/objinfo.pb-c.c		\
-			protobuf/objinfo.pb-c.h		\
 			protobuf/segment.pb-c.c		\
 			protobuf/segment.pb-c.h		\
-			protobuf/datasym.pb-c.c		\
-			protobuf/datasym.pb-c.h		\
 			protobuf/funcjump.pb-c.c	\
 			protobuf/funcjump.pb-c.h	\
 							\
