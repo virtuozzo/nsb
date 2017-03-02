@@ -32,7 +32,7 @@ class Test:
 		os.environ['LD_LIBRARY_PATH'] = ld_library_path + ":" + library_path
 
 	def start(self):
-		cmd = "%s -t %d -n %d" % (self.path, self.test_type, 3)
+		cmd = "%s -t %d -n %d" % (self.path, self.test_type, 2)
 		try:
 			if self.__state__ != "init":
 				print "Test is not new. State: %s" % self.__state__
