@@ -8,21 +8,24 @@
 
 extern int run_test(int test_type, int print);
 
-int signalled;
+int test_stop;
 
-static void sighandler(int dummy)
+static void stop_handler(int dummy)
 {
-	signalled = 1;
+	test_stop = 1;
 }
 
 int call_loop(int test_type)
 {
-	signal(SIGINT, sighandler);
+	if (signal(SIGINT, stop_handler) == SIG_ERR) {
+		perror("failed to register SIGINT handler");
+		return TEST_ERROR;
+	}
 
 	if (run_test(test_type, 0) == TEST_ERROR)
 		return 1;
 
-	while (!signalled)
+	while (!test_stop)
 		(void)run_test(test_type, 0);
 
 	return run_test(test_type, 1);
