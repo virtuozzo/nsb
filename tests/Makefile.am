@@ -32,7 +32,6 @@ patch_lib_global_func_cb.so$(EXEEXT): lib_global_func_cb.c
 patch_lib_global_func_p.so$(EXEEXT): lib_global_func_p.c
 patch_lib_global_var.so$(EXEEXT): lib_global_var.c
 patch_lib_global_var_addr.so$(EXEEXT): lib_global_var_addr.c
-patch_lib_global_var_addend.so$(EXEEXT): lib_global_var_addend.c
 patch_lib_static_func_cb.so$(EXEEXT): lib_static_func_cb.c
 patch_lib_static_var.so$(EXEEXT): lib_static_var.c
 
@@ -43,7 +42,6 @@ check_PROGRAMS += patch_lib_global_func_cb.so
 check_PROGRAMS += patch_lib_global_func_p.so
 check_PROGRAMS += patch_lib_global_var.so
 check_PROGRAMS += patch_lib_global_var_addr.so
-check_PROGRAMS += patch_lib_global_var_addend.so
 check_PROGRAMS += patch_lib_static_func_cb.so
 check_PROGRAMS += patch_lib_static_var.so
 
