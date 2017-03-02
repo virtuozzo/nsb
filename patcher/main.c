@@ -5,7 +5,6 @@
 
 #include <compel/compel.h>
 
-#include "include/version.h"
 #include "include/patch.h"
 #include "include/log.h"
 
