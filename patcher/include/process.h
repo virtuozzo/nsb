@@ -7,26 +7,6 @@
 
 #include "list.h"
 
-#ifdef STATIC_PATCHING
-struct objinfo_s {
-	char			*name;
-	int32_t			op_size;
-	int32_t			addr_size;
-	int32_t			offset;
-	int32_t			ref_addr;
-};
-
-struct funcpatch_s {
-	char			*name;
-	int64_t			addr;
-	int32_t			size;
-	int			new_:1;
-	int32_t			old_addr;
-	size_t			n_objinfos;
-	struct objinfo_s	**objinfos;
-	void			*code;
-};
-#endif
 struct func_jump_s {
 	char			*name;
 	int64_t			func_value;
@@ -57,12 +37,6 @@ struct patch_info_s {
 	char			*old_bid;
 	char			*new_bid;
 	char			*path;
-#ifdef STATIC_PATCHING
-	struct list_head	places;
-
-	size_t			n_funcpatches;
-	struct funcpatch_s	**funcpatches;
-#endif
 #ifdef SWAP_PATCHING
 	size_t			n_local_vars;
 	struct local_var_s	**local_vars;

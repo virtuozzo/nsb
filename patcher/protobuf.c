@@ -11,10 +11,6 @@
 #include "include/util.h"
 
 #include <protobuf/binpatch.pb-c.h>
-#ifdef STATIC_PATCHING
-#include <protobuf/funcpatch.pb-c.h>
-#include <protobuf/objinfo.pb-c.h>
-#endif
 #include <protobuf/segment.pb-c.h>
 #include <protobuf/funcjump.pb-c.h>
 
@@ -49,47 +45,6 @@ free_data:
 	free(data);
 	return res;
 }
-#ifdef STATIC_PATCHING
-static struct funcpatch_s *create_funcpatch(const FuncPatch *fp)
-{
-	struct funcpatch_s *funcpatch;
-
-	funcpatch = xmalloc(sizeof(struct funcpatch_s));
-	if (!funcpatch)
-		return NULL;
-
-	funcpatch->name = strdup(fp->name);
-	if (!funcpatch->name)
-		return NULL;
-
-	funcpatch->addr = fp->addr;
-	funcpatch->size = fp->size;
-	funcpatch->new_ = fp->new_;
-	funcpatch->old_addr = 0;
-	if (fp->has_old_addr)
-		funcpatch->old_addr = fp->old_addr;
-	return funcpatch;
-}
-
-static int set_binpatch_funcpatches(struct patch_info_s *patch_info, BinPatch *bp)
-{
-	int i;
-	struct funcpatch_s **funcpatches;
-
-	funcpatches = xmalloc(sizeof(struct funcpatch_s *) * bp->n_patches);
-	if (!funcpatches)
-		return -ENOMEM;
-
-	for (i = 0; i < bp->n_patches; i++) {
-		funcpatches[i] = create_funcpatch(bp->patches[i]);
-		if (!funcpatches[i])
-			return -ENOMEM;
-	}
-	patch_info->n_funcpatches = bp->n_patches;
-	patch_info->funcpatches = funcpatches;
-	return 0;
-}
-#endif
 #ifdef SWAP_PATCHING
 static struct local_var_s *create_local_var(const DataSym *lv)
 {
@@ -235,10 +190,6 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 			goto free_new_bid;
 	}
 
-#ifdef STATIC_PATCHING
-	if (set_binpatch_funcpatches(patch_info, bp))
-		goto free_new_path;
-#endif
 #ifdef SWAP_PATCHING
 	if (set_binpatch_local_vars(patch_info, bp))
 		goto free_funcpatches;
@@ -262,9 +213,6 @@ free_local_vars:
 #ifdef SWAP_PATCHING
 free_funcpatches:
 	// TODO
-#endif
-#ifdef STATIC_PATCHING
-free_new_path:
 #endif
 	if (bp->new_path)
 		free(patch_info->path);

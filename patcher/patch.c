@@ -19,17 +19,8 @@
 #include "include/protobuf.h"
 #include "include/relocations.h"
 
-#ifdef STATIC_PATCHING
-#include "include/patch_static.h"
-#endif
-
 struct process_ctx_s process_context = {
 	.p = {
-		.pi = {
-#ifdef STATIC_PATCHING
-			.places = LIST_HEAD_INIT(process_context.p.pi.places),
-#endif
-		},
 		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 	}
@@ -701,12 +692,6 @@ static const struct patch_ops_s *set_patch_ops(const char *type)
 	struct patch_ops_s *ops;
 	int (*apply)(struct process_ctx_s *ctx);
 
-#ifdef STATIC_PATCHING
-	if (!strcmp(type, "ET_EXEC")) {
-		how = "jump";
-		apply = apply_exec_binpatch;
-	} else
-#endif
 	if (!strcmp(type, "ET_DYN"))
 		apply = apply_dyn_binpatch;
 	else {

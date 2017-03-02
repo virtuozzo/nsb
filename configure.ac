@@ -78,24 +78,6 @@ AC_CHECK_LIB(
 
 AC_PYTHON_MODULE(elftools.elf.elffile)
 
-
-AC_MSG_CHECKING([for static code patching support])
-AC_ARG_ENABLE([static_patching],
-	      [  --enable_static-patching    Turn on static code patching support],
-	      [case "${enableval}" in
-	         yes) static_patching=yes ;;
-		 no)  static_patching=no ;;
-		 *) AC_MSG_ERROR([bad value ${enableval} for --enable-static-patching]) ;;
-	      esac],
-	      [static_patching=no])
-AM_CONDITIONAL([STATIC_PATCHING], [test x$static_patching = xyes])
-AS_IF([test x$static_patching = xyes],
-      [
-       AC_DEFINE(STATIC_PATCHING,[],[Static code pathing support])
-       ],
-      [])
-AC_MSG_RESULT([$static_patching])
-
 AC_MSG_CHECKING([for library swap patching support])
 AC_ARG_ENABLE([swap_patching],
 	      [  --enable_swap-patching    Turn on swap code patching support],

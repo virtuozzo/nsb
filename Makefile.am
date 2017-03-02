@@ -69,12 +69,6 @@ nsb_SOURCES =						\
 			patcher/relocations.c		\
 			patcher/patch.c
 
-if STATIC_PATCHING
-nsb_SOURCES +=						\
-			patcher/include/patch_static.h	\
-			patcher/patch_static.c
-endif
-
 if SWAP_PATCHING
 nsb_SOURCES += 						\
 			patcher/include/rtld.h		\
