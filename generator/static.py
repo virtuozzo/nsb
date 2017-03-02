@@ -37,13 +37,13 @@ for sym_idx, sym in enumerate(symtab.iter_symbols()):
 	if not is_mangled(sym.name):
 		continue
 
-	name = sym.name
+	sym_name = sym.name
 	addr = sym.entry.st_value
-	print("{0:<4d} {1:<30s} {2:016x}".format(sym_idx, name, addr))
+	print("{0:<4d} {1:016x} {2}".format(sym_idx, addr, sym_name))
 
-	orig_name = demangle(name)
-	sym_info.append((sym_idx, orig_name, addr))
-	sym_names.add(orig_name)
+	sym_name_orig = demangle(sym_name)
+	sym_info.append((sym_idx, sym_name_orig, addr))
+	sym_names.add(sym_name_orig)
 
 print("== Reading debuginfo for {0}".format(old_file))
 o_di2addr = debuginfo.read(o_elf, sym_names)
@@ -55,8 +55,8 @@ p_di2addr = debuginfo.read(p_elf, sym_names,
 p_addr2di = reverse_mapping(p_di2addr)
 
 print("== Resolving addresses in old ELF")
-for sym_idx, sym, p_addr in sym_info:
+for sym_idx, sym_name, p_addr in sym_info:
 	o_addr = o_di2addr[p_addr2di[p_addr]]
 
-	print("{0:<4d} {1:30s} {2:016x}".format(sym_idx, sym, o_addr))
+	print("{0:<4d} {1:016x} {2}".format(sym_idx, o_addr, sym_name))
 
