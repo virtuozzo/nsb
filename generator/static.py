@@ -28,24 +28,6 @@ def reverse_mapping(d):
 	assert len(result) == len(d)
 	return result
 
-relocations_dyn = p_elf.get_section_by_name('.rela.dyn')
-assert relocations_dyn.header.sh_type == 'SHT_RELA'
-
-rel2sym_idx = dict()
-rel_ent_size = relocations_dyn.header.sh_entsize
-assert rel_ent_size
-rel_sect_pos = relocations_dyn.header.sh_offset
-
-for rel_idx, rel in enumerate(relocations_dyn.iter_relocations()):
-	sym_idx = rel.entry.r_info_sym
-	if not sym_idx:
-		continue
-
-	rel_pos = rel_sect_pos + rel_idx * rel_ent_size
-	rel2sym_idx[(rel_pos, rel)] = sym_idx
-
-sym_idx2rel = reverse_mapping(rel2sym_idx)
-
 sym_info  = list()
 sym_names = set()
 symtab = p_elf.get_section_by_name('.dynsym')
@@ -72,20 +54,9 @@ p_di2addr = debuginfo.read(p_elf, sym_names,
 
 p_addr2di = reverse_mapping(p_di2addr)
 
-processed_rels = list()
-
 print("== Resolving addresses in old ELF")
 for sym_idx, sym, p_addr in sym_info:
 	o_addr = o_di2addr[p_addr2di[p_addr]]
-	rel_pos, rel = rel_info = sym_idx2rel[sym_idx]
-	processed_rels.append(rel_info)
 
-	print("{0:<4d} {1:30s} {2:016x} @ {3:016x}".format(
-		sym_idx, sym, o_addr, rel.entry.r_offset))
-
-# Set R_X86_64_NONE type for processed relocations
-for rel_pos, rel in processed_rels:
-	p_elf.stream.seek(rel_pos)
-	rel.entry.r_info = ELF64_R_INFO(rel.entry.r_info_sym, 0)
-	p_elf.structs.Elf_Rela.build_stream(rel.entry, p_elf.stream)
+	print("{0:<4d} {1:30s} {2:016x}".format(sym_idx, sym, o_addr))
 
