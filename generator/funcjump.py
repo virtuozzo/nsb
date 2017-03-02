@@ -13,7 +13,7 @@ class FuncJump:
 				self.func_value, self.func_size,
 				self.patch_value, self.patch_size)
 
-	def get_patch(self):
+	def patch_info(self):
 		fj = funcjump_pb2.FuncJump()
 		fj.name = self.name
 		fj.func_value = self.func_value

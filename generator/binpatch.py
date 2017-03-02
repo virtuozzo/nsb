@@ -52,28 +52,29 @@ class BinPatch:
 
 		return True
 
-	def get_patch(self):
+	def patch_info(self):
 		print "\n*************************************************"
 		print "***************** Patch info ********************"
 		print "*************************************************\n"
 
-		image = binpatch_pb2.BinPatch()
+		pi = binpatch_pb2.BinPatch()
 
-		image.object_type = self.bf_old.header.type
-		image.old_bid = get_build_id(self.bf_old.filename)
-		image.new_bid = get_build_id(self.bf_new.filename)
+		pi.object_type = self.bf_old.header.type
+		pi.old_bid = get_build_id(self.bf_old.filename)
+		pi.new_bid = get_build_id(self.bf_new.filename)
 
-		print "image.object_type: %s" % image.object_type
-		print "image.old_bid    : %s" % image.old_bid
-		print "image.new_bid    : %s" % image.new_bid
+		print "Header:"
+		print "  Object type   : %s" % pi.object_type
+		print "  Target BuildId: %s" % pi.old_bid
+		print "  Patch BuildId : %s" % pi.new_bid
 
 		if self.patchfile:
-			image.new_path = self.bf_new.filename
-			print "image.new_path   : %s" % image.new_path
+			pi.new_path = self.bf_new.filename
+			print "  Patch path    : %s" % pi.new_path
 
-		print "\nimage.new_segments:"
+		print "\nSegments:"
 		for s in self.bf_new.segments:
-			si = image.new_segments.add()
+			si = pi.new_segments.add()
 			si.type    = s.type;
 			si.offset  = s.offset;
 			si.vaddr   = s.vaddr;
@@ -85,13 +86,13 @@ class BinPatch:
 			print "  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x" %  \
 				(si.type, si.offset, si.vaddr, si.paddr, si.mem_sz, si.flags, si.align, si.file_sz)
 
-		print "\nimage.funcjumps:"
+		print "\nFunction jumps:"
 		for fj in self.common_func:
-			funcjump = fj.get_patch()
-			image.func_jumps.extend([funcjump])
+			funcjump = fj.patch_info()
+			pi.func_jumps.extend([funcjump])
 
 		print"\n"
-		return image
+		return pi
 
 	def write(self):
 		if self.patchfile:
@@ -101,9 +102,9 @@ class BinPatch:
 
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
 
-		image = self.get_patch()
+		pi = self.patch_info()
 
-		data = image.SerializeToString()
+		data = pi.SerializeToString()
 
 		os.write(pfile, data)
 		print "Written %d bytes to %s" % (len(data), filename)
