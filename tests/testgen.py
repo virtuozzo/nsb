@@ -18,8 +18,14 @@ outfile = args.name
 if args.name.endswith('.py'):
     args.name = args.name[:-3]
 
-test_name = os.path.basename(args.name)
-source = "nsbtest_library"
+test_type, test_name = os.path.basename(args.name).split('_', 1)
+
+if test_type == "library":
+	source = "nsbtest_library"
+else:
+	print "Unsupported test type: \"%s\"" % test_type
+	exit(1)
+
 target = "patch_" + test_name + ".so"
 test_type = get_test_type(test_name)
 
