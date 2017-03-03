@@ -19,8 +19,7 @@ if args.name.endswith('.py'):
     args.name = args.name[:-3]
 
 test_name = os.path.basename(args.name)
-patch_type = "jump"
-source = "nsbtest"
+source = "nsbtest_library"
 target = "patch_" + test_name + ".so"
 test_type = get_test_type(test_name)
 
