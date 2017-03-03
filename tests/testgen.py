@@ -18,7 +18,7 @@ outfile = args.name
 if args.name.endswith('.py'):
     args.name = args.name[:-3]
 
-test_type, test_name = os.path.basename(args.name).split('_', 1)
+test_name, test_type = os.path.basename(args.name).split('__', 1)
 
 if test_type == "library":
 	source = "nsbtest_library"

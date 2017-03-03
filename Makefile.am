@@ -67,20 +67,21 @@ nsb_SOURCES =						\
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-LIBRARY_TESTS = tests/library_global_func.py
-LIBRARY_TESTS += tests/library_static_func.py
-LIBRARY_TESTS += tests/library_ext_global_func.py
-LIBRARY_TESTS += tests/library_global_func_cb.py
-LIBRARY_TESTS += tests/library_global_func_p.py
-LIBRARY_TESTS += tests/library_global_var.py
-LIBRARY_TESTS += tests/library_global_var_addr.py
-LIBRARY_TESTS += tests/library_static_func_cb.py
-LIBRARY_TESTS += tests/library_static_var.py
+TEST_FILES = tests/global_func.c
+TEST_FILES += tests/static_func.c
+TEST_FILES += tests/ext_global_func.c
+TEST_FILES += tests/global_func_cb.c
+TEST_FILES += tests/global_func_p.c
+TEST_FILES += tests/global_var.c
+TEST_FILES += tests/global_var_addr.c
+TEST_FILES += tests/static_func_cb.c
+TEST_FILES += tests/static_var.c
 
-LIBRARY_XFAIL_TESTS = tests/library_static_func_cb.py
-LIBRARY_XFAIL_TESTS += tests/library_static_var.py
+LIBRARY_TESTS = $(TEST_FILES:.c=__library.py)
+LIBRARY_XFAIL_TESTS = tests/static_func_cb__library.py
+LIBRARY_XFAIL_TESTS += tests/static_var__library.py
 
-TESTS = $(LIBRARY_TESTS)
+TESTS := $(LIBRARY_TESTS)
 
 XFAIL_TESTS = $(LIBRARY_XFAIL_TESTS)
 
