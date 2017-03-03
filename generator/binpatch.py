@@ -23,10 +23,9 @@ class BinPatch:
 			self.common_func.append(fj)
 
 	def applicable(self):
-		if self.bf_old.header.type != self.bf_new.header.type:
-			print "Binaries have different object types: %s != %s" %	\
-				(self.bf_old.header.type, self.bf_new.header.type)
-			print "Not supported."
+		if self.bf_new.header.type != 'ET_DYN':
+			print "Wrong object file type: %s" % self.bf_new.header.type
+			print "Only shared object patches are supported"
 			return False
 
 		for k, s in self.bf_new.objects.iteritems():

@@ -41,11 +41,6 @@ class BinFile:
 			self.sections = elf.get_sections()
 			self.segments = elf.get_segments()
 
-		if self.header.type != 'ET_DYN':
-			print "Wrong object file type: %s" % self.header.type
-			print "Only shared object files are supported"
-			raise
-
 		if self.symbols is None:
 			print "  No symbols found. Perhaps this ELF has been stripped?"
 			exit(1)
