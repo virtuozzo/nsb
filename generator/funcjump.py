@@ -10,8 +10,8 @@ class FuncJump:
 
 	def show(self):
 		print "\t%s: %#x-%#x ---> %#x-%#x" % (self.name,
-				self.func_value, self.func_size,
-				self.patch_value, self.patch_size)
+				self.func_value, self.func_value + self.func_size,
+				self.patch_value, self.patch_value + self.patch_size)
 
 	def patch_info(self):
 		fj = funcjump_pb2.FuncJump()
