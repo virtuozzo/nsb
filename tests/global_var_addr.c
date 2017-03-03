@@ -8,7 +8,7 @@ extern long *global_var_addr;
 long *global_var_addr = &global_var;
 #endif
 
-long lib_global_var_addr(int type)
+long test_global_var_addr(int type)
 {
 	if (global_var_addr == &global_var)
 		return original_result(type);

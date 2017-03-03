@@ -4,16 +4,16 @@
 
 extern long vzpatch_static_var;
 
-long lib_static_var(int type)
+long test_static_var(int type)
 {
 	return vzpatch_static_var;
 }
 
 #else
 
-long static_var = original_result(TEST_TYPE_LIB_STATIC_VAR);
+long static_var = original_result(TEST_TYPE_STATIC_VAR);
 
-long lib_static_var(int type)
+long test_static_var(int type)
 {
 	return static_var;
 }

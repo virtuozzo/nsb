@@ -29,24 +29,24 @@ check_PROGRAMS += nsb_test_types.py
 patch_%.so: %.c test_types.h
 	$(AM_V_CC) $(CC) -DPATCH -shared -fpic $^ -o $@
 
-patch_lib_global_func.so$(EXEEXT): lib_global_func.c
-patch_lib_static_func.so$(EXEEXT): lib_static_func.c
+patch_global_func.so$(EXEEXT): global_func.c
+patch_static_func.so$(EXEEXT): static_func.c
 patch_ext_global_func.so$(EXEEXT): ext_global_func.c
-patch_lib_global_func_cb.so$(EXEEXT): lib_global_func_cb.c
-patch_lib_global_func_p.so$(EXEEXT): lib_global_func_p.c
-patch_lib_global_var.so$(EXEEXT): lib_global_var.c
-patch_lib_global_var_addr.so$(EXEEXT): lib_global_var_addr.c
-patch_lib_static_func_cb.so$(EXEEXT): lib_static_func_cb.c
-patch_lib_static_var.so$(EXEEXT): lib_static_var.c
+patch_global_func_cb.so$(EXEEXT): global_func_cb.c
+patch_global_func_p.so$(EXEEXT): global_func_p.c
+patch_global_var.so$(EXEEXT): global_var.c
+patch_global_var_addr.so$(EXEEXT): global_var_addr.c
+patch_static_func_cb.so$(EXEEXT): static_func_cb.c
+patch_static_var.so$(EXEEXT): static_var.c
 
-check_PROGRAMS += patch_lib_global_func.so
-check_PROGRAMS += patch_lib_static_func.so
+check_PROGRAMS += patch_global_func.so
+check_PROGRAMS += patch_static_func.so
 check_PROGRAMS += patch_ext_global_func.so
-check_PROGRAMS += patch_lib_global_func_cb.so
-check_PROGRAMS += patch_lib_global_func_p.so
-check_PROGRAMS += patch_lib_global_var.so
-check_PROGRAMS += patch_lib_global_var_addr.so
-check_PROGRAMS += patch_lib_static_func_cb.so
-check_PROGRAMS += patch_lib_static_var.so
+check_PROGRAMS += patch_global_func_cb.so
+check_PROGRAMS += patch_global_func_p.so
+check_PROGRAMS += patch_global_var.so
+check_PROGRAMS += patch_global_var_addr.so
+check_PROGRAMS += patch_static_func_cb.so
+check_PROGRAMS += patch_static_var.so
 
 ctags:

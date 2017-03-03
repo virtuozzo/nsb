@@ -136,8 +136,7 @@ int main(int argc, char **argv)
 		return print_usage(1);
 	}
 
-	if ((test_type < TEST_TYPE_LIB_GLOBAL_FUNC) ||
-	    (test_type >= TEST_TYPE_MAX)) {
+	if ((test_type < 0) || (test_type >= TEST_TYPE_MAX)) {
 		printf("invalid test type: %d\n", test_type);
 		return print_usage(1);
 	}

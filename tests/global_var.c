@@ -3,10 +3,10 @@
 #ifdef PATCH
 extern long global_var;
 #else
-long global_var = original_result(TEST_TYPE_LIB_GLOBAL_VAR);
+long global_var = original_result(TEST_TYPE_GLOBAL_VAR);
 #endif
 
-long lib_global_var(int type)
+long test_global_var(int type)
 {
 	return global_var;
 }

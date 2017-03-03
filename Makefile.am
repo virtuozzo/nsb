@@ -67,18 +67,18 @@ nsb_SOURCES =						\
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-TESTS = tests/lib_global_func.py
-TESTS += tests/lib_static_func.py
+TESTS = tests/global_func.py
+TESTS += tests/static_func.py
 TESTS += tests/ext_global_func.py
-TESTS += tests/lib_global_func_cb.py
-TESTS += tests/lib_global_func_p.py
-TESTS += tests/lib_global_var.py
-TESTS += tests/lib_global_var_addr.py
-TESTS += tests/lib_static_func_cb.py
-TESTS += tests/lib_static_var.py
+TESTS += tests/global_func_cb.py
+TESTS += tests/global_func_p.py
+TESTS += tests/global_var.py
+TESTS += tests/global_var_addr.py
+TESTS += tests/static_func_cb.py
+TESTS += tests/static_var.py
 
-XFAIL_TESTS = tests/lib_static_func_cb.py
-XFAIL_TESTS += tests/lib_static_var.py
+XFAIL_TESTS = tests/static_func_cb.py
+XFAIL_TESTS += tests/static_var.py
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@
