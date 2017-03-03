@@ -155,10 +155,6 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 {
 	const struct patch_info_s *pi = PI(ctx);
 	int i, fd;
-	// TODO: there should be bigger offset. 2 or maybe even 4 GB.
-	// But jmpq command construction fails, if map lays ouside 2g offset.
-	// This might be a bug in jmps construction
-	uint64_t load_bias = hint & 0xfffffffff0000000;
 	int flags = MAP_PRIVATE;
 
 	pr_info("= Loading %s:\n", pi->path);
@@ -182,20 +178,20 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
 			 es->type, es->offset, es->vaddr, es->paddr, es->mem_sz, es->flags, es->align, es->file_sz);
 
-		addr = elf_map(ctx, fd, load_bias + es->vaddr, es, flags);
+		addr = elf_map(ctx, fd, hint + es->vaddr, es, flags);
 		if (addr == -1) {
 			pr_perror("failed to map");
-			load_bias = -1;
+			hint = -1;
 			break;
 		}
 
-		load_bias += addr - ELF_PAGESTART(load_bias + es->vaddr);
+		hint += addr - ELF_PAGESTART(hint + es->vaddr);
 		flags |= MAP_FIXED;
 	}
 
 	(void)process_close_file(ctx, fd);
 
-	return load_bias;
+	return hint;
 }
 
 static Elf *elf_fd(const char *path, int fd)

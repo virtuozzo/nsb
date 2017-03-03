@@ -34,7 +34,10 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	func_addr = ctx->pvma->start + fj->func_value;
+	func_addr = fj->func_value;
+	if (elf_type_dyn(ctx->pvma->ei))
+		func_addr += ctx->pvma->start;
+
 	patch_addr = PLA(ctx) + fj->patch_value;
 
 	pr_info("      old address: %#lx\n", func_addr);
@@ -70,11 +73,27 @@ static int set_func_jumps(struct process_ctx_s *ctx)
 	return 0;
 }
 
+static int64_t load_patch(struct process_ctx_s *ctx)
+{
+	uint64_t hint;
+
+	if (elf_type_dyn(ctx->pvma->ei))
+		/*
+		 * TODO: there should be bigger offset. 2 or maybe even 4 GB.
+		 * But jmpq command construction fails, if map lays ouside 2g offset.
+		 * This might be a bug in jmps construction
+		 */
+		hint = ctx->pvma->start & 0xfffffffff0000000;
+	else
+		hint = 0x1000000;
+	return load_elf(ctx, hint);
+}
+
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
 
-	P(ctx)->load_addr = load_elf(ctx, ctx->pvma->start);
+	P(ctx)->load_addr = load_patch(ctx);
 	if (P(ctx)->load_addr < 0)
 		return P(ctx)->load_addr;
 
