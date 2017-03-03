@@ -13,7 +13,11 @@ nsbtest_static_SOURCES = main.c library.c test_type.h
 nsbtest_static_LDADD = -lpthread
 nsbtest_static_CFLAGS = $(AM_CFLAGS)
 
-check_PROGRAMS = nsbtest_library nsbtest_static
+nsbtest_shared_SOURCES = main.c library.c test_type.h
+nsbtest_shared_LDADD = -lpthread
+nsbtest_shared_CFLAGS = $(AM_CFLAGS) -fpic -pie
+
+check_PROGRAMS = nsbtest_library nsbtest_static nsbtest_shared
 
 nsb_test_types.py$(EXEEXT): test_types.h
 	$(AM_V_GEN) python convert_test_types.py $<

@@ -245,10 +245,9 @@ class LibraryLivePatchTest(LivePatchTest):
 		return os.getcwd() + "/tests/.libs/libtest.so"
 
 
-class StaticLivePatchTest(LivePatchTest):
+class ExecutableLivePatchTest(LivePatchTest):
 	def test_binary(self, path):
 		return os.getcwd() + "/tests/" + path
 
 	def source_elf(self, path):
 		return os.getcwd() + "/tests/" + path
-

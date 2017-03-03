@@ -24,7 +24,10 @@ if test_type == "library":
 	test_class = "LibraryLivePatchTest"
 elif test_type == "static":
 	source = "nsbtest_static"
-	test_class = "StaticLivePatchTest"
+	test_class = "ExecutableLivePatchTest"
+elif test_type == "shared":
+	source = "nsbtest_shared"
+	test_class = "ExecutableLivePatchTest"
 else:
 	print "Unsupported test type: \"%s\"" % test_type
 	exit(1)
