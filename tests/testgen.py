@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-from testrunner import Test
 
 def get_test_type(test_name):
 	from nsb_test_types import NSB_TEST_TYPES
@@ -22,6 +21,10 @@ test_name, test_type = os.path.basename(args.name).split('__', 1)
 
 if test_type == "library":
 	source = "nsbtest_library"
+	test_class = "LibraryLivePatchTest"
+elif test_type == "static":
+	source = "nsbtest_static"
+	test_class = "StaticLivePatchTest"
 else:
 	print "Unsupported test type: \"%s\"" % test_type
 	exit(1)
@@ -41,8 +44,8 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"except:\n"								\
 	"\tos.environ['NSB_PATCHER'] = os.getcwd() + '/nsb'\n"			\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
-	"exit(testrunner.LibraryLivePatchTest('%s', '%s', %d).run())\n" %	\
-	(source, target, test_type)
+	"exit(testrunner.%s('%s', '%s', %d).run())\n" %	\
+	(test_class, source, target, test_type)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

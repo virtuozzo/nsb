@@ -81,9 +81,16 @@ LIBRARY_TESTS = $(TEST_FILES:.c=__library.py)
 LIBRARY_XFAIL_TESTS = tests/static_func_cb__library.py
 LIBRARY_XFAIL_TESTS += tests/static_var__library.py
 
-TESTS := $(LIBRARY_TESTS)
+STATIC_TESTS = $(TEST_FILES:.c=__static.py)
+STATIC_XFAIL_TESTS = tests/static_func_cb__static.py
+STATIC_XFAIL_TESTS += tests/static_var__static.py
+STATIC_XFAIL_TESTS += tests/global_func_cb__static.py
+STATIC_XFAIL_TESTS += tests/global_var__static.py
+STATIC_XFAIL_TESTS += tests/global_var_addr__static.py
 
-XFAIL_TESTS = $(LIBRARY_XFAIL_TESTS)
+TESTS = $(LIBRARY_TESTS) $(STATIC_TESTS)
+
+XFAIL_TESTS = $(LIBRARY_XFAIL_TESTS) $(STATIC_XFAIL_TESTS)
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@

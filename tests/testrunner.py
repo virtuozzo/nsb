@@ -233,8 +233,9 @@ class LivePatchTest:
 	@abstractmethod
 	def source_elf(self, path): pass
 
-	@abstractmethod
-	def target_elf(self, path): pass
+	def target_elf(self, path):
+		return os.getcwd() + "/tests/" + path
+
 
 class LibraryLivePatchTest(LivePatchTest):
 	def test_binary(self, path):
@@ -243,5 +244,11 @@ class LibraryLivePatchTest(LivePatchTest):
 	def source_elf(self, path):
 		return os.getcwd() + "/tests/.libs/libtest.so"
 
-	def target_elf(self, path):
+
+class StaticLivePatchTest(LivePatchTest):
+	def test_binary(self, path):
 		return os.getcwd() + "/tests/" + path
+
+	def source_elf(self, path):
+		return os.getcwd() + "/tests/" + path
+
