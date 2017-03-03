@@ -63,11 +63,6 @@ nsb_SOURCES =						\
 			patcher/relocations.c		\
 			patcher/patch.c
 
-if SWAP_PATCHING
-nsb_SOURCES += 						\
-			patcher/include/rtld.h		\
-			patcher/rtld.c
-endif
 
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic

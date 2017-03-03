@@ -14,7 +14,6 @@
 
 #include "include/process.h"
 #include "include/x86_64.h"
-#include "include/rtld.h"
 #include "include/backtrace.h"
 #include "include/protobuf.h"
 #include "include/relocations.h"
@@ -25,12 +24,6 @@ struct process_ctx_s process_context = {
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 	}
 };
-
-#ifdef SWAP_PATCHING
-static const struct patch_ops_s *set_patch_ops(const char *how);
-#else
-static const struct patch_ops_s *set_patch_ops(void);
-#endif
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
@@ -60,87 +53,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	}
 	return 0;
 }
-#ifdef SWAP_PATCHING
-static int process_copy_lw(pid_t pid, unsigned long dest, unsigned long src)
-{
-	int err;
-	char buf[8];
 
-	err = process_read_data(pid, src, buf, 8);
-	if (err) {
-		pr_err("failed to read from %lx\n", src);
-		return err;
-	}
-	err = process_write_data(pid, dest, buf, 8);
-	if (err) {
-		pr_err("failed to write to %lx\n", dest);
-		return err;
-	}
-	return 0;
-}
-
-static int process_copy_data(pid_t pid, unsigned long dst, unsigned long src, size_t size)
-{
-	int iter = size / 8;
-	int remain = size % 8;
-	int err, i;
-
-	for (i = 0; i < iter; i++) {
-		err = process_copy_lw(pid, src, dst);
-		if (err) {
-			pr_err("failed to copy from %#lx to %#lx\n", src, dst);
-			return err;
-		}
-		src += 8;
-		dst += 8;
-	}
-	if (remain) {
-		char buf[8], tmp[8];
-
-		err = process_read_data(pid, dst, buf, 8);
-		if (err) {
-			pr_err("failed to read from %lx\n", dst);
-			return err;
-		}
-
-		err = process_read_data(pid, src, tmp, 8);
-		if (err) {
-			pr_err("failed to read from %lx\n", src);
-			return err;
-		}
-		memcpy(buf, tmp, remain);
-		err = process_write_data(pid, dst, buf, 8);
-		if (err) {
-			pr_err("failed to write to %lx\n", dst);
-			return err;
-		}
-	}
-	return 0;
-}
-
-static int copy_local_data(struct process_ctx_s *ctx)
-{
-	struct patch_info_s *pi = PI(ctx);
-	int i;
-
-	pr_info("= Copy global variables:\n");
-	for (i = 0; i < pi->n_local_vars; i++) {
-		struct local_var_s *ds = pi->local_vars[i];
-		unsigned long from, to;
-		int err;
-
-		from = ctx->pvma->start + ds->ref;
-		to = PLA(ctx) + ds->offset;
-
-		pr_info("  - %s (size: %d): %#lx ---> %#lx\n",
-				ds->name, ds->size, from, to);
-		err = process_copy_data(ctx->pid, to, from, ds->size);
-		if (err)
-			return err;
-	}
-	return 0;
-}
-#endif
 static int set_func_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
@@ -156,56 +69,7 @@ static int set_func_jumps(struct process_ctx_s *ctx)
 	}
 	return 0;
 }
-#ifdef SWAP_PATCHING
-static int vma_fix_target_syms(struct process_ctx_s *ctx, const struct vma_area *vma)
-{
-	struct extern_symbol *es;
-	int64_t address;
-	int err;
 
-	list_for_each_entry(es, &vma->target_syms, list) {
-		unsigned long offset = es_r_offset(es);
-
-		pr_debug("    \"%s\":\n", es->name);
-
-		if (elf_type_dyn(vma->ei))
-			offset += vma->start;
-
-		pr_debug("       GOT address: %#lx\n", offset);
-
-		address = elf_dsym_offset(P(ctx)->ei, es->name);
-
-		address += PLA(ctx);
-		pr_debug("       new address: %#lx\n", address);
-
-		pr_info("          Overwrite .got.plt entry: %#lx ---> %#lx\n", address, es_r_offset(es));
-		err = process_write_data(ctx->pid, es_r_offset(es), &address, sizeof(address));
-		if (err < 0) {
-			pr_err("failed to patch: %d\n", err);
-			return err;
-		}
-	}
-
-	return 0;
-}
-
-static int fix_vma_refs(struct vma_area *vma, void *data)
-{
-	struct process_ctx_s *ctx = data;
-
-	if (list_empty(&vma->target_syms))
-		return 0;
-
-	pr_debug("  - %s -> %s:\n", vma->map_file, vma->path);
-	return vma_fix_target_syms(ctx, vma);
-}
-
-static int fix_target_references(struct process_ctx_s *ctx)
-{
-	pr_info("= Fix target references:\n");
-	return iterate_file_vmas(&ctx->vmas, ctx, fix_vma_refs);
-}
-#endif
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
@@ -218,31 +82,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	if (ctx->ops->copy_data) {
-		err = ctx->ops->copy_data(ctx);
-		if (err)
-			return err;
-	}
-
-	if (ctx->ops->set_jumps) {
-		err = ctx->ops->set_jumps(ctx);
-		if (err)
-			return err;
-	}
-
-	if (ctx->ops->fix_references) {
-		err = ctx->ops->fix_references(ctx);
-		if (err)
-			return err;
-	}
-
-	if (ctx->ops->cleanup_target) {
-		err = ctx->ops->cleanup_target(ctx);
-		if (err)
-			return err;
-	}
-
-	return 0;
+	return ctx->ops->set_jumps(ctx);
 }
 
 static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
@@ -329,92 +169,7 @@ static int get_ctx_deplist(struct process_ctx_s *ctx)
 
 	return 0;
 }
-#ifdef SWAP_PATCHING
-static int ctx_bind_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
-{
-	int ret;
-	const struct ctx_dep *n;
 
-	list_for_each_entry(n, &ctx->objdeps, list) {
-		const struct vma_area *vma = n->vma;
-
-		ret = elf_contains_sym(vma->ei, es->name);
-		if (ret < 0)
-			return ret;
-		if (ret) {
-			es->vma = vma;
-			return 0;
-		}
-	}
-
-	if (elf_weak_sym(es))
-		return 0;
-
-	pr_err("failed to find %s symbol\n", es->name);
-	return -ENOENT;
-}
-
-static int collect_dependent_vma(struct process_ctx_s *ctx,
-				 struct vma_area *vma)
-{
-	int err;
-	LIST_HEAD(plt_syms);
-	struct extern_symbol *es, *tmp;
-
-	err = elf_rela_plt(vma->ei, &plt_syms);
-	if (err)
-		return err;
-
-	pr_debug("    PLT symbols to update:\n");
-	list_for_each_entry_safe(es, tmp, &plt_syms, list) {
-		err = ctx_bind_es(ctx, es);
-		if (err)
-			return err;
-
-		if (es->vma != ctx->pvma)
-			continue;
-
-		list_move(&es->list, &vma->target_syms);
-
-		pr_debug("      - %s:\n", es->name);
-		pr_debug("          offset  : %#lx\n", es_r_offset(es));
-		pr_debug("          bind    : %d\n", es_s_bind(es));
-		pr_debug("          path    : %s\n", es->vma->path);
-		pr_debug("          map_file: %s\n", es->vma->map_file);
-	}
-
-	return 0;
-}
-
-static int check_file_vma(struct vma_area *vma, void *data)
-{
-	struct process_ctx_s *ctx = data;
-	int ret;
-
-	if (!vma->path)
-		return 0;
-
-	if (!vma_is_executable(vma))
-		return 0;
-
-	pr_info("  - %#lx-%#lx -> %s\n", vma->start, vma->end, vma->path);
-	ret = elf_soname_needed(vma->ei, vma_soname(ctx->pvma));
-	if (ret < 0)
-		pr_err("failed to find %s dependences: %d\n", vma->path, ret);
-	else if (ret)
-		ret = collect_dependent_vma(ctx, vma);
-	return ret < 0 ? ret : 0;
-}
-
-static int process_collect_dependable_vmas(struct process_ctx_s *ctx)
-{
-	if (!vma_soname(ctx->pvma))
-		return 0;
-
-	pr_info("= Searching mappings, depending on \"%s\":\n", vma_soname(ctx->pvma));
-	return iterate_file_vmas(&ctx->vmas, ctx, check_file_vma);
-}
-#endif
 static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
 {
 	const struct vma_area *pvma;
@@ -472,68 +227,6 @@ static int init_patch(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int init_context(struct process_ctx_s *ctx, pid_t pid,
-#ifdef SWAP_PATCHING
-			const char *patchfile, const char *how)
-#else
-			const char *patchfile)
-#endif
-{
-	if (elf_library_status())
-		return -1;
-
-	pr_info("Patch context:\n");
-	pr_info("  Pid        : %d\n", pid);
-
-	ctx->pid = pid;
-	ctx->patchfile = patchfile;
-	INIT_LIST_HEAD(&ctx->vmas);
-	INIT_LIST_HEAD(&ctx->objdeps);
-	INIT_LIST_HEAD(&ctx->threads);
-
-	if (init_patch(ctx))
-		goto err;
-
-#ifdef SWAP_PATCHING
-	ctx->ops = set_patch_ops(how);
-#else
-	ctx->ops = set_patch_ops();
-#endif
-	if (!ctx->ops)
-		goto err;
-
-	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
-	pr_info("  Patch path    : %s\n", PI(ctx)->path);
-#ifdef SWAP_PATCHING
-	pr_info("  Patch mode    : %s\n", ctx->ops->name);
-#endif
-	if (collect_vmas(ctx->pid, &ctx->vmas)) {
-		pr_err("Can't collect mappings for %d\n", ctx->pid);
-		goto err;
-	}
-
-	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
-		goto err;
-
-	if (get_ctx_deplist(ctx))
-		goto err;
-
-	if (collect_relocations(ctx))
-		goto err;
-
-	if (ctx->ops->collect_deps) {
-		if (ctx->ops->collect_deps(ctx)) {
-			pr_err("failed to find dependable VMAs\n");
-			goto err;
-		}
-	}
-
-	return 0;
-
-err:
-	return -1;
-}
-
 static int process_resume(struct process_ctx_s *ctx)
 {
 	pr_info("= Resuming %d\n", ctx->pid);
@@ -562,20 +255,57 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 	return iterate_jumps(ctx, bt, backtrace_check_func);
 }
 
-#ifdef SWAP_PATCHING
-int patch_process(pid_t pid, const char *patchfile, const char *how)
-#else
+struct patch_ops_s patch_jump_ops = {
+	.apply_patch = apply_dyn_binpatch,
+	.set_jumps = set_func_jumps,
+	.check_backtrace = jumps_check_backtrace,
+};
+
+static int init_context(struct process_ctx_s *ctx, pid_t pid,
+			const char *patchfile)
+{
+	if (elf_library_status())
+		return -1;
+
+	pr_info("Patch context:\n");
+	pr_info("  Pid        : %d\n", pid);
+
+	ctx->pid = pid;
+	ctx->patchfile = patchfile;
+	INIT_LIST_HEAD(&ctx->vmas);
+	INIT_LIST_HEAD(&ctx->objdeps);
+	INIT_LIST_HEAD(&ctx->threads);
+
+	if (init_patch(ctx))
+		return 1;
+
+	ctx->ops = &patch_jump_ops;
+
+	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
+	pr_info("  Patch path    : %s\n", PI(ctx)->path);
+	if (collect_vmas(ctx->pid, &ctx->vmas)) {
+		pr_err("Can't collect mappings for %d\n", ctx->pid);
+		return 1;
+	}
+
+	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
+		return 1;
+
+	if (get_ctx_deplist(ctx))
+		return 1;
+
+	if (collect_relocations(ctx))
+		return 1;
+
+	return 0;
+}
+
 int patch_process(pid_t pid, const char *patchfile)
-#endif
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
 
-#ifdef SWAP_PATCHING
-	err = init_context(ctx, pid, patchfile, how);
-#else
 	err = init_context(ctx, pid, patchfile);
-#endif
 	if (err)
 		return err;
 
@@ -625,85 +355,3 @@ int check_process(pid_t pid, const char *patchfile)
 	return !find_vma_by_bid(&vmas, bid);
 }
 
-struct patch_ops_s patch_jump_ops = {
-#ifdef SWAP_PATCHING
-	.name = "jump",
-#endif
-	.collect_deps = NULL,
-	.set_jumps = set_func_jumps,
-	.copy_data = NULL,
-	.check_backtrace = jumps_check_backtrace,
-	.fix_references = NULL,
-	.cleanup_target = NULL,
-};
-#ifdef SWAP_PATCHING
-static int unmap_file_vma(struct vma_area *vma, void *data)
-{
-	struct process_ctx_s *ctx = data;
-
-	if (!vma->path)
-		return 0;
-
-	if (strcmp(vma->path, ctx->pvma->path))
-		return 0;
-
-	return process_unmap(ctx, vma->start, vma->end - vma->start);
-}
-
-static int unmap_old_lib(struct process_ctx_s *ctx)
-{
-	if (fixup_rtld(ctx))
-		return -EINVAL;
-
-	pr_debug("= Unmap target VMA:\n");
-	return iterate_file_vmas(&ctx->vmas, ctx, unmap_file_vma);
-}
-
-static int swap_check_backtrace(const struct process_ctx_s *ctx,
-				const struct backtrace_s *bt)
-{
-	return backtrace_check_vma(bt, ctx->pvma);
-}
-
-struct patch_ops_s patch_swap_ops = {
-	.name = "swap",
-	.collect_deps = process_collect_dependable_vmas,
-	.set_jumps = NULL,
-	.copy_data = copy_local_data,
-	.check_backtrace = swap_check_backtrace,
-	.fix_references = fix_target_references,
-	.cleanup_target = unmap_old_lib,
-};
-
-static struct patch_ops_s *get_patch_ops(const char *how)
-{
-	if (!strcmp(how, "jump"))
-		return &patch_jump_ops;
-	if (!strcmp(how, "swap"))
-		return &patch_swap_ops;
-	pr_msg("Error: \"how\" option can be either \"jump\" or \"swap\"\n");
-	return NULL;
-}
-#endif
-#ifdef SWAP_PATCHING
-static const struct patch_ops_s *set_patch_ops(const char *how)
-#else
-static const struct patch_ops_s *set_patch_ops(void)
-#endif
-{
-	struct patch_ops_s *ops;
-#ifdef SWAP_PATCHING
-	ops = get_patch_ops(how);
-#else
-	ops = &patch_jump_ops;
-#endif
-	ops->apply_patch = apply_dyn_binpatch;
-	return ops;
-}
-
-#ifdef SWAP_PATCHING
-int check_patch_mode(const char *how)
-{
-	return get_patch_ops(how) ? 0 : -EINVAL;
-}
-#endif

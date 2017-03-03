@@ -78,23 +78,6 @@ AC_CHECK_LIB(
 
 AC_PYTHON_MODULE(elftools.elf.elffile)
 
-AC_MSG_CHECKING([for library swap patching support])
-AC_ARG_ENABLE([swap_patching],
-	      [  --enable_swap-patching    Turn on swap code patching support],
-	      [case "${enableval}" in
-	         yes) swap_patching=yes ;;
-		 no)  swap_patching=no ;;
-		 *) AC_MSG_ERROR([bad value ${enableval} for --enable-swap-patching]) ;;
-	      esac],
-	      [swap_patching=no])
-AM_CONDITIONAL([SWAP_PATCHING], [test x$swap_patching = xyes])
-AS_IF([test x$swap_patching = xyes],
-      [
-       AC_DEFINE(SWAP_PATCHING,[],[Library swap code pathing support])
-       ],
-      [])
-AC_MSG_RESULT([$swap_patching])
-
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/nsbgen.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
 AC_SUBST([TESTS_DIR], ${ac_pwd}/tests)

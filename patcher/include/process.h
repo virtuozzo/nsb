@@ -13,14 +13,7 @@ struct func_jump_s {
 	int32_t			func_size;
 	int64_t			patch_value;
 };
-#ifdef SWAP_PATCHING
-struct local_var_s {
-	char			*name;
-	int32_t			size;
-	int32_t			offset;
-	int32_t			ref;
-};
-#endif
+
 struct segment_s {
 	char			*type;
 	int32_t			offset;
@@ -36,10 +29,6 @@ struct patch_info_s {
 	char			*old_bid;
 	char			*new_bid;
 	char			*path;
-#ifdef SWAP_PATCHING
-	size_t			n_local_vars;
-	struct local_var_s	**local_vars;
-#endif
 	size_t			n_segments;
 	struct segment_s	**segments;
 
