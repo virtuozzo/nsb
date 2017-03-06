@@ -25,8 +25,6 @@ class BinPatch:
 			self.common_func.append(fj)
 
 	def applicable(self):
-		return True
-
 		if self.bf_new.header.type != 'ET_DYN':
 			print "Wrong object file type: %s" % self.bf_new.header.type
 			print "Only shared object patches are supported"
