@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractmethod
 import binpatch_pb2
 from build_id import get_build_id
 from funcjump import FuncJump
+import staticsym_pb2
+import static
 
 class BinPatch:
 	__metaclass__ = ABCMeta
@@ -23,6 +25,8 @@ class BinPatch:
 			self.common_func.append(fj)
 
 	def applicable(self):
+		return True
+
 		if self.bf_new.header.type != 'ET_DYN':
 			print "Wrong object file type: %s" % self.bf_new.header.type
 			print "Only shared object patches are supported"
@@ -87,6 +91,12 @@ class BinPatch:
 		for fj in self.common_func:
 			funcjump = fj.patch_info()
 			pi.func_jumps.extend([funcjump])
+
+		print "Resolving static symbols"
+		static_sym_info = static.resolve(self.bf_old.elf.elf, self.bf_new.elf.elf)
+		pi.static_symbols.extend(
+			staticsym_pb2.StaticSym(idx=idx, addr=addr)
+				for idx, addr in static_sym_info)
 
 		print"\n"
 		return pi
