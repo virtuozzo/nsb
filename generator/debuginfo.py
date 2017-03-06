@@ -71,11 +71,21 @@ def read(elf, sym_names=None,
 	result = {}
 	sym_tags = [DW_TAG_subprogram, DW_TAG_variable]
 
-	def walk(die):
-		if die.tag in sym_tags and (
-			sym_names is None or
-				demangler(get_die_name(die)) in sym_names):
+	def should_process(die):
+		if die.tag not in sym_tags:
+			return False
 
+		if DW_AT_abstract_origin in die.attributes:
+			return False
+
+		if sym_names is None:
+			return True
+
+		name = get_die_name(die)
+		return demangler(name) in sym_names
+
+	def walk(die):
+		if should_process(die):
 			die_key = get_die_key(die, demangler)
 			assert die_key not in result
 
