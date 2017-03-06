@@ -224,6 +224,28 @@ static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
 	return cd;
 }
 
+static int dep_is_collected(const struct list_head *needed, const struct vma_area *vma)
+{
+	struct ctx_dep *cd;
+
+	list_for_each_entry(cd, needed, list) {
+		if (cd->vma == vma)
+			return 1;
+	}
+	return 0;
+}
+
+static void collect_new_deps(struct list_head *nested, struct list_head *head)
+{
+	struct ctx_dep *cd, *tmp;
+
+	list_for_each_entry_safe(cd, tmp, nested, list) {
+		if (dep_is_collected(head, cd->vma))
+			continue;
+		list_move_tail(&cd->list, head);
+	}
+}
+
 static int collect_lib_deps(struct process_ctx_s *ctx, const struct vma_area *vma, struct list_head *head)
 {
 	struct elf_needed *en;
@@ -252,7 +274,7 @@ static int collect_lib_deps(struct process_ctx_s *ctx, const struct vma_area *vm
 
 	}
 	list_splice_tail(&needed, head);
-	list_splice_tail(&nested, head);
+	collect_new_deps(&nested, head);
 	return 0;
 }
 
