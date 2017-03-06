@@ -42,6 +42,7 @@ struct patch_s {
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
 	struct elf_info_s	*ei;
+	struct list_head	objdeps;
 };
 
 struct ctx_dep {

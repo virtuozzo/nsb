@@ -22,6 +22,7 @@ struct process_ctx_s process_context = {
 	.p = {
 		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
+		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
 	}
 };
 
@@ -189,6 +190,26 @@ static int get_ctx_deplist(struct process_ctx_s *ctx)
 	return 0;
 }
 
+static int get_patch_deplist(struct process_ctx_s *ctx)
+{
+	int err;
+	struct ctx_dep *cd;
+	struct vma_area vma = {
+		.ei = P(ctx)->ei,
+	};
+
+	pr_debug("= Process patch soname search list:\n");
+
+	err = collect_lib_deps(ctx, &vma, &P(ctx)->objdeps);
+	if (err)
+		return err;
+
+	list_for_each_entry(cd, &P(ctx)->objdeps, list)
+		pr_debug("      - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
+
+	return 0;
+}
+
 static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
 {
 	const struct vma_area *pvma;
@@ -311,6 +332,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		return 1;
 
 	if (get_ctx_deplist(ctx))
+		return 1;
+
+	if (get_patch_deplist(ctx))
 		return 1;
 
 	if (collect_relocations(ctx))

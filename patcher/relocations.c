@@ -85,7 +85,13 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 			    const struct vma_area **vma,
 			    uint64_t patch_value)
 {
-	return __find_dym_sym(&ctx->objdeps, ctx->pvma, es, vma, es_s_value(es));
+	int64_t value;
+
+	value = __find_dym_sym(&ctx->objdeps, ctx->pvma, es, vma, es_s_value(es));
+	if (value != -ENOENT)
+		return value;
+
+	return __find_dym_sym(&P(ctx)->objdeps, NULL, es, vma, es_s_value(es));
 }
 
 
