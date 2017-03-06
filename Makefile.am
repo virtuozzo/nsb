@@ -21,9 +21,6 @@ generator_PYTHON =						\
 			generator/nsbgen.py		\
 							\
 			protobuf/binpatch_pb2.py	\
-			protobuf/datasym_pb2.py		\
-			protobuf/funcpatch_pb2.py	\
-			protobuf/objinfo_pb2.py		\
 			protobuf/funcjump_pb2.py	\
 			protobuf/segment_pb2.py
 
