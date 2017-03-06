@@ -1,7 +1,8 @@
 dist_noinst_DATA =			\
 		   binpatch.proto	\
 		   segment.proto	\
-		   funcjump.proto
+		   funcjump.proto	\
+		   staticsym.proto
 
 DEPS	= $(dist_noinst_DATA:.proto=.dep)
 

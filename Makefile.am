@@ -22,7 +22,8 @@ generator_PYTHON =						\
 							\
 			protobuf/binpatch_pb2.py	\
 			protobuf/funcjump_pb2.py	\
-			protobuf/segment_pb2.py
+			protobuf/segment_pb2.py		\
+			protobuf/staticsym_pb2.py
 
 bin_PROGRAMS = nsb
 
@@ -33,6 +34,8 @@ nsb_SOURCES =						\
 			protobuf/segment.pb-c.h		\
 			protobuf/funcjump.pb-c.c	\
 			protobuf/funcjump.pb-c.h	\
+			protobuf/staticsym.pb-c.c	\
+			protobuf/staticsym.pb-c.h	\
 							\
 			patcher/include/compiler.h	\
 			patcher/include/log.h		\

@@ -1,0 +1,4 @@
+message StaticSym {
+	required int32 idx		= 1;
+	required int64 addr		=2 ;
+}

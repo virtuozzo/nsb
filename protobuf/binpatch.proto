@@ -1,5 +1,6 @@
 import "segment.proto";
 import "funcjump.proto";
+import "staticsym.proto";
 
 message BinPatch {
 	required string		old_bid		= 1;
@@ -7,4 +8,5 @@ message BinPatch {
 	optional string		new_path	= 3;
 	repeated FuncJump	func_jumps	= 4;
 	repeated ElfSegment	new_segments	= 5;
+	repeated StaticSym	static_symbols	= 6;
 }
