@@ -11,12 +11,6 @@ ELF64_R_INFO = lambda s, t: (s << 32) | t
 PREFIX = 'vzpatch'
 prefix_re = re.compile(r'^{0}_(\d+_)*'.format(PREFIX))
 
-old_file   = sys.argv[1]
-patch_file = sys.argv[2]
-
-p_elf = elffile.ELFFile(open(patch_file, 'r+'))
-o_elf = elffile.ELFFile(open(old_file))
-
 def is_mangled(n):
 	return n.startswith(PREFIX)
 
@@ -28,35 +22,49 @@ def reverse_mapping(d):
 	assert len(result) == len(d)
 	return result
 
-sym_info  = list()
-sym_names = set()
-symtab = p_elf.get_section_by_name('.dynsym')
+def resolve(o_elf, p_elf):
+	result = []
 
-print("== Searching symbols to process")
-for sym_idx, sym in enumerate(symtab.iter_symbols()):
-	if not is_mangled(sym.name):
-		continue
+	sym_info  = list()
+	sym_names = set()
+	symtab = p_elf.get_section_by_name('.dynsym')
 
-	sym_name = sym.name
-	addr = sym.entry.st_value
-	print("{0:<4d} {1:016x} {2}".format(sym_idx, addr, sym_name))
+	print("== Searching symbols to process")
+	for sym_idx, sym in enumerate(symtab.iter_symbols()):
+		if not is_mangled(sym.name):
+			continue
 
-	sym_name_orig = demangle(sym_name)
-	sym_info.append((sym_idx, sym_name_orig, addr))
-	sym_names.add(sym_name_orig)
+		sym_name = sym.name
+		addr = sym.entry.st_value
+		print("{0:<4d} {1:016x} {2}".format(sym_idx, addr, sym_name))
 
-print("== Reading debuginfo for old ELF")
-o_di2addr = debuginfo.read(o_elf, sym_names)
+		sym_name_orig = demangle(sym_name)
+		sym_info.append((sym_idx, sym_name_orig, addr))
+		sym_names.add(sym_name_orig)
 
-print("== Reading debuginfo for new ELF")
-p_di2addr = debuginfo.read(p_elf, sym_names,
-		lambda n: demangle(n) if is_mangled(n) else n)
+	print("== Reading debuginfo for old ELF")
+	o_di2addr = debuginfo.read(o_elf, sym_names)
 
-p_addr2di = reverse_mapping(p_di2addr)
+	print("== Reading debuginfo for new ELF")
+	p_di2addr = debuginfo.read(p_elf, sym_names,
+			lambda n: demangle(n) if is_mangled(n) else n)
 
-print("== Resolving addresses in old ELF")
-for sym_idx, sym_name, p_addr in sym_info:
-	o_addr = o_di2addr[p_addr2di[p_addr]]
+	p_addr2di = reverse_mapping(p_di2addr)
 
-	print("{0:<4d} {1:016x} {2}".format(sym_idx, o_addr, sym_name))
+	print("== Resolving addresses in old ELF")
+	for sym_idx, sym_name, p_addr in sym_info:
+		o_addr = o_di2addr[p_addr2di[p_addr]]
+		result.append((sym_idx, o_addr))
+		print("{0:<4d} {1:016x} {2}".format(sym_idx, o_addr, sym_name))
+
+	return result
+
+if __name__ == '__main__':
+	old_file   = sys.argv[1]
+	patch_file = sys.argv[2]
+
+	old_elf = elffile.ELFFile(open(old_file))
+	patch_elf = elffile.ELFFile(open(patch_file))
+
+	resolve(old_elf, patch_elf)
 
