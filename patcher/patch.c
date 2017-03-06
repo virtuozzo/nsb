@@ -228,6 +228,17 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 	return 0;
 }
 
+static int process_find_patch(struct process_ctx_s *ctx, const char *bid)
+{
+	pr_info("= Cheking for patch is applied...\n");
+
+	if (find_vma_by_bid(&ctx->vmas, bid)) {
+		pr_err("Patch with Build ID %s is already applied\n", bid);
+		return -EEXIST;
+	}
+	return 0;
+}
+
 static int init_patch_info(struct patch_info_s *pi, const char *patchfile)
 {
 	int is_elf;
@@ -327,6 +338,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		return 1;
 	}
+
+	if (process_find_patch(ctx, PI(ctx)->new_bid))
+		return 1;
 
 	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
 		return 1;
