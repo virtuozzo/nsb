@@ -22,6 +22,30 @@ def reverse_mapping(d):
 	assert len(result) == len(d)
 	return result
 
+def read_symtab(elf, sym_names):
+	symtab = elf.get_section_by_name('.symtab')
+	if not symtab:
+		return
+
+	result = {}
+	for sym in symtab.iter_symbols():
+		if not sym.name:
+			continue
+
+		if sym.name not in sym_names:
+			continue
+
+		if sym.name in result:
+			print("Multiple entries for {0} in symbol table".format(sym.name))
+			return None
+
+		result[sym.name] = sym.entry.st_value
+
+	return result
+
+def resolve_symtab():
+	pass
+
 def resolve(o_elf, p_elf):
 	result = []
 
@@ -42,18 +66,23 @@ def resolve(o_elf, p_elf):
 		sym_info.append((sym_idx, sym_name_orig, addr))
 		sym_names.add(sym_name_orig)
 
-	print("== Reading debuginfo for old ELF")
-	o_di2addr = debuginfo.read(o_elf, sym_names)
+	sym_name2addr = read_symtab(o_elf, sym_names)
+	if sym_name2addr is not None:
+		lookup = lambda name, addr: sym_name2addr[name]
+	else:
+		print("== Reading debuginfo for old ELF")
+		o_di2addr = debuginfo.read(o_elf, sym_names)
 
-	print("== Reading debuginfo for new ELF")
-	p_di2addr = debuginfo.read(p_elf, sym_names,
-			lambda n: demangle(n) if is_mangled(n) else n)
+		print("== Reading debuginfo for new ELF")
+		p_di2addr = debuginfo.read(p_elf, sym_names,
+				lambda n: demangle(n) if is_mangled(n) else n)
 
-	p_addr2di = reverse_mapping(p_di2addr)
+		p_addr2di = reverse_mapping(p_di2addr)
+		lookup = lambda name, addr: o_di2addr[p_addr2di[addr]]
 
 	print("== Resolving addresses in old ELF")
 	for sym_idx, sym_name, p_addr in sym_info:
-		o_addr = o_di2addr[p_addr2di[p_addr]]
+		o_addr = lookup(sym_name, p_addr)
 		result.append((sym_idx, o_addr))
 		print("{0:<4d} {1:016x} {2}".format(sym_idx, o_addr, sym_name))
 
