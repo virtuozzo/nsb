@@ -77,6 +77,7 @@ AC_CHECK_LIB(
 ])
 
 AC_PYTHON_MODULE(elftools.elf.elffile)
+AC_PYTHON_MODULE(google.protobuf)
 
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/nsbgen.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
