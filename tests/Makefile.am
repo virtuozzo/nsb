@@ -33,7 +33,7 @@ check_PROGRAMS += nsb_test_types.py
 ########################
 
 patch_%.so: %.c test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -shared -fpic $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH -g -shared -fpic $^ -o $@
 
 patch_global_func.so$(EXEEXT): global_func.c
 patch_static_func.so$(EXEEXT): static_func.c
