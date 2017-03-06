@@ -3,14 +3,14 @@ import argparse
 from build_id import get_build_id
 
 def check_build_id(bid):
+	if len(bid) != 40:
+		msg = "%r must be 40-symbols long" % bid
+		raise argparse.ArgumentTypeError(msg)
+
 	try:
 		val = int(bid, 16)
 	except ValueError:
 		msg = "%r must be hexidecimal number" % bid
-		raise argparse.ArgumentTypeError(msg)
-
-	if len("%x" % val) != 40:
-		msg = "%r must be 40-symbols long" % bid
 		raise argparse.ArgumentTypeError(msg)
 
 	return bid
