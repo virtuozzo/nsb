@@ -34,12 +34,12 @@ class BinFile:
 		self.objects[obj.name] = obj
 
 	def __parse__(self):
-		with open(self.filename, 'rb') as stream:
-			elf = elffile.ElfFile(stream)
-			self.header = elf.get_header()
-			self.symbols = elf.get_symbols()
-			self.sections = elf.get_sections()
-			self.segments = elf.get_segments()
+		stream = open(self.filename, 'rb')
+		self.elf = elf = elffile.ElfFile(stream)
+		self.header = elf.get_header()
+		self.symbols = elf.get_symbols()
+		self.sections = elf.get_sections()
+		self.segments = elf.get_segments()
 
 		if self.symbols is None:
 			print "  No symbols found. Perhaps this ELF has been stripped?"
