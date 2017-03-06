@@ -45,10 +45,10 @@ for sym_idx, sym in enumerate(symtab.iter_symbols()):
 	sym_info.append((sym_idx, sym_name_orig, addr))
 	sym_names.add(sym_name_orig)
 
-print("== Reading debuginfo for {0}".format(old_file))
+print("== Reading debuginfo for old ELF")
 o_di2addr = debuginfo.read(o_elf, sym_names)
 
-print("== Reading debuginfo for {0}".format(patch_file))
+print("== Reading debuginfo for new ELF")
 p_di2addr = debuginfo.read(p_elf, sym_names,
 		lambda n: demangle(n) if is_mangled(n) else n)
 
