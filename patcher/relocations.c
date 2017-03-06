@@ -43,16 +43,17 @@ int collect_relocations(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int64_t find_dym_sym(const struct process_ctx_s *ctx,
-			    struct extern_symbol *es,
-			    const struct vma_area **vma_area,
-			    uint64_t patch_value)
+static int64_t __find_dym_sym(const struct list_head *deps,
+			      const struct vma_area *stop_vma,
+			      struct extern_symbol *es,
+			      const struct vma_area **vma_area,
+			      uint64_t patch_value)
 {
 	int64_t value;
 	const struct ctx_dep *n;
 
 	es->vma = NULL;
-	list_for_each_entry(n, &ctx->objdeps, list) {
+	list_for_each_entry(n, deps, list) {
 		const struct vma_area *vma = n->vma;
 
 		/* If symbol is defined in the patch and we reached the old
@@ -62,7 +63,7 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 		 * Without this check we can find the symbol not in the patch,
 		 * but somewhere else in soname list, which is wrong.
 		 */
-		if (patch_value && (vma == ctx->pvma))
+		if (patch_value && (vma == stop_vma))
 			/* Note, that VMA remains NULL. It will be used is
 			 * patch marker in apply_es()
 			 */
@@ -78,6 +79,15 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 	}
 	return -ENOENT;
 }
+
+static int64_t find_dym_sym(const struct process_ctx_s *ctx,
+			    struct extern_symbol *es,
+			    const struct vma_area **vma,
+			    uint64_t patch_value)
+{
+	return __find_dym_sym(&ctx->objdeps, ctx->pvma, es, vma, es_s_value(es));
+}
+
 
 static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol *es)
 {
