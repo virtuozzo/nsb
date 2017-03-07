@@ -46,7 +46,6 @@ int collect_relocations(struct process_ctx_s *ctx)
 static int64_t __find_dym_sym(const struct list_head *deps,
 			      const struct vma_area *stop_vma,
 			      struct extern_symbol *es,
-			      const struct vma_area **vma_area,
 			      uint64_t patch_value)
 {
 	int64_t value;
@@ -81,17 +80,15 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 }
 
 static int64_t find_dym_sym(const struct process_ctx_s *ctx,
-			    struct extern_symbol *es,
-			    const struct vma_area **vma,
-			    uint64_t patch_value)
+			    struct extern_symbol *es)
 {
 	int64_t value;
 
-	value = __find_dym_sym(&ctx->objdeps, ctx->pvma, es, vma, es_s_value(es));
+	value = __find_dym_sym(&ctx->objdeps, ctx->pvma, es, es_s_value(es));
 	if (value != -ENOENT)
 		return value;
 
-	return __find_dym_sym(&P(ctx)->objdeps, NULL, es, vma, es_s_value(es));
+	return __find_dym_sym(&P(ctx)->objdeps, NULL, es, es_s_value(es));
 }
 
 
@@ -99,9 +96,8 @@ static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol 
 {
 	int err;
 	int64_t value;
-	const struct vma_area *vma = NULL;
 
-	value = find_dym_sym(ctx, es, &vma, es_s_value(es));
+	value = find_dym_sym(ctx, es);
 	if (value < 0)
 		return value;
 
