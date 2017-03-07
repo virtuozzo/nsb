@@ -23,6 +23,7 @@ struct process_ctx_s process_context = {
 		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
+		.segments = LIST_HEAD_INIT(process_context.p.segments),
 	}
 };
 
@@ -87,7 +88,7 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 		hint = ctx->pvma->start & 0xfffffffff0000000;
 	else
 		hint = 0x1000000;
-	return load_elf(ctx, hint);
+	return load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
 }
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)

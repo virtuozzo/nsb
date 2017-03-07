@@ -146,106 +146,141 @@ int elf_library_status(void)
 }
 
 struct segment_s {
-	char			*type;
-	int32_t			offset;
-	int32_t			vaddr;
-	int32_t			paddr;
-	int32_t			mem_sz;
-	int32_t			flags;
-	int32_t			align;
-	int32_t			file_sz;
+	struct list_head	list;
+	uint64_t		addr;
+	size_t			size;
 };
 
-static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct segment_s *es, int flags)
+static int64_t elf_load_segment(struct process_ctx_s *ctx, const GElf_Phdr *phdr,
+				int fd, uint64_t hint, size_t size, int flags)
 {
-	unsigned long size = es->file_sz + ELF_PAGEOFFSET(es->vaddr);
-	unsigned long off = es->offset - ELF_PAGEOFFSET(es->vaddr);
+	unsigned long off = phdr->p_offset - ELF_PAGEOFFSET(phdr->p_vaddr);
 	int prot = 0;
 	int64_t maddr;
 
-	addr = ELF_PAGESTART(addr);
-	size = ELF_PAGEALIGN(size);
+	hint = ELF_PAGESTART(hint + phdr->p_vaddr);
 
-	if (!size)
-		return addr;
-
-	if (es->flags & PF_R)
+	if (phdr->p_flags & PF_R)
 		prot = PROT_READ;
-	if (es->flags & PF_W)
+	if (phdr->p_flags & PF_W)
 		prot |= PROT_WRITE;
-	if (es->flags & PF_X)
+	if (phdr->p_flags & PF_X)
 		prot |= PROT_EXEC;
-	maddr = process_create_map(ctx, fd, off, addr, size, flags, prot);
+	maddr = process_create_map(ctx, fd, off, hint, size, flags, prot);
 	if (maddr > 0)
-		pr_info("    - %#lx-%#lx, prot: %#x, flags: %#x, off: %#lx\n", maddr, maddr + size, prot, flags, off);
+		pr_info("    - %#lx-%#lx, prot: %#x, flags: %#x, off: %#lx\n",
+				maddr, maddr + size, prot, flags, off);
+	else
+		pr_err("failed to create new mapping %#lx-%#lx "
+		       "in process %d with flags %#x, prot %#x, off %#lx\n",
+		       maddr, maddr + size, ctx->pid, prot, flags, off);
 	return maddr;
 }
 
-int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
+static int64_t first_segment_addr(struct process_ctx_s *ctx)
 {
-	const struct patch_info_s *pi = PI(ctx);
-	int i, fd;
-	int flags = MAP_PRIVATE;
-	const struct elf_info_s *ei = P(ctx)->ei;
+	struct list_head *segments = &P(ctx)->segments;
+	if (list_empty(segments)) {
+		pr_err("no segments were loaded\n");
+		return -ENOENT;
+	}
+	return list_entry(segments->next, typeof(struct segment_s), list)->addr;
+}
+
+static int load_elf_segment(struct process_ctx_s *ctx,
+			    struct list_head *segments,
+			    const GElf_Phdr *phdr, int fd, uint64_t hint)
+{
+	struct segment_s *s;
+	int64_t addr;
+	unsigned flags = MAP_PRIVATE;
+	size_t size;
+
+	if (!list_empty(&P(ctx)->segments)) {
+		flags |= MAP_FIXED;
+		hint = first_segment_addr(ctx);
+		if (hint < 0)
+			return hint;
+	}
+
+	s = xmalloc(sizeof(*s));
+	if (!s)
+		return -ENOMEM;
+
+	size = ELF_PAGEALIGN(phdr->p_filesz + ELF_PAGEOFFSET(phdr->p_vaddr));
+
+	addr = elf_load_segment(ctx, phdr, fd, hint, size, flags);
+	if (addr == -1)
+		return addr;
+
+	s->addr = addr;
+	s->size = size;
+	list_add_tail(&s->list, segments);
+	return 0;
+}
+
+static void unload_segment(struct process_ctx_s *ctx, struct segment_s *s)
+{
+	process_unmap(ctx, s->addr, s->size);
+}
+
+void unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
+{
+	struct segment_s *s, *tmp;
+
+	list_for_each_entry_safe(s, tmp, &P(ctx)->segments, list) {
+		unload_segment(ctx, s);
+		list_del(&s->list);
+		free(s);
+	}
+}
+
+int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
+		 const struct elf_info_s *ei, uint64_t hint)
+{
+	int i, fd, err = -1;
 	size_t pnum;
 
-	pr_info("= Loading %s:\n", pi->path);
+	pr_info("= Loading %s:\n", ei->path);
 
 	if (elf_getphdrnum(ei->e, &pnum)) {
 		pr_err("elf_getphdrnum() failed: %s\n", elf_errmsg(-1));
 		return -1;
 	}
 
-	fd = open(pi->path, O_RDONLY);
+	fd = open(ei->path, O_RDONLY);
 	if (fd < 0) {
-		pr_perror("failed to open %s for read", pi->path);
+		pr_perror("failed to open %s for read", ei->path);
 		return -1;
 	}
 
-	fd = process_open_file(ctx, pi->path, O_RDONLY, 0);
+	fd = process_open_file(ctx, ei->path, O_RDONLY, 0);
 	if (fd < 0)
 		return -1;
 
-
 	for (i = 0; i < pnum; i++) {
 		GElf_Phdr phdr;
-		struct segment_s es;
-		int64_t addr;
 
-		if (gelf_getphdr(ei->e, i, &phdr) != &phdr) {
+		if (gelf_getphdr(P(ctx)->ei->e, i, &phdr) != &phdr) {
 			pr_err("gelf_getphdr() failed: %s\n", elf_errmsg(-1));
-			return -1;
+			goto err;
 		}
 
 		if (phdr.p_type != PT_LOAD)
 			continue;
 
-		es.flags = phdr.p_flags;
-		es.flags = phdr.p_flags;
-		es.offset = phdr.p_offset;
-		es.vaddr = phdr.p_vaddr;
-		es.paddr = phdr.p_paddr;
-		es.file_sz = phdr.p_filesz;
-		es.mem_sz = phdr.p_memsz;
-		es.align = phdr.p_align;
-
-		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
-			 segment_type(phdr.p_type), es.offset, es.vaddr, es.paddr, es.mem_sz, es.flags, es.align, es.file_sz);
-
-		addr = elf_map(ctx, fd, hint + es.vaddr, &es, flags);
-		if (addr == -1) {
-			pr_perror("failed to map");
-			hint = -1;
-			break;
-		}
-
-		hint += addr - ELF_PAGESTART(hint + es.vaddr);
-		flags |= MAP_FIXED;
+		err = load_elf_segment(ctx, segments, &phdr, fd, hint);
+		if (err < 0)
+			goto err;
 	}
 
 	(void)process_close_file(ctx, fd);
 
-	return hint;
+	return first_segment_addr(ctx);
+err:
+	unload_elf(ctx, segments);
+	(void)process_close_file(ctx, fd);
+	return err;
 }
 
 static Elf *elf_fd(const char *path, int fd)
