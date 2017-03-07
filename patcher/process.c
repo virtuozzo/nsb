@@ -37,11 +37,41 @@ int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size)
 	return ptrace_peek_area(pid, data, (void *)addr, size);
 }
 
+static const char *map_flags(unsigned flags, char *buf)
+{
+	if (flags & MAP_SHARED)
+		strcpy(buf, "MAP_SHARED");
+	else
+		strcpy(buf, "MAP_PRIVATE");
+
+	if (flags & MAP_FIXED)
+		strcat(buf, " | MAP_FIXED");
+
+	if (flags & MAP_ANONYMOUS)
+		strcat(buf, " | MAP_ANONYMOUS");
+
+	return buf;
+}
+
+static const char *map_prot(unsigned prot, char *buf)
+{
+	strcpy(buf, "---");
+	if (prot & PROT_READ)
+		buf[0] = 'r';
+	if (prot & PROT_WRITE)
+		buf[1] = 'w';
+	if (prot & PROT_EXEC)
+		buf[2] = 'x';
+	return buf;
+}
+
 int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 			unsigned long addr, size_t size, int flags, int prot)
 {
 	int ret;
 	long sret = -ENOSYS;
+	char fbuf[512];
+	char pbuf[4];
 
 	ret = compel_syscall(ctx->ctl, __NR(mmap, false), &sret,
 			     addr, size, prot, flags, fd, offset);
@@ -56,9 +86,10 @@ int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
 		return -1;
 	}
 
-	pr_debug("    Created map %#lx-%#lx in task %d\n",
-		 sret, sret + size, ctx->pid);
-
+	pr_info("  - %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
+			sret, sret + size, offset,
+			map_prot(prot, pbuf),
+			map_flags(flags, fbuf));
 	return sret;
 }
 
