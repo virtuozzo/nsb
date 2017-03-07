@@ -173,10 +173,17 @@ static int collect_ctx_deplist(struct process_ctx_s *ctx)
 	return collect_lib_deps(ctx, exe_vma, &ctx->objdeps);
 }
 
+static void print_deps(const struct list_head *head)
+{
+	struct ctx_dep *cd;
+
+	list_for_each_entry(cd, head, list)
+		pr_debug("  - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
+}
+
 static int get_ctx_deplist(struct process_ctx_s *ctx)
 {
 	int err;
-	struct ctx_dep *cd;
 
 	pr_debug("= Process soname search list:\n");
 
@@ -184,16 +191,13 @@ static int get_ctx_deplist(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	list_for_each_entry(cd, &ctx->objdeps, list)
-		pr_debug("      - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
-
+	print_deps(&ctx->objdeps);
 	return 0;
 }
 
 static int get_patch_deplist(struct process_ctx_s *ctx)
 {
 	int err;
-	struct ctx_dep *cd;
 	struct vma_area vma = {
 		.ei = P(ctx)->ei,
 	};
@@ -204,9 +208,7 @@ static int get_patch_deplist(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	list_for_each_entry(cd, &P(ctx)->objdeps, list)
-		pr_debug("      - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
-
+	print_deps(&ctx->objdeps);
 	return 0;
 }
 
