@@ -113,6 +113,25 @@ const char *relocation_types[R_X86_64_NUM] = {
 	"R_X86_64_RELATIVE64",
 };
 
+const char *segment_types[PT_NUM] = {
+	"PT_NULL",
+	"PT_LOAD",
+	"PT_DYNAMIC",
+	"PT_INTERP",
+	"PT_NOTE",
+	"PT_SHLIB",
+	"PT_PHDR",
+	"PT_TLS",
+};
+
+const char *segment_type(int type)
+{
+	if (type < R_X86_64_NUM)
+		return segment_types[type];
+	pr_err("unknown segment type: %d\n", type);
+	return NULL;
+}
+
 static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 static int elf_collect_needed(struct elf_info_s *ei);
 static char *elf_get_bid(struct elf_info_s *ei);
@@ -156,8 +175,16 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 	const struct patch_info_s *pi = PI(ctx);
 	int i, fd;
 	int flags = MAP_PRIVATE;
+	const struct elf_info_s *ei = P(ctx)->ei;
+	size_t pnum;
 
 	pr_info("= Loading %s:\n", pi->path);
+
+	if (elf_getphdrnum(ei->e, &pnum)) {
+		pr_err("elf_getphdrnum() failed: %s\n", elf_errmsg(-1));
+		return -1;
+	}
+
 	fd = open(pi->path, O_RDONLY);
 	if (fd < 0) {
 		pr_perror("failed to open %s for read", pi->path);
@@ -168,24 +195,40 @@ int64_t load_elf(struct process_ctx_s *ctx, uint64_t hint)
 	if (fd < 0)
 		return -1;
 
-	for (i = 0; i < pi->n_segments; i++) {
-		struct segment_s *es = pi->segments[i];
+
+	for (i = 0; i < pnum; i++) {
+		GElf_Phdr phdr;
+		struct segment_s es;
 		int64_t addr;
 
-		if (strcmp(es->type, "PT_LOAD"))
+		if (gelf_getphdr(ei->e, i, &phdr) != &phdr) {
+			pr_err("gelf_getphdr() failed: %s\n", elf_errmsg(-1));
+			return -1;
+		}
+
+		if (phdr.p_type != PT_LOAD)
 			continue;
 
-		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
-			 es->type, es->offset, es->vaddr, es->paddr, es->mem_sz, es->flags, es->align, es->file_sz);
+		es.flags = phdr.p_flags;
+		es.flags = phdr.p_flags;
+		es.offset = phdr.p_offset;
+		es.vaddr = phdr.p_vaddr;
+		es.paddr = phdr.p_paddr;
+		es.file_sz = phdr.p_filesz;
+		es.mem_sz = phdr.p_memsz;
+		es.align = phdr.p_align;
 
-		addr = elf_map(ctx, fd, hint + es->vaddr, es, flags);
+		pr_debug("  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x\n",
+			 segment_type(phdr.p_type), es.offset, es.vaddr, es.paddr, es.mem_sz, es.flags, es.align, es.file_sz);
+
+		addr = elf_map(ctx, fd, hint + es.vaddr, &es, flags);
 		if (addr == -1) {
 			pr_perror("failed to map");
 			hint = -1;
 			break;
 		}
 
-		hint += addr - ELF_PAGESTART(hint + es->vaddr);
+		hint += addr - ELF_PAGESTART(hint + es.vaddr);
 		flags |= MAP_FIXED;
 	}
 
