@@ -5,18 +5,26 @@
 #include "include/process.h"
 #include "include/vma.h"
 
-static void print_relocation(const struct extern_symbol *es)
+static void print_relocation(const struct list_head *head, const char *name)
 {
-	pr_debug("      %012lx  %012lx  %17.17s  %016lx  %s + %ld:\n",
-			es_r_offset(es), es_r_info(es),
-			es_relocation(es), es_s_value(es),
-			es->name, es_r_addend(es));
+	struct extern_symbol *es;
+
+	if (list_empty(head))
+		return;
+
+	pr_debug("  %s:\n", name);
+	pr_debug("    Offset        Info          Type               "
+		 "Symbol value      Name + Addend\n");
+	list_for_each_entry(es, head, list)
+		pr_debug("    %012lx  %012lx  %17.17s  %016lx  %s + %ld:\n",
+				es_r_offset(es), es_r_info(es),
+				es_relocation(es), es_s_value(es),
+				es->name, es_r_addend(es));
 }
 
 int collect_relocations(struct process_ctx_s *ctx)
 {
 	int err;
-	struct extern_symbol *es;
 
 	pr_debug("= Collect relocations:\n");
 
@@ -24,22 +32,13 @@ int collect_relocations(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	pr_debug("    .rela.plt:\n");
-	pr_debug("      Offset        Info          Type               "
-		 "Symbol value      Name + Addend\n");
-	list_for_each_entry(es, &P(ctx)->rela_plt, list)
-		print_relocation(es);
+	print_relocation(&P(ctx)->rela_plt, ".rela.plt");
 
 	err = elf_rela_dyn(P(ctx)->ei, &P(ctx)->rela_dyn);
 	if (err)
 		return err;
 
-	pr_debug("    .rela.dyn:\n");
-	pr_debug("      Offset        Info          Type               "
-		 "Symbol value      Name + Addend\n");
-	list_for_each_entry(es, &P(ctx)->rela_dyn, list)
-		print_relocation(es);
-
+	print_relocation(&P(ctx)->rela_plt, ".rela.plt");
 	return 0;
 }
 
@@ -128,15 +127,23 @@ static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol 
 	return 0;
 }
 
-static void print_resolution(const struct process_ctx_s *ctx,
-			     const struct extern_symbol *es)
+static void print_resolution(struct process_ctx_s *ctx,
+			     const struct list_head *head, const char *name)
 {
-	pr_debug("    %4d:  %012lx  %4ld  %7.7s  %6.6s  %s  %s\n",
-			es_r_sym(es), es->address,
-			es_s_size(es), es_type(es), es_binding(es),
-			es->name,
-			(es->address == 0) ? "" :
-			((es->vma) ? es->vma->path : ctx->pvma->path));
+	struct extern_symbol *es;
+
+	if (list_empty(head))
+		return;
+
+	pr_debug("  %s:\n", name);
+	pr_debug("      Nr:  Value         Size   Type    Bind    Name\n");
+	list_for_each_entry(es, head, list)
+		pr_debug("    %4d:  %012lx  %4ld  %7.7s  %6.6s  %s  %s\n",
+				es_r_sym(es), es->address,
+				es_s_size(es), es_type(es), es_binding(es),
+				es->name,
+				(es->address == 0) ? "" :
+				((es->vma) ? es->vma->path : ctx->pvma->path));
 }
 
 static int resolve_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
@@ -175,18 +182,8 @@ int resolve_relocations(struct process_ctx_s *ctx)
 			return err;
 	}
 
-	if (!list_empty(&P(ctx)->rela_plt)) {
-		pr_debug("    .rela.plt:\n");
-		pr_debug("      Nr:  Value         Size   Type    Bind    Name\n");
-		list_for_each_entry(es, &P(ctx)->rela_plt, list)
-			print_resolution(ctx, es);
-	}
-	if (!list_empty(&P(ctx)->rela_dyn)) {
-		pr_debug("    .rela.dyn:\n");
-		pr_debug("      Nr:  Value         Size   Type    Bind    Name\n");
-		list_for_each_entry(es, &P(ctx)->rela_dyn, list)
-			print_resolution(ctx, es);
-	}
+	print_resolution(ctx, &P(ctx)->rela_plt, ".rela.plt");
+	print_resolution(ctx, &P(ctx)->rela_dyn, ".rela.dyn");
 	return 0;
 }
 
