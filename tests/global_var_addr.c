@@ -1,12 +1,19 @@
 #include "test_types.h"
 
-extern long global_var;
 
 #ifdef PATCH
-extern long *global_var_addr;
+extern long vzpatch_global_var;
+extern long *vzpatch_global_var_addr;
+
+long test_global_var_addr(int type)
+{
+	if (vzpatch_global_var_addr == &vzpatch_global_var)
+		return original_result(type);
+	return TEST_FAILED;
+}
 #else
+extern long global_var;
 long *global_var_addr = &global_var;
-#endif
 
 long test_global_var_addr(int type)
 {
@@ -14,3 +21,4 @@ long test_global_var_addr(int type)
 		return original_result(type);
 	return TEST_FAILED;
 }
+#endif
