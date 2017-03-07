@@ -124,6 +124,38 @@ static int set_patch_func_jumps(struct patch_info_s *patch_info, BinPatch *bp)
 	return 0;
 }
 
+static struct static_sym_s *create_static_sym(const StaticSym *ss)
+{
+	struct static_sym_s *static_sym;
+
+	static_sym = xmalloc(sizeof(struct static_sym_s));
+	if (!static_sym)
+		return NULL;
+
+	static_sym->idx = ss->idx;
+	static_sym->addr = ss->addr;
+	return static_sym;
+}
+
+static int set_patch_static_syms(struct patch_info_s *patch_info, BinPatch *bp)
+{
+	int i;
+	struct static_sym_s **static_syms;
+
+	static_syms = xmalloc(sizeof(struct static_sym_s *) * bp->n_static_symbols);
+	if (!static_syms)
+		return -ENOMEM;
+
+	for (i = 0; i < bp->n_static_symbols; i++) {
+		static_syms[i] = create_static_sym(bp->static_symbols[i]);
+		if (!static_syms[i])
+			return -ENOMEM;
+	}
+	patch_info->n_static_syms = bp->n_static_symbols;
+	patch_info->static_syms = static_syms;
+	return 0;
+}
+
 int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, size_t size)
 {
 	int err = -ENOMEM;
@@ -153,6 +185,9 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 		goto free_local_vars;
 
 	if (set_patch_func_jumps(patch_info, bp))
+		goto free_info_segments;
+
+	if (set_patch_static_syms(patch_info, bp))
 		goto free_info_segments;
 
 	err = 0;
