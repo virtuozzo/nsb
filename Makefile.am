@@ -78,8 +78,6 @@ TEST_FILES += tests/static_func_cb.c
 TEST_FILES += tests/static_var.c
 
 LIBRARY_TESTS = $(TEST_FILES:.c=__library.py)
-LIBRARY_XFAIL_TESTS = tests/static_func_cb__library.py
-LIBRARY_XFAIL_TESTS += tests/static_var__library.py
 
 STATIC_TESTS = $(TEST_FILES:.c=__static.py)
 STATIC_XFAIL_TESTS = tests/static_func_cb__static.py
@@ -89,9 +87,7 @@ STATIC_XFAIL_TESTS += tests/global_var__static.py
 STATIC_XFAIL_TESTS += tests/global_var_addr__static.py
 
 SHARED_TESTS = $(TEST_FILES:.c=__shared.py)
-SHARED_XFAIL_TESTS = tests/static_func_cb__shared.py
-SHARED_XFAIL_TESTS += tests/static_var__shared.py
-SHARED_XFAIL_TESTS += tests/global_func_cb__shared.py
+SHARED_XFAIL_TESTS = tests/global_func_cb__shared.py
 SHARED_XFAIL_TESTS += tests/global_var__shared.py
 SHARED_XFAIL_TESTS += tests/global_var_addr__shared.py
 
