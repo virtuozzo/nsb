@@ -79,10 +79,31 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 	return -ENOENT;
 }
 
+static int64_t check_sym_info(const struct process_ctx_s *ctx,
+			      struct extern_symbol *es)
+{
+	int i;
+	const struct patch_info_s *pi = PI(ctx);
+
+	for (i = 0; i < pi->n_static_syms; i++) {
+		const struct static_sym_s *si = pi->static_syms[i];
+
+		if (si->idx == es_r_sym(es)) {
+			es->vma = ctx->pvma;
+			return si->addr;
+		}
+	}
+	return 0;
+}
+
 static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 			    struct extern_symbol *es)
 {
 	int64_t value;
+
+	value = check_sym_info(ctx, es);
+	if (value)
+		return value;
 
 	value = __find_dym_sym(&ctx->objdeps, ctx->pvma, es, es_s_value(es));
 	if (value != -ENOENT)
@@ -90,7 +111,6 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 
 	return __find_dym_sym(&P(ctx)->objdeps, NULL, es, es_s_value(es));
 }
-
 
 static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol *es)
 {
