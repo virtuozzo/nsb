@@ -198,9 +198,11 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 
 	plt_addr = PLA(ctx) + es_r_offset(es);
 
-	if (es->vma)
-		func_addr = es->vma->start + es->address;
-	else
+	if (es->vma) {
+		func_addr = es->address;
+		if (elf_type_dyn(es->vma->ei))
+			func_addr += es->vma->start;
+	} else
 		func_addr = PLA(ctx) + es->address;
 
 	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
