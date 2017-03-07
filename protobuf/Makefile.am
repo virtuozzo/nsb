@@ -1,6 +1,5 @@
 dist_noinst_DATA =			\
 		   binpatch.proto	\
-		   segment.proto	\
 		   funcjump.proto	\
 		   staticsym.proto
 

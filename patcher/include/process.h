@@ -19,23 +19,10 @@ struct func_jump_s {
 	int64_t			patch_value;
 };
 
-struct segment_s {
-	char			*type;
-	int32_t			offset;
-	int32_t			vaddr;
-	int32_t			paddr;
-	int32_t			mem_sz;
-	int32_t			flags;
-	int32_t			align;
-	int32_t			file_sz;
-};
-
 struct patch_info_s {
 	char			*old_bid;
 	char			*new_bid;
 	char			*path;
-	size_t			n_segments;
-	struct segment_s	**segments;
 
 	size_t			n_func_jumps;
 	struct func_jump_s	**func_jumps;

@@ -39,7 +39,6 @@ class BinFile:
 		self.header = elf.get_header()
 		self.symbols = elf.get_symbols()
 		self.sections = elf.get_sections()
-		self.segments = elf.get_segments()
 
 		if self.symbols is None:
 			print "  No symbols found. Perhaps this ELF has been stripped?"

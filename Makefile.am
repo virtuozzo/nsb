@@ -30,8 +30,6 @@ bin_PROGRAMS = nsb
 nsb_SOURCES =						\
 			protobuf/binpatch.pb-c.c	\
 			protobuf/binpatch.pb-c.h	\
-			protobuf/segment.pb-c.c		\
-			protobuf/segment.pb-c.h		\
 			protobuf/funcjump.pb-c.c	\
 			protobuf/funcjump.pb-c.h	\
 			protobuf/staticsym.pb-c.c	\

@@ -11,7 +11,6 @@
 #include "include/util.h"
 
 #include <protobuf/binpatch.pb-c.h>
-#include <protobuf/segment.pb-c.h>
 #include <protobuf/funcjump.pb-c.h>
 
 static ssize_t read_protobuf_binpatch(const char *path, void **patch)
@@ -44,47 +43,6 @@ static ssize_t read_protobuf_binpatch(const char *path, void **patch)
 free_data:
 	free(data);
 	return res;
-}
-
-static struct segment_s *create_segment(const ElfSegment *seg)
-{
-	struct segment_s *segment;
-
-	segment = xmalloc(sizeof(struct segment_s));
-	if (!segment)
-		return NULL;
-
-	segment->type = strdup(seg->type);
-	if (!segment->type)
-		return NULL;
-
-	segment->offset = seg->offset;
-	segment->vaddr = seg->vaddr;
-	segment->paddr = seg->paddr;
-	segment->mem_sz = seg->mem_sz;
-	segment->flags = seg->flags;
-	segment->align = seg->align;
-	segment->file_sz = seg->file_sz;
-	return segment;
-}
-
-static int set_patch_info_segments(struct patch_info_s *patch_info, BinPatch *bp)
-{
-	int i;
-	struct segment_s **segments;
-
-	segments = xmalloc(sizeof(struct segment_s *) * bp->n_new_segments);
-	if (!segments)
-		return -ENOMEM;
-
-	for (i = 0; i < bp->n_new_segments; i++) {
-		segments[i] = create_segment(bp->new_segments[i]);
-		if (!segments[i])
-			return -ENOMEM;
-	}
-	patch_info->n_segments = bp->n_new_segments;
-	patch_info->segments = segments;
-	return 0;
 }
 
 static struct func_jump_s *create_funcjump(const FuncJump *fj)
@@ -181,14 +139,11 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 			goto free_new_bid;
 	}
 
-	if (set_patch_info_segments(patch_info, bp))
-		goto free_local_vars;
-
 	if (set_patch_func_jumps(patch_info, bp))
-		goto free_info_segments;
+		goto free_new_path;
 
 	if (set_patch_static_syms(patch_info, bp))
-		goto free_info_segments;
+		goto free_func_jumps;
 
 	err = 0;
 
@@ -196,10 +151,9 @@ free_unpacked:
 	bin_patch__free_unpacked(bp, NULL);
 	return err;
 
-free_info_segments:
+free_func_jumps:
 	// TODO
-free_local_vars:
-	// TODO
+free_new_path:
 	if (bp->new_path)
 		free(patch_info->path);
 free_new_bid:

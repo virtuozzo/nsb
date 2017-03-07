@@ -71,20 +71,6 @@ class BinPatch:
 			pi.new_path = self.bf_new.filename
 			print "  Patch path    : %s" % pi.new_path
 
-		print "\nSegments:"
-		for s in self.bf_new.segments:
-			si = pi.new_segments.add()
-			si.type    = s.type;
-			si.offset  = s.offset;
-			si.vaddr   = s.vaddr;
-			si.paddr   = s.paddr;
-			si.mem_sz  = s.mem_sz;
-			si.flags   = s.flags;
-			si.align   = s.align;
-			si.file_sz = s.file_sz;
-			print "  %s: offset: %#x, vaddr: %#x, paddr: %#x, mem_sz: %#x, flags: %#x, align: %#x, file_sz: %#x" %  \
-				(si.type, si.offset, si.vaddr, si.paddr, si.mem_sz, si.flags, si.align, si.file_sz)
-
 		print "\nFunction jumps:"
 		for fj in self.common_func:
 			funcjump = fj.patch_info()

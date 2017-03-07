@@ -145,6 +145,17 @@ int elf_library_status(void)
 	return 0;
 }
 
+struct segment_s {
+	char			*type;
+	int32_t			offset;
+	int32_t			vaddr;
+	int32_t			paddr;
+	int32_t			mem_sz;
+	int32_t			flags;
+	int32_t			align;
+	int32_t			file_sz;
+};
+
 static int64_t elf_map(struct process_ctx_s *ctx, int fd, uint64_t addr, struct segment_s *es, int flags)
 {
 	unsigned long size = es->file_sz + ELF_PAGEOFFSET(es->vaddr);
