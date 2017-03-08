@@ -15,6 +15,9 @@ long test_static_func_cb(int type)
 
 long test_static_func_cb(int type)
 {
+	/* Increasing function size up to 8+ bytes
+	 * to overcome generator limitation */
+	asm("nop;nop;nop;nop;nop;nop;nop;nop;");
 	return test_static_func(type);
 }
 

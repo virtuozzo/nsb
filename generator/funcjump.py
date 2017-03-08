@@ -7,11 +7,18 @@ class FuncJump:
 		self.func_size = func.size
 		self.patch_value = patch.value
 		self.patch_size = patch.size
+		self.min_func_size = 8
 
 	def show(self):
 		print "\t%s: %#x-%#x ---> %#x-%#x" % (self.name,
 				self.func_value, self.func_value + self.func_size,
 				self.patch_value, self.patch_value + self.patch_size)
+
+	def applicable(self):
+		if self.func_size < self.min_func_size:
+			print "Function \"%s\" size is less than minimal: %d < %d" % (self.name, self.func_size, self.min_func_size)
+			return False
+		return True
 
 	def patch_info(self):
 		fj = funcjump_pb2.FuncJump()

@@ -45,6 +45,14 @@ class BinPatch:
 			print "Nothing to patch"
 			return False
 
+		unapplicable_functions = False
+		for fj in self.common_func:
+			if not fj.applicable():
+				unapplicable_functions = True
+
+		if unapplicable_functions:
+			return False
+
 		print "\n*************************************************"
 		print "***************** Functions *********************"
 		print "*************************************************\n"

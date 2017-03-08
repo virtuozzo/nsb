@@ -16,6 +16,7 @@ def gen_patch(args):
 	binpatch = BinPatch(bfa, bfb, args.outfile)
 
 	if not binpatch.applicable():
+		print "Can't apply patch"
 		exit(1)
 
 	binpatch.write()
