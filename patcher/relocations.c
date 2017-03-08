@@ -88,7 +88,7 @@ static int64_t check_sym_info(const struct process_ctx_s *ctx,
 		const struct static_sym_s *si = pi->static_syms[i];
 
 		if (si->idx == es_r_sym(es)) {
-			es->vma = ctx->pvma;
+			es->vma = PVMA(ctx);
 			return si->addr;
 		}
 	}
@@ -104,7 +104,7 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 	if (value)
 		return value;
 
-	value = __find_dym_sym(&ctx->objdeps, ctx->pvma, es, es_s_value(es));
+	value = __find_dym_sym(&ctx->objdeps, PVMA(ctx), es, es_s_value(es));
 	if (value != -ENOENT)
 		return value;
 
@@ -143,7 +143,7 @@ static void print_resolution(struct process_ctx_s *ctx,
 				es_s_size(es), es_type(es), es_binding(es),
 				es->name,
 				(es->address == 0) ? "" :
-				((es->vma) ? es->vma->path : ctx->pvma->path));
+				((es->vma) ? es->vma->path : PVMA(ctx)->path));
 }
 
 static int resolve_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
@@ -204,7 +204,7 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 
 	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
 			es_r_sym(es), plt_addr, func_addr, es->name,
-			((es->vma) ? es->vma->path : ctx->pvma->path),
+			((es->vma) ? es->vma->path : PVMA(ctx)->path),
 			es->address);
 
 	err = process_write_data(ctx->pid, plt_addr, &func_addr, sizeof(func_addr));

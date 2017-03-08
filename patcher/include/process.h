@@ -37,6 +37,7 @@ struct patch_info_s {
 
 struct patch_s {
 	struct patch_info_s	pi;
+	const struct vma_area	*vma;
 	int64_t			load_addr;
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
@@ -57,7 +58,6 @@ struct process_ctx_s {
 	struct parasite_ctl	*ctl;
 	struct list_head	vmas;
 	int64_t			remote_map;
-	const struct vma_area	*pvma;
 	struct list_head	objdeps;
 	struct list_head	threads;
 	struct patch_s		p;
@@ -66,6 +66,7 @@ struct process_ctx_s {
 #define P(ctx)			(&ctx->p)
 #define PI(ctx)			(&ctx->p.pi)
 #define PLA(ctx)		(ctx->p.load_addr)
+#define PVMA(ctx)		(ctx->p.vma)
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size);
 int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size);

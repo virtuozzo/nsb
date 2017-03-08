@@ -34,8 +34,8 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("  - Restoring code in \"%s\":\n", fj->name);
 
 	func_addr = fj->func_value;
-	if (elf_type_dyn(ctx->pvma->ei))
-		func_addr += ctx->pvma->start;
+	if (elf_type_dyn(PVMA(ctx)->ei))
+		func_addr += PVMA(ctx)->start;
 
 	pr_info("      old address: %#lx\n", func_addr);
 
@@ -91,8 +91,8 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("  - Function \"%s\":\n", fj->name);
 
 	fj->func_addr = fj->func_value;
-	if (elf_type_dyn(ctx->pvma->ei))
-		fj->func_addr += ctx->pvma->start;
+	if (elf_type_dyn(PVMA(ctx)->ei))
+		fj->func_addr += PVMA(ctx)->start;
 
 	patch_addr = PLA(ctx) + fj->patch_value;
 
@@ -142,13 +142,13 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 
 	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
 
-	if (elf_type_dyn(ctx->pvma->ei))
+	if (elf_type_dyn(PVMA(ctx)->ei))
 		/*
 		 * TODO: there should be bigger offset. 2 or maybe even 4 GB.
 		 * But jmpq command construction fails, if map lays ouside 2g offset.
 		 * This might be a bug in jmps construction
 		 */
-		hint = ctx->pvma->start & 0xfffffffff0000000;
+		hint = PVMA(ctx)->start & 0xfffffffff0000000;
 	else
 		hint = 0x1000000;
 	return load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
@@ -314,19 +314,19 @@ static int get_patch_deplist(struct process_ctx_s *ctx)
 
 static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
 {
-	const struct vma_area *pvma;
+	const struct vma_area *vma;
 
 	pr_info("= Searching source VMA:\n");
 
-	pvma = find_vma_by_bid(&ctx->vmas, bid);
-	if (!pvma) {
+	vma = find_vma_by_bid(&ctx->vmas, bid);
+	if (!vma) {
 		pr_err("failed to find vma with Build ID %s in process %d\n",
 				bid, ctx->pid);
 		return -ENOENT;
 	}
-	pr_info("  - path   : %s\n", pvma->path);
-	pr_info("  - address: %#lx\n", pvma->start);
-	ctx->pvma = pvma;
+	pr_info("  - path   : %s\n", vma->path);
+	pr_info("  - address: %#lx\n", vma->start);
+	PVMA(ctx) = vma;
 	return 0;
 }
 
