@@ -437,22 +437,82 @@ static char *get_section_name(struct elf_info_s *ei, Elf_Scn *scn)
 	return sname;
 }
 
-static Elf_Scn *elf_get_section(struct elf_info_s *ei, const char *name)
+static Elf_Scn *find_section(struct elf_info_s *ei,
+			     int (*compare)(struct elf_info_s *ei,
+					    Elf_Scn *scn,
+					    const void *data),
+			     const void *data)
 {
 	Elf_Scn *scn = NULL;
+	int ret;
 
 	while((scn = elf_nextscn(ei->e, scn)) != NULL) {
-		char *sname;
-
-		sname = get_section_name(ei, scn);
-		if (!sname)
-			break;
-
-		if (!strcmp(sname, name))
+		ret = compare(ei, scn, data);
+		if (ret < 0)
+			return NULL;
+		if (ret)
 			return scn;
 	}
-	pr_err("failed to find \"%s\" section in %s\n", name, ei->path);
 	return NULL;
+}
+
+static int scn_compare_name(struct elf_info_s *ei, Elf_Scn *scn,
+			    const void *data)
+{
+	const char *name = data;
+	char *sname;
+
+	sname = get_section_name(ei, scn);
+	if (!sname)
+		return -EINVAL;
+
+	return !strcmp(sname, name);
+}
+
+static Elf_Scn *elf_get_section_by_name(struct elf_info_s *ei, const char *name)
+{
+	Elf_Scn *scn;
+
+	scn = find_section(ei, scn_compare_name, name);
+	if (!scn)
+		pr_err("failed to find \"%s\" section in %s\n", name, ei->path);
+	return scn;
+}
+
+static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
+{
+	GElf_Shdr shdr;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("getshdr() failed: %s\n", elf_errmsg(-1));
+		return -EINVAL;
+	}
+
+	return shdr.sh_addr;
+}
+
+static int scn_compare_addr(struct elf_info_s *ei, Elf_Scn *scn,
+			    const void *data)
+{
+	GElf_Sxword addr = *(GElf_Sxword *)data;
+	GElf_Sxword saddr;
+
+	saddr = get_section_addr(ei, scn);
+	if (saddr < 0)
+		return saddr;
+
+	return saddr == addr;
+}
+
+static Elf_Scn *elf_get_section_by_addr(struct elf_info_s *ei, GElf_Addr addr)
+{
+	Elf_Scn *scn;
+
+	scn = find_section(ei, scn_compare_addr, &addr);
+	if (!scn)
+		pr_err("failed to find section with address %#lx in %s\n",
+				addr, ei->path);
+	return scn;
 }
 
 static char *get_build_id(Elf_Scn *bid_scn)
@@ -489,7 +549,7 @@ static char *elf_get_bid(struct elf_info_s *ei)
 {
 	Elf_Scn *bid_scn;
 
-	bid_scn = elf_get_section(ei, ".note.gnu.build-id");
+	bid_scn = elf_get_section_by_name(ei, ".note.gnu.build-id");
 	if (!bid_scn)
 		return NULL;
 	return get_build_id(bid_scn);
@@ -534,36 +594,6 @@ static int sect_nr_ent(struct elf_info_s *ei, Elf_Scn *scn)
 	return shdr.sh_size/shdr.sh_entsize;
 }
 
-static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
-{
-	GElf_Shdr shdr;
-
-	if (gelf_getshdr(scn, &shdr) != &shdr) {
-		pr_err("getshdr() failed: %s\n", elf_errmsg(-1));
-		return -EINVAL;
-	}
-
-	return shdr.sh_addr;
-}
-
-static Elf_Scn *elf_get_section_by_addr(struct elf_info_s *ei, GElf_Addr addr)
-{
-	Elf_Scn *scn = NULL;
-
-	while((scn = elf_nextscn(ei->e, scn)) != NULL) {
-		GElf_Sxword saddr;
-
-		saddr = get_section_addr(ei, scn);
-		if (saddr < 0)
-			break;
-
-		if (saddr == addr)
-			return scn;
-	}
-
-	return NULL;
-}
-
 static int elf_create_scn(struct elf_info_s *ei,
 		          elf_scn_t **elf_scn, const char *sname)
 {
@@ -572,7 +602,7 @@ static int elf_create_scn(struct elf_info_s *ei,
 	Elf_Data *data;
 	int nr_ent;
 
-	scn = elf_get_section(ei, sname);
+	scn = elf_get_section_by_name(ei, sname);
 	if (!scn)
 		return -ENOENT;
 
@@ -838,7 +868,7 @@ static int get_symbol_name(const GElf_Sym *sym, struct elf_info_s *ei,
 static int dynsym_name(const GElf_Sym *sym, struct elf_info_s *ei, char **name)
 {
 	if (!ei->dynstr) {
-		ei->dynstr = elf_get_section(ei, ".dynstr");
+		ei->dynstr = elf_get_section_by_name(ei, ".dynstr");
 		if (!ei->dynstr) {
 			pr_err("failed to find \".dynstr\" section\n");
 			return -EINVAL;
@@ -1229,7 +1259,7 @@ int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 	if (!ei)
 		return -EINVAL;
 
-	scn = elf_get_section(ei, sname);
+	scn = elf_get_section_by_name(ei, sname);
 	if (!scn)
 		goto destroy_elf_info;
 
