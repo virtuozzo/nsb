@@ -140,20 +140,24 @@ int process_close_file(struct process_ctx_s *ctx, int fd)
 	return (int)(long)sret;
 }
 
-int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mode_t mode)
+static int process_do_open_file(pid_t pid, struct parasite_ctl *ctl,
+				uint64_t process_addr,
+				const char *path, int flags, mode_t mode)
 {
 	int ret;
 	long sret = -ENOSYS;
 
-	process_write_data(ctx->pid, ctx->remote_map,
-			path, round_up(strlen(path) + 1, 8));
+	ret = process_write_data(pid, process_addr, path,
+				 round_up(strlen(path) + 1, 8));
+	if (ret)
+		return ret;
 
-	ret = compel_syscall(ctx->ctl, __NR(open, false), &sret,
-				(unsigned long)ctx->remote_map,
+	ret = compel_syscall(ctl, __NR(open, false), &sret,
+				process_addr,
 				(unsigned long)flags,
 				(unsigned long)mode, 0, 0, 0);
 	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", ctx->pid);
+		pr_err("Failed to execute syscall for %d\n", pid);
 		return -1;
 	}
 
@@ -164,6 +168,16 @@ int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mo
 	}
 
 	return (int)(long)sret;
+}
+
+int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mode_t mode)
+{
+	int err;
+
+	err = process_do_open_file(ctx->pid, ctx->ctl, ctx->remote_map, path, flags, mode);
+	if (err)
+		pr_err("failed to open %s in process %d\n", path, ctx->pid);
+	return err;
 }
 
 static int task_cure(struct thread_s *t)
