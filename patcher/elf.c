@@ -238,8 +238,6 @@ int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 	int i, fd, err = -1;
 	size_t pnum;
 
-	pr_info("= Loading %s:\n", ei->path);
-
 	if (elf_getphdrnum(ei->e, &pnum)) {
 		pr_err("elf_getphdrnum() failed: %s\n", elf_errmsg(-1));
 		return -1;

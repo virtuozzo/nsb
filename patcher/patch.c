@@ -79,6 +79,8 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 {
 	uint64_t hint;
 
+	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
+
 	if (elf_type_dyn(ctx->pvma->ei))
 		/*
 		 * TODO: there should be bigger offset. 2 or maybe even 4 GB.
