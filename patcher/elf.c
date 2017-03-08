@@ -621,10 +621,10 @@ static int find_strtab(struct elf_info_s *ei, const GElf_Dyn *d, const void *dum
 	return 1;
 }
 
-static int find_dyn_sym(struct elf_info_s *ei, GElf_Dyn *dyn,
-			int (*compare)(struct elf_info_s *ei,
-				       const GElf_Dyn *dyn, const void *data),
-			const void *data)
+static int find_dyn(struct elf_info_s *ei, GElf_Dyn *dyn,
+		    int (*compare)(struct elf_info_s *ei,
+				   const GElf_Dyn *dyn, const void *data),
+		    const void *data)
 {
 	int i;
 	elf_scn_t *scn;
@@ -657,7 +657,7 @@ static Elf_Scn *elf_get_strtab_scn(struct elf_info_s *ei)
 		int err;
 		GElf_Dyn strtab_dyn;
 
-		err = find_dyn_sym(ei, &strtab_dyn, find_strtab, NULL);
+		err = find_dyn(ei, &strtab_dyn, find_strtab, NULL);
 		if (err < 0) {
 			pr_debug("Failed to find DT_STRTAB tag\n");
 			return NULL;
@@ -682,7 +682,7 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname)
 	if (!strtab_scn)
 		return -EINVAL;
 
-	err = find_dyn_sym(ei, &soname_dyn, find_soname, NULL);
+	err = find_dyn(ei, &soname_dyn, find_soname, NULL);
 	if (err < 0) {
 		if (err == -ENOENT)
 			return 0;
@@ -856,17 +856,12 @@ static elf_scn_t *elf_set_dynsym_scn(struct elf_info_s *ei)
 	return ei->dynsym;
 }
 
-static int check_dyn_sym(struct elf_info_s *ei, GElf_Sym *sym,
-			 int (*compare)(struct elf_info_s *ei,
-					const GElf_Sym *sym, const void *data),
-			 const void *data)
+static int find_sym(struct elf_info_s *ei, elf_scn_t *escn, GElf_Sym *sym,
+		    int (*compare)(struct elf_info_s *ei,
+				   const GElf_Sym *sym, const void *data),
+		    const void *data)
 {
 	int i;
-	elf_scn_t *escn;
-
-	escn = elf_set_dynsym_scn(ei);
-	if (!escn)
-		return -ENOENT;
 
 	for (i = 0; i < escn->nr_ent; i++) {
 		int ret;
@@ -879,6 +874,20 @@ static int check_dyn_sym(struct elf_info_s *ei, GElf_Sym *sym,
 			return ret;
 	}
 	return -ENOENT;
+}
+
+static int find_dyn_sym(struct elf_info_s *ei, GElf_Sym *sym,
+		    int (*compare)(struct elf_info_s *ei,
+				   const GElf_Sym *sym, const void *data),
+		    const void *data)
+{
+	elf_scn_t *escn;
+
+	escn = elf_set_dynsym_scn(ei);
+	if (!escn)
+		return -ENOENT;
+
+	return find_sym(ei, escn, sym, compare, data);
 }
 
 static int compare_sym_name(struct elf_info_s *ei,
@@ -904,7 +913,7 @@ static int compare_sym_name(struct elf_info_s *ei,
 static int elf_find_dsym_by_name(struct elf_info_s *ei, const char *symname,
 				 GElf_Sym *sym)
 {
-	return check_dyn_sym(ei, sym, compare_sym_name, symname);
+	return find_dyn_sym(ei, sym, compare_sym_name, symname);
 }
 
 int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name)
