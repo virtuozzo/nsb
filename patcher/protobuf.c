@@ -60,6 +60,7 @@ static struct func_jump_s *create_funcjump(const FuncJump *fj)
 	func_jump->func_value = fj->func_value;
 	func_jump->func_size = fj->func_size;
 	func_jump->patch_value = fj->patch_value;
+	func_jump->applied = 0;
 	return func_jump;
 }
 

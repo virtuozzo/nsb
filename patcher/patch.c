@@ -51,12 +51,16 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	if (size < 0)
 		return size;
 
-	err = process_write_data(ctx->pid, func_addr, jump, round_up(size, 8));
-	if (err < 0) {
-		pr_err("failed to patch: %d\n", err);
-		return err;
+	if (size > sizeof(fj->code)) {
+		pr_err("not enough space to store old code\n");
+		return -ENOSPC;
 	}
-	return 0;
+
+	err = process_read_data(ctx->pid, func_addr, fj->code, round_up(size, 8));
+	if (err < 0)
+		return err;
+
+	return process_write_data(ctx->pid, func_addr, jump, round_up(size, 8));
 }
 
 static int set_func_jumps(struct process_ctx_s *ctx)
@@ -69,8 +73,12 @@ static int set_func_jumps(struct process_ctx_s *ctx)
 		struct func_jump_s *fj = pi->func_jumps[i];
 
 		err = write_func_jump(ctx, fj);
-		if (err)
+		if (err) {
+			pr_err("failed to apply function jump\n");
 			return err;
+		}
+
+		fj->applied = 1;
 	}
 	return 0;
 }
