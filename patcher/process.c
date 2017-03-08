@@ -29,12 +29,38 @@ struct thread_s {
 
 int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
 {
-	return ptrace_poke_area(pid, (void *)data, (void *)addr, size);
+	int err;
+
+	err = ptrace_poke_area(pid, (void *)data, (void *)addr, size);
+	if (err) {
+		if (err == -1) {
+			pr_err("Failed to write range %#lx-%#lx in process %d: "
+			       "size is not aligned\n", addr, addr + size, pid);
+			return -EINVAL;
+		}
+		pr_perror("Failed to read range %#lx-%#lx from process %d",
+				addr, addr + size, pid);
+		return -errno;
+	}
+	return 0;
 }
 
 int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size)
 {
-	return ptrace_peek_area(pid, data, (void *)addr, size);
+	int err;
+
+	err = ptrace_peek_area(pid, data, (void *)addr, size);
+	if (err) {
+		if (err == -1) {
+			pr_err("Failed to read range %#lx-%#lx in process %d: "
+			       "size is not aligned\n", addr, addr + size, pid);
+			return -EINVAL;
+		}
+		pr_perror("Failed to read range %#lx-%#lx from process %d",
+				addr, addr + size, pid);
+		return -errno;
+	}
+	return 0;
 }
 
 static const char *map_flags(unsigned flags, char *buf)
