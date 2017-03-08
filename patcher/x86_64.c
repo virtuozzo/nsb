@@ -22,13 +22,7 @@ static int ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
 		return -EINVAL;
 	}
 
-//	pr_debug("%s: addr_size : %d\n", __func__, addr_size);
-//	pr_debug("%s: next_ip : %#lx\n", __func__, next_ip);
-//	pr_debug("%s: tgt_pos : %#lx\n", __func__, tgt_pos);
-//	pr_debug("%s: offset  : %#x\n", __func__, (int)offset);
-
 	*buf = offset;
-
 	return 0;
 }
 
@@ -37,22 +31,15 @@ static int ip_change_relative(unsigned char *addr,
 			      size_t addr_size)
 {
 	int offset;
-//	int i;
 
 	if (ip_gen_offset(next_ip, tgt_pos, addr_size, &offset))
 		return -1;
 
 	memcpy(addr, (void *)&offset, addr_size);
-/*
-	pr_debug("%s: offset  :", __func__);
-	for (i = 0; i < addr_size; i++)
-		pr_msg(" %02x", addr[i]);
-	pr_debug("\n");
-*/
 	return 0;
 }
 
-int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
+static int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
 			   unsigned long cur_pos, unsigned long tgt_pos)
 {
 	unsigned char *addr;
