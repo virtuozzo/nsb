@@ -7,6 +7,7 @@ class FuncJump:
 		self.func_size = func.size
 		self.patch_value = patch.value
 		self.patch_size = patch.size
+		self.shndx = func.ndx
 		self.min_func_size = 8
 
 	def show(self):
@@ -26,5 +27,6 @@ class FuncJump:
 		fj.func_value = self.func_value
 		fj.func_size = self.func_size
 		fj.patch_value = self.patch_value
+		fj.shndx = self.shndx
 		print "  %s: func_value: %#x, func_size: %d, patch_value: %#x" % (self.name, fj.func_value, fj.func_size, fj.patch_value)
 		return fj

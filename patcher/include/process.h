@@ -14,9 +14,10 @@ struct static_sym_s {
 
 struct func_jump_s {
 	char			*name;
-	int64_t			func_value;
-	int32_t			func_size;
-	int64_t			patch_value;
+	uint64_t		func_value;
+	uint32_t		func_size;
+	uint64_t		patch_value;
+	uint32_t		shndx;
 	uint8_t			code[8];
 	uint8_t			applied;
 	uint64_t		func_addr;

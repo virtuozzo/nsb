@@ -1,6 +1,7 @@
 message FuncJump {
 	required string		name		= 1;
-	required int64		func_value	= 2;
-	required int32		func_size	= 3;
-	required int32		patch_value	= 4;
+	required uint64		func_value	= 2;
+	required uint32		func_size	= 3;
+	required uint32		patch_value	= 4;
+	required uint32		shndx		= 5;
 }
