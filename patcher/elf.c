@@ -497,6 +497,11 @@ static char *elf_get_bid(struct elf_info_s *ei)
 	return get_build_id(bid_scn);
 }
 
+const char *elf_path(struct elf_info_s *ei)
+{
+	return ei->path;
+}
+
 const char *elf_bid(struct elf_info_s *ei)
 {
 	return ei->bid;
