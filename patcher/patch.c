@@ -29,17 +29,10 @@ struct process_ctx_s process_context = {
 
 static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
-	unsigned long func_addr;
-
 	pr_info("  - Restoring code in \"%s\":\n", fj->name);
+	pr_info("      old address: %#lx\n", fj->func_addr);
 
-	func_addr = fj->func_value;
-	if (elf_type_dyn(PVMA(ctx)->ei))
-		func_addr += PVMA(ctx)->start;
-
-	pr_info("      old address: %#lx\n", func_addr);
-
-	return process_write_data(ctx->pid, func_addr,
+	return process_write_data(ctx->pid, fj->func_addr,
 				  fj->code, sizeof(fj->code));
 }
 
@@ -93,9 +86,7 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	fj->func_addr = fj->func_value;
-	if (elf_type_dyn(PVMA(ctx)->ei))
-		fj->func_addr += PVMA(ctx)->start;
+	fj->func_addr = vma_func_addr(PVMA(ctx), fj->func_value);
 
 	patch_addr = PLA(ctx) + fj->patch_value;
 

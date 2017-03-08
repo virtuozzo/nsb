@@ -43,4 +43,6 @@ const char *vma_soname(const struct vma_area *vma);
 
 int vma_is_executable(const struct vma_area *vma);
 
+uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr);
+
 #endif /* __PATCHER_VMA_H__ */

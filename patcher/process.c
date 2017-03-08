@@ -13,6 +13,7 @@
 #include "include/backtrace.h"
 #include "include/process.h"
 #include "include/patch.h"
+#include "include/elf.h"
 
 struct patch_place_s {
 	struct list_head	list;
