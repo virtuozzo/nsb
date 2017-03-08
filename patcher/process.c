@@ -91,8 +91,8 @@ static const char *map_prot(unsigned prot, char *buf)
 	return buf;
 }
 
-int64_t process_create_map(struct process_ctx_s *ctx, int fd, off_t offset,
-			unsigned long addr, size_t size, int flags, int prot)
+int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
+		    unsigned long addr, size_t size, int flags, int prot)
 {
 	int ret;
 	long sret = -ENOSYS;
@@ -213,7 +213,7 @@ int process_link(struct process_ctx_s *ctx)
 		return -1;
 	}
 
-	ctx->remote_map = process_create_map(ctx, -1, 0, 0, PAGE_SIZE,
+	ctx->remote_map = process_map(ctx, -1, 0, 0, PAGE_SIZE,
 			MAP_ANONYMOUS | MAP_PRIVATE,
 			PROT_READ | PROT_WRITE | PROT_EXEC);
 	if ((void *)ctx->remote_map == MAP_FAILED) {

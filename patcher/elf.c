@@ -166,7 +166,7 @@ static int64_t elf_load_segment(struct process_ctx_s *ctx, const GElf_Phdr *phdr
 		prot |= PROT_WRITE;
 	if (phdr->p_flags & PF_X)
 		prot |= PROT_EXEC;
-	maddr = process_create_map(ctx, fd, off, hint, size, flags, prot);
+	maddr = process_map(ctx, fd, off, hint, size, flags, prot);
 	if (maddr <= 0)
 		pr_err("failed to create new mapping %#lx-%#lx "
 		       "in process %d with flags %#x, prot %#x, off %#lx\n",
