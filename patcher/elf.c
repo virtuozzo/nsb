@@ -216,20 +216,24 @@ static int load_elf_segment(struct process_ctx_s *ctx,
 	return 0;
 }
 
-static void unload_segment(struct process_ctx_s *ctx, struct segment_s *s)
+static int unload_segment(struct process_ctx_s *ctx, struct segment_s *s)
 {
-	process_unmap(ctx, s->addr, s->size);
+	return process_unmap(ctx, s->addr, s->size);
 }
 
-void unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
+int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
 {
 	struct segment_s *s, *tmp;
+	int err;
 
 	list_for_each_entry_safe(s, tmp, &P(ctx)->segments, list) {
-		unload_segment(ctx, s);
+		err = unload_segment(ctx, s);
+		if (err)
+			return err;
 		list_del(&s->list);
 		free(s);
 	}
+	return 0;
 }
 
 int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
@@ -273,7 +277,7 @@ int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 
 	return first_segment_addr(ctx);
 err:
-	unload_elf(ctx, segments);
+	(void)unload_elf(ctx, segments);
 	(void)process_close_file(ctx, fd);
 	return err;
 }

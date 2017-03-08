@@ -129,11 +129,11 @@ static int tune_func_jumps(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static void unload_patch(struct process_ctx_s *ctx)
+static int unload_patch(struct process_ctx_s *ctx)
 {
 	pr_info("= Unloading %s:\n", elf_path(P(ctx)->ei));
 
-	unload_elf(ctx, &P(ctx)->segments);
+	return unload_elf(ctx, &P(ctx)->segments);
 }
 
 static int64_t load_patch(struct process_ctx_s *ctx)
@@ -201,8 +201,7 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	err = revert_func_jumps(ctx);
 	if (err)
 		return err;
-	unload_patch(ctx);
-	return 0;
+	return unload_patch(ctx);
 }
 
 static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
