@@ -27,6 +27,22 @@ struct process_ctx_s process_context = {
 	}
 };
 
+static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
+{
+	unsigned long func_addr;
+
+	pr_info("  - Restoring code in \"%s\":\n", fj->name);
+
+	func_addr = fj->func_value;
+	if (elf_type_dyn(ctx->pvma->ei))
+		func_addr += ctx->pvma->start;
+
+	pr_info("      old address: %#lx\n", func_addr);
+
+	return process_write_data(ctx->pid, func_addr,
+				  fj->code, round_up(sizeof(fj->code), 8));
+}
+
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
 	unsigned char jump[X86_MAX_SIZE];
@@ -83,6 +99,13 @@ static int set_func_jumps(struct process_ctx_s *ctx)
 	return 0;
 }
 
+static void unload_patch(struct process_ctx_s *ctx)
+{
+	pr_info("= Unloading %s:\n", elf_path(P(ctx)->ei));
+
+	unload_elf(ctx, &P(ctx)->segments);
+}
+
 static int64_t load_patch(struct process_ctx_s *ctx)
 {
 	uint64_t hint;
@@ -114,6 +137,38 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 		return err;
 
 	return ctx->ops->set_jumps(ctx);
+}
+
+static int revert_func_jumps(struct process_ctx_s *ctx)
+{
+	int i, err;
+	struct patch_info_s *pi = PI(ctx);
+
+	pr_info("= Revert function jumps:\n");
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		struct func_jump_s *fj = pi->func_jumps[i];
+
+		if (!fj->applied)
+			continue;
+
+		err = write_func_code(ctx, fj);
+		if (err) {
+			pr_err("failed to revert function jump\n");
+			return err;
+		}
+	}
+	return 0;
+}
+
+static int revert_dyn_binpatch(struct process_ctx_s *ctx)
+{
+	int err;
+
+	err = revert_func_jumps(ctx);
+	if (err)
+		return err;
+	unload_patch(ctx);
+	return 0;
 }
 
 static struct ctx_dep *ctx_create_dep(const struct vma_area *vma)
@@ -321,6 +376,7 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 
 struct patch_ops_s patch_jump_ops = {
 	.apply_patch = apply_dyn_binpatch,
+	.revert_patch = revert_dyn_binpatch,
 	.set_jumps = set_func_jumps,
 	.check_backtrace = jumps_check_backtrace,
 };
@@ -395,10 +451,12 @@ int patch_process(pid_t pid, const char *patchfile)
 		goto resume;
 
 	ret = ctx->ops->apply_patch(ctx);
-	if (ret)
-		 pr_err("failed to apply binary patch\n");
+	if (ret) {
+		pr_err("failed to apply binary patch\n");
+		if (ctx->ops->revert_patch(ctx))
+			pr_err("failed to revert patch\n");
+	}
 
-	/* TODO all the work has to be rolled out, if an error occured */
 resume:
 	err = process_resume(ctx);
 
