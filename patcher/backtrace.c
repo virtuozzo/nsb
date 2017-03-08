@@ -214,7 +214,7 @@ int backtrace_check_func(const struct process_ctx_s *ctx,
 	uint64_t func_start, func_end;
 	const struct backtrace_frame_s *bf;
 
-	func_start = PVMA(ctx)->start + fj->func_value;
+	func_start = vma_func_addr(PVMA(ctx), fj->func_value);
 	func_end = func_start + fj->func_size;
 
 	bf = bt_check_range(bt, func_start, func_end);
