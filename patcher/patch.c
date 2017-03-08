@@ -45,38 +45,15 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
-	unsigned char jump[X86_MAX_SIZE];
-	unsigned long func_addr, patch_addr;
-	ssize_t size;
-	int err;
-
-	pr_info("  - Function \"%s\":\n", fj->name);
-
-	func_addr = fj->func_value;
-	if (elf_type_dyn(ctx->pvma->ei))
-		func_addr += ctx->pvma->start;
+	uint64_t patch_addr;
 
 	patch_addr = PLA(ctx) + fj->patch_value;
 
-	pr_info("      old address: %#lx\n", func_addr);
-	pr_info("      new address: %#lx\n", patch_addr);
+	pr_info("  - Function \"%s\":\n", fj->name);
+	pr_info("      jump: %#lx ---> %#lx\n", fj->func_addr, patch_addr);
 
-	pr_info("        jump: %#lx ---> %#lx\n", func_addr, patch_addr);
-
-	size = x86_jmpq_instruction(jump, func_addr, patch_addr);
-	if (size < 0)
-		return size;
-
-	if (size > sizeof(fj->code)) {
-		pr_err("not enough space to store old code\n");
-		return -ENOSPC;
-	}
-
-	err = process_read_data(ctx->pid, func_addr, fj->code, round_up(size, 8));
-	if (err < 0)
-		return err;
-
-	return process_write_data(ctx->pid, func_addr, jump, round_up(size, 8));
+	return process_write_data(ctx->pid, fj->func_addr, fj->func_jump,
+				  round_up(sizeof(fj->func_jump), 8));
 }
 
 static int apply_func_jumps(struct process_ctx_s *ctx)
@@ -95,6 +72,59 @@ static int apply_func_jumps(struct process_ctx_s *ctx)
 		}
 
 		fj->applied = 1;
+	}
+	return 0;
+}
+
+static int read_func_jump_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
+{
+	return process_read_data(ctx->pid, fj->func_addr,
+				 fj->code, sizeof(fj->code));
+}
+
+static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
+{
+	uint8_t jump[X86_MAX_SIZE];
+	uint64_t patch_addr;
+	ssize_t size;
+
+	pr_info("  - Function \"%s\":\n", fj->name);
+
+	fj->func_addr = fj->func_value;
+	if (elf_type_dyn(ctx->pvma->ei))
+		fj->func_addr += ctx->pvma->start;
+
+	patch_addr = PLA(ctx) + fj->patch_value;
+
+	pr_info("      original address: %#lx\n", fj->func_addr);
+	pr_info("      patch address   : %#lx\n", patch_addr);
+
+	size = x86_jmpq_instruction(jump, fj->func_addr, patch_addr);
+	if (size < 0)
+		return size;
+	if (size > sizeof(fj->func_jump)) {
+		pr_err("not enough space to store jump instruction\n");
+		return -ENOSPC;
+	}
+	memcpy(fj->func_jump, jump, size);
+
+	return read_func_jump_code(ctx, fj);
+}
+
+static int tune_func_jumps(struct process_ctx_s *ctx)
+{
+	int i, err;
+	struct patch_info_s *pi = PI(ctx);
+
+	pr_info("= Tune function jumps:\n");
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		struct func_jump_s *fj = pi->func_jumps[i];
+
+		err = tune_func_jump(ctx, fj);
+		if (err) {
+			pr_err("failed to tune function jump\n");
+			return err;
+		}
 	}
 	return 0;
 }
@@ -133,6 +163,10 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 		return P(ctx)->load_addr;
 
 	err = apply_relocations(ctx);
+	if (err)
+		return err;
+
+	err = tune_func_jumps(ctx);
 	if (err)
 		return err;
 

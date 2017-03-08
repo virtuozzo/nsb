@@ -19,6 +19,8 @@ struct func_jump_s {
 	int64_t			patch_value;
 	uint8_t			code[8];
 	uint8_t			applied;
+	uint64_t		func_addr;
+	uint8_t			func_jump[8];
 };
 
 struct patch_info_s {
