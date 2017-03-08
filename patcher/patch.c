@@ -40,7 +40,7 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("      old address: %#lx\n", func_addr);
 
 	return process_write_data(ctx->pid, func_addr,
-				  fj->code, round_up(sizeof(fj->code), 8));
+				  fj->code, sizeof(fj->code));
 }
 
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
@@ -52,8 +52,8 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("  - Function \"%s\":\n", fj->name);
 	pr_info("      jump: %#lx ---> %#lx\n", fj->func_addr, patch_addr);
 
-	return process_write_data(ctx->pid, fj->func_addr, fj->func_jump,
-				  round_up(sizeof(fj->func_jump), 8));
+	return process_write_data(ctx->pid, fj->func_addr,
+				  fj->func_jump, sizeof(fj->func_jump));
 }
 
 static int apply_func_jumps(struct process_ctx_s *ctx)
@@ -159,8 +159,10 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	int err;
 
 	P(ctx)->load_addr = load_patch(ctx);
-	if (P(ctx)->load_addr < 0)
+	if (P(ctx)->load_addr < 0) {
+		pr_err("failed to load patch\n");
 		return P(ctx)->load_addr;
+	}
 
 	err = apply_relocations(ctx);
 	if (err)
