@@ -515,6 +515,17 @@ static Elf_Scn *elf_get_section_by_addr(struct elf_info_s *ei, GElf_Addr addr)
 	return scn;
 }
 
+static Elf_Scn *elf_get_section_by_ndx(struct elf_info_s *ei, GElf_Section ndx)
+{
+	Elf_Scn *scn;
+
+	scn = elf_getscn(ei->e, ndx);
+	if (!scn)
+		pr_err("failed to find section with index %#x in %s\n",
+				ndx, ei->path);
+	return scn;
+}
+
 static char *get_build_id(Elf_Scn *bid_scn)
 {
 	Elf_Data *data;
@@ -1189,6 +1200,23 @@ int64_t elf_dyn_sym_value(struct elf_info_s *ei, const char *name)
 		return (err != -ENOENT) ? err : 0;
 
 	return sym.st_value;
+}
+
+int64_t elf_section_virt_base(struct elf_info_s *ei, uint16_t ndx)
+{
+	Elf_Scn *scn;
+	GElf_Shdr shdr;
+
+	scn = elf_get_section_by_ndx(ei, ndx);
+	if (!scn)
+		return -EINVAL;
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("getshdr() failed: %s\n", elf_errmsg(-1));
+		return -EINVAL;
+	}
+
+	return shdr.sh_addr - shdr.sh_offset;
 }
 
 int elf_reloc_sym(struct extern_symbol *es, uint64_t address)

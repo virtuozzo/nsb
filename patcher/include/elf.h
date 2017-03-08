@@ -71,4 +71,6 @@ int elf_reloc_sym(struct extern_symbol *es, uint64_t address);
 
 int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 
+int64_t elf_section_virt_base(struct elf_info_s *ei, uint16_t ndx);
+
 #endif /* __PATCHER_ELF_H__ */
