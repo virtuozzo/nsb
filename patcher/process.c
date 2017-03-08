@@ -112,7 +112,7 @@ int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
 		return -1;
 	}
 
-	pr_info("  - %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
+	pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
 			sret, sret + size, offset,
 			map_prot(prot, pbuf),
 			map_flags(flags, fbuf));
@@ -380,9 +380,7 @@ int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
 		return -1;
 	}
 
-	pr_debug("Unmapped %#lx-%#lx in task %d\n",
-			addr, addr + size, ctx->pid);
-
+	pr_info("  - munmap: %#lx-%#lx\n", addr, addr + size);
 	return 0;
 }
 
