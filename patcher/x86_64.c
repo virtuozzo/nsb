@@ -64,9 +64,15 @@ int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
 	return instr_size;
 }
 
-int x86_jmpq_instruction(unsigned char *buf,
+int x86_jmpq_instruction(unsigned char *buf, size_t buf_size,
 			 unsigned long cur_pos, unsigned long tgt_pos)
 {
+	if (buf_size < 5) {
+		pr_err("buffer size is too small for jump command: %ld < 5\n",
+				buf_size);
+		return -ENOSPC;
+	}
+	memset(buf, 0x90, buf_size);
 	*buf = 0xe9;
 	return x86_modify_instruction(buf, 1, 4, cur_pos, tgt_pos);
 }

@@ -84,7 +84,6 @@ static int read_func_jump_code(struct process_ctx_s *ctx, struct func_jump_s *fj
 
 static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
-	uint8_t jump[X86_MAX_SIZE];
 	uint64_t patch_addr;
 	ssize_t size;
 
@@ -99,14 +98,10 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("      original address: %#lx\n", fj->func_addr);
 	pr_info("      patch address   : %#lx\n", patch_addr);
 
-	size = x86_jmpq_instruction(jump, fj->func_addr, patch_addr);
+	size = x86_jmpq_instruction(fj->func_jump, sizeof(fj->func_jump),
+				    fj->func_addr, patch_addr);
 	if (size < 0)
 		return size;
-	if (size > sizeof(fj->func_jump)) {
-		pr_err("not enough space to store jump instruction\n");
-		return -ENOSPC;
-	}
-	memcpy(fj->func_jump, jump, size);
 
 	return read_func_jump_code(ctx, fj);
 }
