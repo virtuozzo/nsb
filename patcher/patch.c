@@ -79,7 +79,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	return process_write_data(ctx->pid, func_addr, jump, round_up(size, 8));
 }
 
-static int set_func_jumps(struct process_ctx_s *ctx)
+static int apply_func_jumps(struct process_ctx_s *ctx)
 {
 	int i, err;
 	struct patch_info_s *pi = PI(ctx);
@@ -136,7 +136,7 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	return ctx->ops->set_jumps(ctx);
+	return apply_func_jumps(ctx);
 }
 
 static int revert_func_jumps(struct process_ctx_s *ctx)
@@ -377,7 +377,6 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 struct patch_ops_s patch_jump_ops = {
 	.apply_patch = apply_dyn_binpatch,
 	.revert_patch = revert_dyn_binpatch,
-	.set_jumps = set_func_jumps,
 	.check_backtrace = jumps_check_backtrace,
 };
 

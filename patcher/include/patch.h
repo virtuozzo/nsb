@@ -5,7 +5,6 @@ struct backtrace_s;
 struct process_ctx_s;
 struct patch_ops_s {
 	int (*apply_patch)(struct process_ctx_s *ctx);
-	int (*set_jumps)(struct process_ctx_s *ctx);
 	int (*check_backtrace)(const struct process_ctx_s *ctx,
 			       const struct backtrace_s *bt);
 	int (*revert_patch)(struct process_ctx_s *ctx);
