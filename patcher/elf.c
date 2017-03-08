@@ -856,10 +856,10 @@ static elf_scn_t *elf_set_dynsym_scn(struct elf_info_s *ei)
 	return ei->dynsym;
 }
 
-static int find_sym_dym(struct elf_info_s *ei, GElf_Sym *sym,
-			int (*compare)(struct elf_info_s *ei,
-				       const GElf_Sym *sym, const void *data),
-			const void *data)
+static int check_dyn_sym(struct elf_info_s *ei, GElf_Sym *sym,
+			 int (*compare)(struct elf_info_s *ei,
+					const GElf_Sym *sym, const void *data),
+			 const void *data)
 {
 	int i;
 	elf_scn_t *escn;
@@ -904,7 +904,7 @@ static int compare_sym_name(struct elf_info_s *ei,
 static int elf_find_dsym_by_name(struct elf_info_s *ei, const char *symname,
 				 GElf_Sym *sym)
 {
-	return find_sym_dym(ei, sym, compare_sym_name, symname);
+	return check_dyn_sym(ei, sym, compare_sym_name, symname);
 }
 
 int64_t elf_dsym_offset(struct elf_info_s *ei, const char *name)
