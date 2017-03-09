@@ -208,9 +208,8 @@ static const struct backtrace_frame_s *bt_check_range(const struct backtrace_s *
 
 int backtrace_check_func(const struct process_ctx_s *ctx,
 			 const struct func_jump_s *fj,
-			 const void *data)
+			 const struct backtrace_s *bt)
 {
-	const struct backtrace_s *bt = data;
 	uint64_t func_start, func_end;
 	const struct backtrace_frame_s *bf;
 

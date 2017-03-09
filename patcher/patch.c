@@ -377,26 +377,18 @@ static int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
-int iterate_jumps(const struct process_ctx_s *ctx, const void *data,
-		  int (*actor)(const struct process_ctx_s *ctx,
-			       const struct func_jump_s *fj,
-			       const void *data))
+static int jumps_check_backtrace(const struct process_ctx_s *ctx,
+				 const struct backtrace_s *bt)
 {
 	const struct patch_info_s *pi = PI(ctx);
 	int i, err;
 
 	for (i = 0; i < pi->n_func_jumps; i++) {
-		err = actor(ctx, pi->func_jumps[i], data);
+		err = backtrace_check_func(ctx, pi->func_jumps[i], bt);
 		if (err)
 			return err;
 	}
 	return 0;
-}
-
-static int jumps_check_backtrace(const struct process_ctx_s *ctx,
-				 const struct backtrace_s *bt)
-{
-	return iterate_jumps(ctx, bt, backtrace_check_func);
 }
 
 struct patch_ops_s patch_jump_ops = {

@@ -9,7 +9,7 @@ struct process_ctx_s;
 struct func_jump_s;
 int backtrace_check_func(const struct process_ctx_s *ctx,
 			 const struct func_jump_s *fj,
-			 const void *data);
+			 const struct backtrace_s *bt);
 
 struct vma_area;
 int backtrace_check_vma(const struct backtrace_s *bt,
