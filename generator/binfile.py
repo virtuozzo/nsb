@@ -1,4 +1,5 @@
 from collections import namedtuple
+import sys
 import os
 import re
 
@@ -10,7 +11,7 @@ class BinFile:
 	def __init__(self, filename):
 		if not os.access(filename, os.R_OK):
 			print "File %s doesn't exist" % filename
-			exit(1)
+			sys.exit(1)
 		self.filename = os.path.realpath(filename)
 		self.functions = {}
 		self.objects = {}
@@ -42,7 +43,7 @@ class BinFile:
 
 		if self.symbols is None:
 			print "  No symbols found. Perhaps this ELF has been stripped?"
-			exit(1)
+			sys.exit(1)
 
 		for k, s in self.symbols.iteritems():
 			if s.name is None:

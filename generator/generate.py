@@ -1,3 +1,5 @@
+import sys
+
 from binfile import BinFile
 from binpatch import BinPatch
 
@@ -17,7 +19,7 @@ def gen_patch(args):
 
 	if not binpatch.applicable():
 		print "Can't apply patch"
-		exit(1)
+		sys.exit(1)
 
 	binpatch.write()
 

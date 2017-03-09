@@ -1,4 +1,5 @@
 from collections import namedtuple
+import sys
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.elffile import SymbolTableSection
@@ -26,7 +27,7 @@ class ElfFile:
 		if section and section['sh_type'] == "SHT_NOBITS":
 			print "section '%s' type is NOBITS" % name
 			print "Perhabs this ELF was stripped"
-			exit(1)
+			sys.exit(1)
 		return section
 
 	def __section_symbols__(self, section_name):
