@@ -302,7 +302,7 @@ end_elf:
 	return NULL;
 }
 
-static Elf *elf_open(const char *path)
+static int elf_open(const char *path, Elf **elf)
 {
 	int fd;
 	Elf *e;
@@ -310,18 +310,19 @@ static Elf *elf_open(const char *path)
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
 		pr_perror("failed to open %s", path);
-		return NULL;
+		return -errno;
 	}
 
 	e = elf_fd(path, fd);
 	if (!e)
 		goto close_fd;
 
-	return e;
+	*elf = e;
+	return 0;
 
 close_fd:
 	close(fd);
-	return NULL;
+	return -EINVAL;
 }
 
 int elf_type_dyn(const struct elf_info_s *ei)
@@ -392,12 +393,13 @@ int is_elf_file(const char *path)
 
 struct elf_info_s *elf_create_info(const char *path)
 {
-	Elf *e;
+	Elf *e = NULL;
 	struct elf_info_s *ei;
+	int err;
 
-	e = elf_open(path);
-	if (!e) {
-		pr_err("failed to parse ELF %s: %s\n", path, elf_errmsg(-1));
+	err = elf_open(path, &e);
+	if (err) {
+		pr_err("failed to parse ELF %s\n", path);
 		return NULL;
 	}
 
