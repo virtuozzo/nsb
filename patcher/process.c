@@ -186,6 +186,8 @@ static int task_cure(struct thread_s *t)
 	if (!t->seized)
 		return 0;
 
+	pr_debug("  %d\n", t->pid);
+
 	if (compel_resume_task(t->pid, TASK_ALIVE, TASK_ALIVE)) {
 		pr_err("Can't unseize from %d\n", t->pid);
 		return -1;
