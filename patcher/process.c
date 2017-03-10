@@ -213,6 +213,26 @@ static int process_cure_threads(struct process_ctx_s *ctx)
 	return 0;
 }
 
+int process_unlink(struct process_ctx_s *ctx)
+{
+	int err;
+
+	if (!ctx->ctl)
+		return 0;
+
+	pr_debug("= Cleanup %d\n", ctx->pid);
+
+	err = process_unmap(ctx, ctx->remote_map, ctx->remote_map_size);
+	if (err)
+		return err;
+
+	err = compel_cure(ctx->ctl);
+	if (err)
+		pr_err("failed to cure process %d: %d\n", ctx->pid, err);
+
+	return err;
+}
+
 int process_cure(struct process_ctx_s *ctx)
 {
 	return process_cure_threads(ctx);
@@ -228,15 +248,23 @@ int process_link(struct process_ctx_s *ctx)
 		return -1;
 	}
 
-	ctx->remote_map = process_map(ctx, -1, 0, 0, PAGE_SIZE,
+	ctx->remote_map_size = PAGE_SIZE;
+
+	ctx->remote_map = process_map(ctx, -1, 0, 0, ctx->remote_map_size,
 			MAP_ANONYMOUS | MAP_PRIVATE,
 			PROT_READ | PROT_WRITE | PROT_EXEC);
 	if ((void *)ctx->remote_map == MAP_FAILED) {
-		pr_err("failed to create remove mem\n");
-		return -1;
+		pr_err("failed to create service memory region in process %d\n", ctx->pid);
+		goto cure;
 	}
 
 	return 0;
+
+cure:
+	if (compel_cure(ctx->ctl))
+		pr_err("failed to cure process %d\n", ctx->pid);
+	ctx->ctl = NULL;
+	return -1;
 }
 
 static int task_infect(struct thread_s *t)

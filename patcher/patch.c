@@ -371,8 +371,14 @@ static int init_patch(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int process_resume(struct process_ctx_s *ctx)
+int process_resume(struct process_ctx_s *ctx)
 {
+	int err;
+
+	err = process_unlink(ctx);
+	if (err)
+		return err;
+
 	pr_info("= Resuming %d\n", ctx->pid);
 	return process_cure(ctx);
 }
