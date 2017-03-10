@@ -67,8 +67,6 @@ static int apply_func_jumps(struct process_ctx_s *ctx)
 			pr_err("failed to apply function jump\n");
 			return err;
 		}
-
-		fj->applied = 1;
 	}
 	return 0;
 }
@@ -165,16 +163,35 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	return apply_func_jumps(ctx);
 }
 
+static int func_jump_applied(struct process_ctx_s *ctx,
+			     const struct func_jump_s *fj)
+{
+	int err;
+	uint8_t code[8];
+
+	BUILD_BUG_ON(sizeof(code) != sizeof(fj->func_jump));
+
+	err = process_read_data(ctx->pid, fj->func_addr, code, sizeof(code));
+	if (err)
+		return err;
+
+	return !memcmp(code, fj->func_jump, sizeof(code));
+}
+
 static int revert_func_jumps(struct process_ctx_s *ctx)
 {
-	int i, err;
+	int i, err, applied;
 	struct patch_info_s *pi = PI(ctx);
 
 	pr_info("= Revert function jumps:\n");
 	for (i = 0; i < pi->n_func_jumps; i++) {
 		struct func_jump_s *fj = pi->func_jumps[i];
 
-		if (!fj->applied)
+		applied = func_jump_applied(ctx, fj);
+		if (applied < 0)
+			return applied;
+
+		if (!applied)
 			continue;
 
 		err = write_func_code(ctx, fj);

@@ -18,9 +18,8 @@ struct func_jump_s {
 	uint32_t		func_size;
 	uint64_t		patch_value;
 	uint32_t		shndx;
-	uint8_t			code[8];
-	uint8_t			applied;
 	uint64_t		func_addr;
+	uint8_t			code[8];
 	uint8_t			func_jump[8];
 };
 
