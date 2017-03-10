@@ -235,55 +235,90 @@ static int dep_is_collected(const struct list_head *needed, const struct vma_are
 	return 0;
 }
 
-static void collect_new_deps(struct list_head *nested, struct list_head *head)
+static int collect_new_dep(struct process_ctx_s *ctx, struct list_head *head,
+			   const struct vma_area *vma)
 {
-	struct ctx_dep *cd, *tmp;
+	struct ctx_dep *cd;
 
-	list_for_each_entry_safe(cd, tmp, nested, list) {
-		if (dep_is_collected(head, cd->vma))
-			continue;
-		list_move_tail(&cd->list, head);
-	}
+	if (dep_is_collected(head, vma))
+		return 1;
+
+	cd = ctx_create_dep(vma);
+	if (!cd)
+		return -EINVAL;
+
+	list_add_tail(&cd->list, head);
+	return 0;
 }
 
-static int collect_lib_deps(struct process_ctx_s *ctx, const struct vma_area *vma, struct list_head *head)
+static int collect_vma_needed(struct process_ctx_s *ctx, const struct vma_area *vma, struct list_head *head)
 {
 	struct elf_needed *en;
-	LIST_HEAD(needed);
-	LIST_HEAD(nested);
 
 	list_for_each_entry(en, elf_needed_list(vma->ei), list) {
-		const struct vma_area *vma;
-		struct ctx_dep *cd;
-		int err;
+		const struct vma_area *svma;
+		int ret;
 
-		vma = find_vma_by_soname(&ctx->vmas, en->needed);
-		if (!vma) {
+		svma = find_vma_by_soname(&ctx->vmas, en->needed);
+		if (!svma) {
 			pr_err("failed to find VMA by soname %s\n", en->needed);
 			return -ENOENT;
 		}
 
-		cd = ctx_create_dep(vma);
-		if (!cd)
-			return -EINVAL;
-		list_add_tail(&cd->list, &needed);
-
-		err = collect_lib_deps(ctx, vma, &nested);
-		if (err)
-			return err;
-
+		ret = collect_new_dep(ctx, head, svma);
+		if (ret < 0)
+			return ret;
 	}
-	list_splice_tail(&needed, head);
-	collect_new_deps(&nested, head);
+
 	return 0;
 }
 
-static int collect_ctx_deplist(struct process_ctx_s *ctx)
+static int collect_lib_deps(struct process_ctx_s *ctx, struct list_head *deps)
 {
 	struct ctx_dep *cd;
+
+	list_for_each_entry(cd, deps, list) {
+		int err;
+
+		err = collect_vma_needed(ctx, cd->vma, deps);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
+static int collect_vma_deplist(struct process_ctx_s *ctx,
+			       struct list_head *head,
+			       const struct vma_area *vma)
+{
+	int ret;
+
+	ret = collect_new_dep(ctx, head, vma);
+	if (ret)
+		return ret < 0 ? ret : 0;
+	return collect_vma_needed(ctx, vma, head);
+}
+
+static int collect_ld_preload(struct process_ctx_s *ctx, struct list_head *head)
+{
+	/* TODO: here must be added for LD_PRELOAD'ed libraries */
+	return 0;
+}
+
+static void print_deps(const struct list_head *head)
+{
+	struct ctx_dep *cd;
+
+	list_for_each_entry(cd, head, list)
+		pr_debug("  - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
+}
+
+static int collect_process_needed(struct process_ctx_s *ctx)
+{
 	char path[PATH_MAX];
 	char *exe_bid;
 	const struct vma_area *exe_vma;
+	int err;
 
 	snprintf(path, sizeof(path), "/proc/%d/exe", ctx->pid);
 
@@ -295,48 +330,32 @@ static int collect_ctx_deplist(struct process_ctx_s *ctx)
 	if (!exe_vma)
 		return -EINVAL;
 
-	cd = ctx_create_dep(exe_vma);
-	if (!cd)
-		return -EINVAL;
-	list_add_tail(&cd->list, &ctx->objdeps);
+	err = collect_new_dep(ctx, &ctx->objdeps, exe_vma);
+	if (err)
+		return err;
 
-	return collect_lib_deps(ctx, exe_vma, &ctx->objdeps);
+	err = collect_ld_preload(ctx, &ctx->objdeps);
+	if (err)
+		return err;
+
+	err = collect_lib_deps(ctx, &ctx->objdeps);
+	if (err)
+		return err;
+
+	/* Collecting target vma and its deps.
+	 * This is needed in case of it was loaded by dlopen(). */
+	return collect_vma_deplist(ctx, &ctx->objdeps, PVMA(ctx));
 }
 
-static void print_deps(const struct list_head *head)
-{
-	struct ctx_dep *cd;
-
-	list_for_each_entry(cd, head, list)
-		pr_debug("  - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
-}
-
-static int get_ctx_deplist(struct process_ctx_s *ctx)
+static int get_process_needed(struct process_ctx_s *ctx)
 {
 	int err;
+
+	err = collect_process_needed(ctx);
+	if (err)
+		return err;
 
 	pr_debug("= Process soname search list:\n");
-
-	err = collect_ctx_deplist(ctx);
-	if (err)
-		return err;
-
-	print_deps(&ctx->objdeps);
-	return 0;
-}
-
-static int get_patch_deplist(struct process_ctx_s *ctx)
-{
-	int err;
-	struct vma_area vma = {
-		.ei = P(ctx)->ei,
-	};
-
-	pr_debug("= Process patch soname search list:\n");
-
-	err = collect_lib_deps(ctx, &vma, &P(ctx)->objdeps);
-	if (err)
-		return err;
 
 	print_deps(&ctx->objdeps);
 	return 0;
@@ -474,10 +493,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
 		return 1;
 
-	if (get_ctx_deplist(ctx))
-		return 1;
-
-	if (get_patch_deplist(ctx))
+	if (get_process_needed(ctx))
 		return 1;
 
 	if (collect_relocations(ctx))
