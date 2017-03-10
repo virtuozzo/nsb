@@ -103,6 +103,8 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		if (access(map_file, F_OK))
 			goto add;
 
+		ret = -ENOMEM;
+
 		vma->path = xstrdup(buf + path_off);
 		if (!vma->path) {
 			pr_err("failed to fuplicate string\n");
@@ -116,8 +118,8 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		}
 
 		if (is_elf_file(vma->map_file)) {
-			vma->ei = elf_create_info(vma->map_file);
-			if (!vma->ei)
+			ret = elf_create_info(vma->map_file, &vma->ei);
+			if (ret)
 				goto free_map_file;
 		}
 

@@ -17,7 +17,7 @@ int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 		 const struct elf_info_s *ei, uint64_t hint);
 int unload_elf(struct process_ctx_s *ctx, struct list_head *segments);
 
-struct elf_info_s *elf_create_info(const char *path);
+int elf_create_info(const char *path, struct elf_info_s **elf_info);
 void elf_destroy_info(struct elf_info_s *ei);
 
 char *elf_build_id(const char *path);

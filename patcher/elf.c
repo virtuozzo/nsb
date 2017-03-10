@@ -342,24 +342,12 @@ static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
 	if (!ei->path)
 		goto free_ei;
 
-	if (elf_getshdrstrndx(e, &ei->shstrndx)) {
-		pr_err("failed to get section string index: %s\n", elf_errmsg(-1));
-		goto free_ei_path;
-	}
-
-	if (&ei->hdr != gelf_getehdr(e, &ei->hdr)) {
-		pr_err("failed to get ELF header: %s\n", elf_errmsg(elf_errno()));
-		goto free_ei_path;
-	}
-
 	INIT_LIST_HEAD(&ei->needed);
 
 	ei->e = e;
 
 	return ei;
 
-free_ei_path:
-	free(ei->path);
 free_ei:
 	free(ei);
 	return NULL;
@@ -391,7 +379,7 @@ int is_elf_file(const char *path)
 	return e != NULL;
 }
 
-struct elf_info_s *elf_create_info(const char *path)
+int elf_create_info(const char *path, struct elf_info_s **elf_info)
 {
 	Elf *e = NULL;
 	struct elf_info_s *ei;
@@ -399,31 +387,46 @@ struct elf_info_s *elf_create_info(const char *path)
 
 	err = elf_open(path, &e);
 	if (err) {
-		pr_err("failed to parse ELF %s\n", path);
-		return NULL;
+		pr_err("failed to open ELF %s\n", path);
+		return err;
 	}
 
+	err = -ENOMEM;
 	ei = elf_alloc_info(e, path);
 	if (!ei)
 		goto end_elf;
 
-	if (__elf_get_soname(ei, &ei->soname))
+	err = -EINVAL;
+	if (elf_getshdrstrndx(e, &ei->shstrndx)) {
+		pr_err("failed to get section string index: %s\n", elf_errmsg(-1));
+		goto destroy_elf;
+	}
+
+	if (&ei->hdr != gelf_getehdr(e, &ei->hdr)) {
+		pr_err("failed to get ELF header: %s\n", elf_errmsg(elf_errno()));
+		goto destroy_elf;
+	}
+
+	err = __elf_get_soname(ei, &ei->soname);
+	if (err)
 		goto destroy_elf;
 
-	if (elf_collect_needed(ei))
+	err = elf_collect_needed(ei);
+	if (err)
 		goto destroy_elf;
 
 	ei->bid = elf_get_bid(ei);
 
-	return ei;
+	*elf_info = ei;
+	return 0;
 
 end_elf:
 	(void)elf_end(e);
-	return NULL;
+	return err;
 
 destroy_elf:
 	elf_destroy_info(ei);
-	return NULL;
+	return err;
 }
 
 static char *get_section_name(struct elf_info_s *ei, Elf_Scn *scn)
@@ -585,16 +588,16 @@ const char *elf_bid(struct elf_info_s *ei)
 char *elf_build_id(const char *path)
 {
 	struct elf_info_s *ei;
-	char *bid = NULL;
+	char *bid;
+	int err;
 
-	if (access(path, R_OK))
+	err = elf_create_info(path, &ei);
+	if (err)
 		return NULL;
 
-	ei = elf_create_info(path);
-	if (ei) {
-		bid = elf_get_bid(ei);
-		elf_destroy_info(ei);
-	}
+	bid = strdup(ei->bid);
+
+	elf_destroy_info(ei);
 	return bid;
 }
 
@@ -1285,13 +1288,15 @@ int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 	Elf_Scn *scn;
 	Elf_Data *edata;
 	GElf_Shdr shdr;
-	int err = -EINVAL;
+	int err;
 	const char *sname = VZPATCH_SECTION;
 	void *data;
 
-	ei = elf_create_info(patchfile);
-	if (!ei)
-		return -EINVAL;
+	err = elf_create_info(patchfile, &ei);
+	if (err)
+		return err;
+
+	err = -EINVAL;
 
 	scn = elf_get_section_by_name(ei, sname);
 	if (!scn)
