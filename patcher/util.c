@@ -34,3 +34,15 @@ close_fd:
 	close(fd);
 	return res;
 }
+
+int check_file_type(const char *path, unsigned type)
+{
+	struct stat st;
+
+	if (stat(path, &st)) {
+		pr_perror("failed to stat %s", path);
+		return -errno;
+	}
+
+	return (st.st_mode & S_IFMT) == type;
+}
