@@ -290,10 +290,8 @@ static Elf *elf_fd(const char *path, int fd)
 	if (!e)
 		return NULL;
 
-	if (elf_kind(e) != ELF_K_ELF) {
-		pr_debug("    %s is not and regular ELF file\n", path);
+	if (elf_kind(e) != ELF_K_ELF)
 		goto end_elf;
-	}
 
 	return e;
 
@@ -362,21 +360,17 @@ void elf_destroy_info(struct elf_info_s *ei)
 
 int is_elf_file(const char *path)
 {
-	int fd;
+	int err;
 	Elf *e;
 
-	fd = open(path, O_RDONLY);
-	if (fd == -1) {
-		pr_perror("failed to open %s", path);
-		return -errno;
-	}
+	if (!check_file_type(path, S_IFREG))
+		return 0;
 
-	e = elf_fd(path, fd);
-	if (e)
+	err = elf_open(path, &e);
+	if (!err)
 		(void)elf_end(e);
 
-	close(fd);
-	return e != NULL;
+	return !err;
 }
 
 int elf_create_info(const char *path, struct elf_info_s **elf_info)
