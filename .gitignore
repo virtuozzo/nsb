@@ -17,6 +17,10 @@ Makefile
 .libs
 .dirstamp
 *.swp
+*.orig
+*.rej
+TAGS
+tags
 
 .gitignore
 aclocal.m4
