@@ -26,9 +26,10 @@ void print_usage(void)
 		"  nsb COMMAND OPTIONS\n"
 		"\n");
 	fprintf(stderr, "Commands:\n"
-		"  patch   - apply patch to process\n"
-		"  check   - check whether patch is applied to process\n"
-		"  list    - list all applied patches\n"
+		"  patch           - apply patch to process\n"
+		"  check           - check whether patch is applied to process\n"
+		"  list            - list all applied patches\n"
+		"  revert          - revert patch in process\n"
 		"\n");
 
 	fprintf(stderr, "Options:\n"
@@ -42,6 +43,20 @@ void print_usage(void)
 		"                      3 - Error, warning and information messages\n"
 		"                      4 - Error, warning, information and debug messages\n"
 	       );
+}
+
+static int cmd_unpatch_process(const struct options *o)
+{
+	if (!o->pid) {
+		pr_msg("Error: process pid has to be provided\n");
+		return 1;
+	}
+
+	if (!o->patch_path) {
+		pr_msg("Error: patch file has to be provided\n");
+		return 1;
+	}
+	return unpatch_process(o->pid, o->patch_path, o->dry_run);
 }
 
 static int cmd_list_patches(const struct options *o)
@@ -92,6 +107,9 @@ void *cmd_handler(char **argv)
 
 	if (!strcmp(argv[optind], "list"))
 		return cmd_list_patches;
+
+	if (!strcmp(argv[optind], "revert"))
+		return cmd_unpatch_process;
 
 	fprintf(stderr, "%s: invalid subcommand -- '%s'\n", argv[0], argv[optind]);
 	return NULL;

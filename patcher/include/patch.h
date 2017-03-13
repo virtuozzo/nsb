@@ -11,6 +11,7 @@ struct process_ctx_s;
 int patch_process(pid_t pid, const char *patchfile, int dry_run);
 int check_process(pid_t pid, const char *patchfile);
 int list_process_patches(pid_t pid);
+int unpatch_process(pid_t pid, const char *patchfile, int dry_run);
 
 struct dl_map;
 struct patch_s;

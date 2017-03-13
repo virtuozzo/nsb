@@ -539,6 +539,12 @@ resume:
 	return ret ? ret : err;
 }
 
+int unpatch_process(pid_t pid, const char *patchfile, int dry_run)
+{
+	pr_err("Not supported yet\n");
+	return -ENOSYS;
+}
+
 int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
