@@ -87,8 +87,43 @@ static int apply_func_jumps(struct process_ctx_s *ctx)
 
 static int read_func_jump_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
-	return process_read_data(ctx, fj->func_addr,
-				 fj->code, sizeof(fj->code));
+	int fd, err = 0;
+	ssize_t ret;
+	size_t size = sizeof(fj->code);
+	off_t offset;
+	const char *map_file = TDLM(ctx)->exec_vma->map_file;
+	const struct elf_info_s *ei = TDLM(ctx)->ei;
+
+	fd = open(map_file, O_RDONLY);
+	if (fd == -1) {
+		pr_perror("failed to open %s", map_file);
+		return -errno;
+	}
+
+	offset = fj->func_value - elf_section_virt_base(ei, fj->shndx);
+
+	if (lseek(fd, offset, SEEK_SET) != offset) {
+		pr_err("failed to set offset %#lx in %s",
+				fj->func_value, map_file);
+		err = -errno;
+		goto close_fd;
+	}
+
+	ret = read(fd, fj->code, size);
+	if (ret != size) {
+		if (ret == -1) {
+			pr_perror("failed to read %s", map_file);
+			err = -errno;
+		} else {
+			pr_perror("read from %s less than requested: %ld < %ld",
+					map_file, ret, size);
+			err = -EINVAL;
+		}
+	}
+
+close_fd:
+	close(fd);
+	return err;
 }
 
 static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
