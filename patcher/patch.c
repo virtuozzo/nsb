@@ -254,6 +254,19 @@ static int collect_new_dep(struct process_ctx_s *ctx, struct list_head *head,
 	return 0;
 }
 
+static int find_needed_vma(struct process_ctx_s *ctx, const char *needed,
+			   const struct vma_area **found_vma)
+{
+	const struct vma_area *vma;
+
+	vma = find_vma_by_soname(&ctx->vmas, needed);
+	if (!vma)
+		return -ENOENT;
+
+	*found_vma = vma;
+	return 0;
+}
+
 static int collect_vma_needed(struct process_ctx_s *ctx, const struct vma_area *vma, struct list_head *head)
 {
 	struct elf_needed *en;
@@ -262,8 +275,8 @@ static int collect_vma_needed(struct process_ctx_s *ctx, const struct vma_area *
 		const struct vma_area *svma;
 		int ret;
 
-		svma = find_vma_by_soname(&ctx->vmas, en->needed);
-		if (!svma) {
+		ret = find_needed_vma(ctx, en->needed, &svma);
+		if (ret) {
 			pr_err("failed to find VMA by soname %s\n", en->needed);
 			return -ENOENT;
 		}
