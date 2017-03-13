@@ -84,7 +84,7 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	fj->func_addr = vma_func_addr(PVMA(ctx), fj->func_value);
+	fj->func_addr = vma_func_addr(TVMA(ctx), fj->func_value);
 
 	patch_addr = PLA(ctx) + fj->patch_value;
 
@@ -130,13 +130,13 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 
 	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
 
-	if (elf_type_dyn(PVMA(ctx)->ei))
+	if (elf_type_dyn(TVMA(ctx)->ei))
 		/*
 		 * TODO: there should be bigger offset. 2 or maybe even 4 GB.
 		 * But jmpq command construction fails, if map lays ouside 2g offset.
 		 * This might be a bug in jmps construction
 		 */
-		hint = PVMA(ctx)->start & 0xfffffffff0000000;
+		hint = TVMA(ctx)->start & 0xfffffffff0000000;
 	else
 		hint = 0x1000000;
 	return load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
@@ -344,7 +344,7 @@ static int collect_process_needed(struct process_ctx_s *ctx)
 
 	/* Collecting target vma and its deps.
 	 * This is needed in case of it was loaded by dlopen(). */
-	return collect_vma_deplist(ctx, &ctx->objdeps, PVMA(ctx));
+	return collect_vma_deplist(ctx, &ctx->objdeps, TVMA(ctx));
 }
 
 static int get_process_needed(struct process_ctx_s *ctx)
@@ -375,7 +375,7 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 	}
 	pr_info("  - path   : %s\n", vma->path);
 	pr_info("  - address: %#lx\n", vma->start);
-	PVMA(ctx) = vma;
+	TVMA(ctx) = vma;
 	return 0;
 }
 
