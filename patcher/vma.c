@@ -295,7 +295,9 @@ int iterate_file_vmas(struct list_head *head, void *data,
 
 const char *vma_soname(const struct vma_area *vma)
 {
-	return elf_get_soname(vma->ei);
+	if (vma->ei)
+		return elf_get_soname(vma->ei);
+	return NULL;
 }
 
 static int compare_soname(const struct vma_area *vma, const void *data)
