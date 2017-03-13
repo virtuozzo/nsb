@@ -539,12 +539,6 @@ resume:
 	return ret ? ret : err;
 }
 
-int unpatch_process(pid_t pid, const char *patchfile, int dry_run)
-{
-	pr_err("Not supported yet\n");
-	return -ENOSYS;
-}
-
 int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
@@ -590,4 +584,68 @@ int list_process_patches(pid_t pid)
 		list_patch(p);
 
 	return 0;
+}
+
+static int patch_check_backtrace(const struct process_ctx_s *ctx,
+				 const struct backtrace_s *bt,
+				 uint64_t start, uint64_t end)
+{
+	return backtrace_check_range(bt, start, end);
+}
+
+static int revert_dyn_binpatch(struct process_ctx_s *ctx, struct patch_s *p)
+{
+	int err;
+
+	if (p->target_dlm) {
+		err = patch_revert_func_jumps(ctx, p);
+		if (err)
+			return err;
+	}
+
+	return patch_unload(ctx, p);
+}
+
+int unpatch_process(pid_t pid, const char *patchfile, int dry_run)
+{
+	int ret, err;
+	struct process_ctx_s *ctx = &process_context;
+	struct patch_s *p;
+
+	err = init_context(ctx, pid, patchfile, dry_run);
+	if (err)
+		return err;
+
+	ctx->check_backtrace = patch_check_backtrace;
+
+	err = process_suspend(ctx, PI(ctx)->patch_bid);
+	if (err)
+		return err;
+
+	ret = process_link(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_collect_vmas(ctx);
+	if (ret)
+		goto resume;
+
+	p = find_patch_by_bid(ctx, PI(ctx)->patch_bid);
+	if (!p) {
+		pr_err("failed to find target ELF with Build ID %s in process %d\n",
+				p->pi.patch_bid, pid);
+		pr_err("It was there. This is totally wrong. Aborting\n");
+		ret = -EFAULT;
+		goto resume;
+	}
+
+	ret = revert_dyn_binpatch(ctx, p);
+	if (ret)
+		pr_err("failed to revert patch\n");
+
+resume:
+	err = process_resume(ctx);
+
+	pr_info("Done\n");
+	return ret ? ret : err;
 }
