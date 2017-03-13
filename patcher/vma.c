@@ -253,6 +253,29 @@ const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char 
 	return find_vma(vmas, bid, compare_bid);
 }
 
+static int compare_stat(const struct vma_area *vma, const void *data)
+{
+	const struct stat *st = data;
+	struct stat vma_st;
+
+	if (!vma->map_file)
+		return 0;
+
+	if (stat(vma->map_file, &vma_st)) {
+		pr_perror("failed to stat %s", vma->map_file);
+		return -errno;
+	}
+
+	return  (vma_st.st_dev == st->st_dev) &&
+		(vma_st.st_ino == st->st_ino);
+}
+
+const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
+					const struct stat *st)
+{
+	return find_vma(vmas, st, compare_stat);
+}
+
 int iterate_file_vmas(struct list_head *head, void *data,
 		int (*actor)(struct vma_area *vma, void *data))
 {
