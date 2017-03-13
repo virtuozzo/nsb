@@ -351,11 +351,11 @@ static int get_process_needed(struct process_ctx_s *ctx)
 {
 	int err;
 
+	pr_debug("= Process soname search list:\n");
+
 	err = collect_process_needed(ctx);
 	if (err)
 		return err;
-
-	pr_debug("= Process soname search list:\n");
 
 	print_deps(&ctx->objdeps);
 	return 0;
