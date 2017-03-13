@@ -582,14 +582,15 @@ const char *elf_bid(struct elf_info_s *ei)
 char *elf_build_id(const char *path)
 {
 	struct elf_info_s *ei;
-	char *bid;
+	char *bid = NULL;
 	int err;
 
 	err = elf_create_info(path, &ei);
 	if (err)
 		return NULL;
 
-	bid = strdup(ei->bid);
+	if (ei->bid)
+		bid = strdup(ei->bid);
 
 	elf_destroy_info(ei);
 	return bid;
