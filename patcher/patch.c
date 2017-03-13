@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <linux/limits.h>
 
 #include "include/patch.h"
@@ -313,22 +316,40 @@ static void print_deps(const struct list_head *head)
 		pr_debug("  - %s - %s\n", vma_soname(cd->vma), cd->vma->path);
 }
 
-static int collect_process_needed(struct process_ctx_s *ctx)
+static int find_process_exe_vma(struct process_ctx_s *ctx,
+				const struct vma_area **exe_vma)
 {
 	char path[PATH_MAX];
 	char *exe_bid;
-	const struct vma_area *exe_vma;
-	int err;
+	const struct vma_area *vma;
 
 	snprintf(path, sizeof(path), "/proc/%d/exe", ctx->pid);
 
 	exe_bid = elf_build_id(path);
-	if (!exe_bid)
+	if (exe_bid) {
+		vma = find_vma_by_bid(&ctx->vmas, exe_bid);
+		if (vma)
+			goto found;
 		return -EINVAL;
+	}
 
-	exe_vma = find_vma_by_bid(&ctx->vmas, exe_bid);
-	if (!exe_vma)
-		return -EINVAL;
+	return -EINVAL;
+
+found:
+	*exe_vma = vma;
+	return 0;
+}
+
+static int collect_process_needed(struct process_ctx_s *ctx)
+{
+	const struct vma_area *exe_vma;
+	int err;
+
+	err = find_process_exe_vma(ctx, &exe_vma);
+	if (err) {
+		pr_err("failed to find process executable VMA\n");
+		return err;
+	}
 
 	err = collect_new_dep(ctx, &ctx->objdeps, exe_vma);
 	if (err)
