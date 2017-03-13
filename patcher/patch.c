@@ -322,6 +322,7 @@ static int find_process_exe_vma(struct process_ctx_s *ctx,
 	char path[PATH_MAX];
 	char *exe_bid;
 	const struct vma_area *vma;
+	struct stat exe_st;
 
 	snprintf(path, sizeof(path), "/proc/%d/exe", ctx->pid);
 
@@ -332,6 +333,16 @@ static int find_process_exe_vma(struct process_ctx_s *ctx,
 			goto found;
 		return -EINVAL;
 	}
+
+	/* Ok, no BID in exe link. Let's search by stat */
+	if (stat(path, &exe_st)) {
+		pr_perror("failed to stat %s", path);
+		return -errno;
+	}
+
+	vma = find_vma_by_stat(&ctx->vmas, &exe_st);
+	if (vma)
+		goto found;
 
 	return -EINVAL;
 
