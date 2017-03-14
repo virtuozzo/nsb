@@ -173,12 +173,12 @@ static int process_do_open_file(pid_t pid, struct parasite_ctl *ctl,
 
 int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mode_t mode)
 {
-	int err;
+	int fd;
 
-	err = process_do_open_file(ctx->pid, ctx->ctl, ctx->remote_map, path, flags, mode);
-	if (err)
+	fd = process_do_open_file(ctx->pid, ctx->ctl, ctx->remote_map, path, flags, mode);
+	if (fd < 0)
 		pr_err("failed to open %s in process %d\n", path, ctx->pid);
-	return err;
+	return fd;
 }
 
 static int task_cure(struct thread_s *t)
