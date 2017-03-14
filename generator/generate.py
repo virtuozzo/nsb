@@ -4,8 +4,14 @@ from binfile import BinFile
 from binpatch import BinPatch
 
 def gen_patch(args):
-	print "ELF A: %s" % args.elfa
-	bfa = BinFile(args.elfa)
+	print "ELF A: %s" % args.elfa,
+	if args.debugfile:
+		print "+", args.debugfile
+	else:
+		print ""
+
+	bfa = BinFile(args.elfa, args.debugfile, args.keep_merged)
+
 	print "ELF B: %s" % args.elfb
 	bfb = BinFile(args.elfb)
 

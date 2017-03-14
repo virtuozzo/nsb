@@ -13,6 +13,9 @@ genp.set_defaults(action = gen_patch)
 genp.add_argument("elfa", help="Old ELF file")
 genp.add_argument("elfb", help="New ELF file")
 genp.add_argument("-o", "--outfile", help="Output file")
+genp.add_argument("-d", "--debugfile", help="File containing separate debuginfo")
+genp.add_argument("--keep-merged", action="store_true",
+	help="Keep result of merging with debuginfo file")
 
 bid = sp.add_parser("build-id", help = "Get ELF file Build ID")
 bid.set_defaults(action = print_build_id)
