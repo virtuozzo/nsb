@@ -22,7 +22,7 @@ generator_PYTHON =					\
 			protobuf/funcjump_pb2.py	\
 			protobuf/staticsym_pb2.py
 
-bin_PROGRAMS = nsb
+sbin_PROGRAMS = nsb
 
 nsb_SOURCES =						\
 			protobuf/binpatch.pb-c.c	\
