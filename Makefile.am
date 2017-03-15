@@ -16,6 +16,12 @@ generator_PYTHON =					\
 			generator/binfile.py		\
 			generator/binpatch.py		\
 			generator/elffile.py		\
+			generator/funcjump.py		\
+			generator/static.py		\
+			generator/debuginfo.py		\
+			generator/check.py		\
+			generator/build_id.py		\
+			generator/generate.py		\
 			generator/nsbgen.py		\
 							\
 			protobuf/binpatch_pb2.py	\
