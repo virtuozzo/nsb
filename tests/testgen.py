@@ -46,6 +46,10 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"\tos.environ['NSB_PATCHER']\n"						\
 	"except:\n"								\
 	"\tos.environ['NSB_PATCHER'] = os.getcwd() + '/nsb'\n"			\
+	"try:\n"								\
+	"\tos.environ['LD_LIBRARY_PATH']\n"					\
+	"except:\n"								\
+	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/plugins/.libs'\n"	\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
 	"exit(testrunner.%s('%s', '%s', %d).run())\n" %	\
 	(test_class, source, target, test_type)
