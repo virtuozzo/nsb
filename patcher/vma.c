@@ -123,7 +123,6 @@ int collect_vmas(pid_t pid, struct list_head *head)
 				goto free_map_file;
 		}
 
-		INIT_LIST_HEAD(&vma->target_syms);
 add:
 		list_add_tail(&vma->list, head);
 	}

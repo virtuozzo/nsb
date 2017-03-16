@@ -17,7 +17,6 @@ struct vma_area {
 	int			deleted;
 	char			*map_file;
 	struct elf_info_s	*ei;
-	struct list_head	target_syms;
 };
 
 int collect_vmas(pid_t pid, struct list_head *head);
