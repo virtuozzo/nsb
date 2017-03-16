@@ -18,18 +18,21 @@ uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr)
 	return addr;
 }
 
-static int parse_vma(const char *line, struct vma_area *vma, int *path_off)
+static int parse_vma(char *line, struct vma_area *vma)
 {
 	char r, w, x, s;
 
-	int dev_maj;
-	int dev_min;
-	unsigned long ino;
+	uint32_t dev_maj;
+	uint32_t dev_min;
+	uint64_t ino;
+	uint32_t path_off;
 	int num;
+
+	memset(vma, 0, sizeof(*vma));
 
 	num = sscanf(line, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
 		     &vma->start, &vma->end, &r, &w, &x, &s, &vma->pgoff,
-		     &dev_maj, &dev_min, &ino, path_off);
+		     &dev_maj, &dev_min, &ino, &path_off);
 	if (num != 10) {
 		pr_err("Can't parse: %s\n", line);
 		return -EINVAL;
@@ -52,15 +55,65 @@ static int parse_vma(const char *line, struct vma_area *vma, int *path_off)
 		return -EINVAL;
 	}
 
+	if (path_off != strlen(line))
+		vma->path = line + path_off;
+
 	return 0;
+}
+
+static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
+{
+	struct vma_area *vma;
+	char map_file[PATH_MAX];
+	int ret = -ENOMEM;
+
+	vma = xmemdup(template, sizeof(*vma));
+	if (!vma)
+		return -ENOMEM;
+
+	if (template->path) {
+		vma->path = xstrdup(template->path);
+		if (!vma->path) {
+			pr_err("failed to fuplicate string\n");
+			goto free_vma;
+		}
+	}
+
+	snprintf(map_file, sizeof(map_file), "/proc/%d/map_files/%lx-%lx",
+			pid, vma->start, vma->end);
+
+	if (!access(map_file, F_OK)) {
+		vma->map_file = xstrdup(map_file);
+		if (!vma->map_file) {
+			pr_err("failed to fuplicate string\n");
+			goto free_vma_path;
+		}
+
+		if (is_elf_file(vma->map_file)) {
+			ret = elf_create_info(vma->map_file, &vma->ei);
+			if (ret)
+				goto free_map_file;
+		}
+	}
+
+	list_add_tail(&vma->list, head);
+
+	return 0;
+
+free_map_file:
+	free(vma->map_file);
+free_vma_path:
+	free(vma->path);
+free_vma:
+	free(vma);
+	return ret;
 }
 
 int collect_vmas(pid_t pid, struct list_head *head)
 {
-	struct vma_area *vma;
+	struct vma_area tmp;
 	int ret = -1;
 	char buf[PATH_MAX];
-	char map_file[PATH_MAX];
 	FILE *f;
 
 	pr_debug("= Collecting mappings for %d\n", pid);
@@ -73,73 +126,29 @@ int collect_vmas(pid_t pid, struct list_head *head)
 	}
 
 	while (fgets(buf, sizeof(buf), f)) {
-		int path_off;
-
 		buf[strlen(buf) - 1] = '\0';
 
-		vma = xzalloc(sizeof(*vma));
-		if (!vma)
+		ret = parse_vma(buf, &tmp);
+		if (ret)
 			goto err;
 
-		ret = parse_vma(buf, vma, &path_off);
-		if (ret)
-			goto free_vma;
-
 		pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
-				vma->start, vma->end,
-				(vma->prot & PROT_READ) ? 'r' : '-',
-				(vma->prot & PROT_WRITE) ? 'w' : '-',
-				(vma->prot & PROT_EXEC) ? 'x' : '-',
-				(vma->flags == MAP_SHARED) ? 's' : 'p',
-				vma->pgoff,
-				(strlen(buf) == path_off) ? "" : (buf + path_off));
+				tmp.start, tmp.end,
+				(tmp.prot & PROT_READ) ? 'r' : '-',
+				(tmp.prot & PROT_WRITE) ? 'w' : '-',
+				(tmp.prot & PROT_EXEC) ? 'x' : '-',
+				(tmp.flags == MAP_SHARED) ? 's' : 'p',
+				tmp.pgoff,
+				(tmp.path) ? tmp.path : "");
 
-		if (strlen(buf) == path_off)
-			goto add;
-
-		snprintf(map_file, sizeof(buf), "/proc/%d/map_files/%lx-%lx",
-				pid, vma->start, vma->end);
-
-		if (access(map_file, F_OK))
-			goto add;
-
-		ret = -ENOMEM;
-
-		vma->path = xstrdup(buf + path_off);
-		if (!vma->path) {
-			pr_err("failed to fuplicate string\n");
-			goto free_vma;
-		}
-
-		vma->map_file = xstrdup(map_file);
-		if (!vma->map_file) {
-			pr_err("failed to fuplicate string\n");
-			goto free_vma_path;
-		}
-
-		if (is_elf_file(vma->map_file)) {
-			ret = elf_create_info(vma->map_file, &vma->ei);
-			if (ret)
-				goto free_map_file;
-		}
-
-add:
-		list_add_tail(&vma->list, head);
+		ret = collect_vma(pid, head, &tmp);
+		if (ret)
+			goto err;
 	}
-
-	ret = 0;
 
 err:
 	fclose(f);
 	return ret;
-
-free_map_file:
-	free(vma->map_file);
-free_vma_path:
-	free(vma->path);
-free_vma:
-	free(vma);
-	goto err;
 }
 
 const struct vma_area *find_vma(const struct list_head *head, const void *data,
