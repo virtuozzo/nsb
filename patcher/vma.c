@@ -109,14 +109,14 @@ free_vma:
 	return ret;
 }
 
-int collect_vmas(pid_t pid, struct list_head *head)
+static int __collect_vmas(pid_t pid, struct list_head *head,
+			  int (*check)(const struct vma_area *vma, const void *data),
+			  const void *data)
 {
 	struct vma_area tmp;
 	int ret = -1;
 	char buf[PATH_MAX];
 	FILE *f;
-
-	pr_debug("= Collecting mappings for %d\n", pid);
 
 	snprintf(buf, sizeof(buf), "/proc/%d/maps", pid);
 	f = fopen(buf, "r");
@@ -131,6 +131,14 @@ int collect_vmas(pid_t pid, struct list_head *head)
 		ret = parse_vma(buf, &tmp);
 		if (ret)
 			goto err;
+
+		if (check) {
+			ret = check(&tmp, data);
+			if (ret < 0)
+				return ret;
+			if (!ret)
+				continue;
+		}
 
 		pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
 				tmp.start, tmp.end,
@@ -149,6 +157,13 @@ int collect_vmas(pid_t pid, struct list_head *head)
 err:
 	fclose(f);
 	return ret;
+}
+
+int collect_vmas(pid_t pid, struct list_head *head)
+{
+	pr_debug("= Collecting mappings for %d\n", pid);
+
+	return __collect_vmas(pid, head, NULL, NULL);
 }
 
 const struct vma_area *find_vma(const struct list_head *head, const void *data,
