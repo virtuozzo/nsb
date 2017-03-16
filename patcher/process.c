@@ -6,6 +6,7 @@
 #include <compel/compel.h>
 #include <compel/ptrace.h>
 
+#include "include/context.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
 #include "include/vma.h"

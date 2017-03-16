@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "include/elf.h"
+#include "include/context.h"
 #include "include/process.h"
 #include "include/log.h"
 #include "include/xmalloc.h"

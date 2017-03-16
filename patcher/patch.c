@@ -15,6 +15,7 @@
 #include "include/vma.h"
 #include "include/elf.h"
 
+#include "include/context.h"
 #include "include/process.h"
 #include "include/x86_64.h"
 #include "include/backtrace.h"

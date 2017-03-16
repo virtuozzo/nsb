@@ -8,7 +8,7 @@
 #include "include/list.h"
 #include "include/xmalloc.h"
 #include "include/backtrace.h"
-#include "include/process.h"
+#include "include/context.h"
 #include "include/vma.h"
 
 #define MAX_DEPTH	64

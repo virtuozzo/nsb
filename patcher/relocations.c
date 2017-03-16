@@ -3,6 +3,7 @@
 #include "include/log.h"
 #include "include/elf.h"
 #include "include/process.h"
+#include "include/context.h"
 #include "include/vma.h"
 
 static void print_relocation(const struct list_head *head, const char *name)

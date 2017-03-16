@@ -39,6 +39,7 @@ nsb_SOURCES =						\
 			protobuf/staticsym.pb-c.h	\
 							\
 			patcher/include/compiler.h	\
+			patcher/include/context.h	\
 			patcher/include/log.h		\
 			patcher/include/list.h		\
 			patcher/include/patch.h		\
