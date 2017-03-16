@@ -357,3 +357,37 @@ int vma_is_executable(const struct vma_area *vma)
 {
 	return vma->prot & PROT_EXEC;
 }
+
+struct sym_info {
+	const char	*name;
+	uint64_t	value;
+};
+
+static int vma_find_sym(struct vma_area *vma, void *data)
+{
+	struct sym_info *si = data;
+	int64_t value;
+
+	if (!vma->ei)
+		return 0;
+
+	value = elf_dyn_sym_value(vma->ei, si->name);
+	if (value <= 0)
+		return value;
+
+	si->value = vma->start + value;
+	return 1;
+}
+
+int64_t vma_get_symbol_value(struct list_head *vmas, const char *name)
+{
+	struct sym_info si = {
+		.name = name,
+	};
+	int ret;
+
+	ret = iterate_file_vmas(vmas, &si, vma_find_sym);
+	if (ret <= 0)
+		return ret;
+	return si.value;
+}
