@@ -166,6 +166,21 @@ int collect_vmas(pid_t pid, struct list_head *head)
 	return __collect_vmas(pid, head, NULL, NULL);
 }
 
+static int compare_vma_path(const struct vma_area *vma, const void *data)
+{
+	const char *path = data;
+
+	if (!vma->path)
+		return 0;
+
+	return !strcmp(vma->path, path);
+}
+
+int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
+{
+	return __collect_vmas(pid, head, compare_vma_path, path);
+}
+
 const struct vma_area *find_vma(const struct list_head *head, const void *data,
 			  int (*actor)(const struct vma_area *vma, const void *data))
 {
