@@ -92,3 +92,21 @@ int iterate_dir_name(const char *dpath,
 
 	return __iter_dentry(dpath, actor, data, &dt);
 }
+
+int find_dentry(const char *dpath,
+		int (*actor)(const char *dentry, void *data),
+		void *data, char *dentry)
+{
+	struct dirent dt;
+	int ret;
+
+	ret = __iter_dentry(dpath, actor, data, &dt);
+	if (ret < 0) {
+		if (!ret)
+			return -ENOENT;
+		return ret;
+	}
+
+	strcpy(dentry, dt.d_name);
+	return 0;
+}

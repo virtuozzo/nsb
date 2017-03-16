@@ -6,5 +6,8 @@ int check_file_type(const char *path, unsigned type);
 int iterate_dir_name(const char *dpath,
 		     int (*actor)(const char *dentry, void *data),
 		     void *data);
+int find_dentry(const char *dpath,
+		int (*actor)(const char *dentry, void *data),
+		void *data, char *dentry);
 
 #endif
