@@ -27,7 +27,10 @@ struct process_ctx_s process_context = {
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
 		.segments = LIST_HEAD_INIT(process_context.p.segments),
-	}
+	},
+	.vmas = LIST_HEAD_INIT(process_context.vmas),
+	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
+	.threads = LIST_HEAD_INIT(process_context.threads),
 };
 
 static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
@@ -516,9 +519,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	ctx->pid = pid;
 	ctx->patchfile = patchfile;
-	INIT_LIST_HEAD(&ctx->vmas);
-	INIT_LIST_HEAD(&ctx->objdeps);
-	INIT_LIST_HEAD(&ctx->threads);
 
 	if (init_patch(ctx))
 		return 1;
