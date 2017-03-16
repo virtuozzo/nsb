@@ -1,18 +1,19 @@
 #include <stdlib.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include "include/log.h"
 #include "include/x86_64.h"
 
-static int ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
+static int ip_gen_offset(uint64_t next_ip, uint64_t tgt_pos,
 			 char addr_size, int *buf)
 {
 	int i;
 	long offset;
-	unsigned long mask = 0;
+	uint64_t mask = 0;
 
 	for (i = 0; i < addr_size; i++) {
-		mask |= ((unsigned long)0xff << (8 * i));
+		mask |= ((uint64_t)0xff << (8 * i));
 	}
 
 	offset = tgt_pos - next_ip;
@@ -27,7 +28,7 @@ static int ip_gen_offset(unsigned long next_ip, unsigned long tgt_pos,
 }
 
 static int ip_change_relative(unsigned char *addr,
-			      unsigned long next_ip, unsigned long tgt_pos,
+			      uint64_t next_ip, uint64_t tgt_pos,
 			      size_t addr_size)
 {
 	int offset;
@@ -40,7 +41,7 @@ static int ip_change_relative(unsigned char *addr,
 }
 
 static int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
-			   unsigned long cur_pos, unsigned long tgt_pos)
+			   uint64_t cur_pos, uint64_t tgt_pos)
 {
 	unsigned char *addr;
 	size_t instr_size = op_size + addr_size;
@@ -52,7 +53,7 @@ static int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t add
 }
 
 int x86_jmpq_instruction(unsigned char *buf, size_t buf_size,
-			 unsigned long cur_pos, unsigned long tgt_pos)
+			 uint64_t cur_pos, uint64_t tgt_pos)
 {
 	if (buf_size < 5) {
 		pr_err("buffer size is too small for jump command: %ld < 5\n",

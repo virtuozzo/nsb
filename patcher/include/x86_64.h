@@ -8,6 +8,6 @@
 #define X86_MAX_SIZE	16
 
 int x86_jmpq_instruction(unsigned char *buf, size_t size,
-			 unsigned long cur_pos, unsigned long tgt_pos);
+			 uint64_t cur_pos, uint64_t tgt_pos);
 
 #endif
