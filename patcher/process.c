@@ -39,7 +39,7 @@ int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
 			       "size is not aligned\n", addr, addr + size, pid);
 			return -EINVAL;
 		}
-		pr_perror("Failed to read range %#lx-%#lx from process %d",
+		pr_perror("Failed to write range %#lx-%#lx in process %d",
 				addr, addr + size, pid);
 		return -errno;
 	}
