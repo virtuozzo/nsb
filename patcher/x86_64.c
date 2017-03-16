@@ -178,3 +178,23 @@ ssize_t x86_64_call(uint64_t call, uint64_t where,
 	*code = &blob;
 	return sizeof(blob);
 }
+
+ssize_t x86_64_dlopen(uint64_t dlopen_addr, uint64_t name_addr,
+		      uint64_t where,
+		      void **code)
+{
+	return x86_64_call(dlopen_addr, where,
+			   name_addr, 1, 0,
+			   0, 0, 0,
+			   code);
+}
+
+ssize_t x86_64_dlclose(uint64_t dlopen_addr, uint64_t handle,
+		       uint64_t where,
+		       void **code)
+{
+	return x86_64_call(dlopen_addr, where,
+			   handle, 0, 0,
+			   0, 0, 0,
+			   code);
+}

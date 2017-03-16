@@ -14,4 +14,11 @@ ssize_t x86_64_call(uint64_t call, uint64_t where,
 		    uint64_t arg3, uint64_t arg4, uint64_t arg5,
 		    void **code);
 
+ssize_t x86_64_dlopen(uint64_t dlopen_addr, uint64_t name_addr,
+		      uint64_t where,
+		      void **code);
+ssize_t x86_64_dlclose(uint64_t dlopen_addr, uint64_t handle,
+		       uint64_t where,
+		       void **code);
+
 #endif
