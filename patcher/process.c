@@ -2,7 +2,6 @@
 #include <sys/mman.h>
 #include <sys/user.h>
 #include <sys/types.h>
-#include <dirent.h>
 
 #include <compel/compel.h>
 #include <compel/ptrace.h>
@@ -14,6 +13,7 @@
 #include "include/process.h"
 #include "include/patch.h"
 #include "include/elf.h"
+#include "include/util.h"
 
 struct patch_place_s {
 	struct list_head	list;
@@ -292,35 +292,6 @@ static int task_infect(struct thread_s *t)
 	}
 	thread_destroy(t);
 	return 0;
-}
-
-static int iterate_dir_name(const char *dpath,
-			    int (*actor)(const char *dentry, void *data),
-			    void *data)
-{
-	struct dirent *dt;
-	DIR *fdir;
-	int err;
-
-	fdir = opendir(dpath);
-	if (!fdir) {
-		pr_perror("failed to open %s", dpath);
-		return -errno;
-	}
-
-	while ((dt = readdir(fdir)) != NULL) {
-		char *dentry = dt->d_name;
-
-		if (!strcmp(dentry, ".") || !strcmp(dentry, ".."))
-			continue;
-
-		err = actor(dentry, data);
-		if (err)
-			break;
-	}
-
-	closedir(fdir);
-	return err;
 }
 
 static int collect_thread(const char *dentry, void *data)

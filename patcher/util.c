@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <dirent.h>
 
 #include "include/log.h"
 #include "include/util.h"
@@ -45,4 +46,49 @@ int check_file_type(const char *path, unsigned type)
 	}
 
 	return (st.st_mode & S_IFMT) == type;
+}
+
+static int __iter_dentry(const char *dpath,
+			 int (*actor)(const char *dentry, void *data),
+			 void *data,
+			 struct dirent *dirent)
+{
+	struct dirent *dt;
+	DIR *fdir;
+	int err;
+
+	fdir = opendir(dpath);
+	if (!fdir) {
+		pr_perror("failed to open %s", dpath);
+		return -errno;
+	}
+
+	while ((err = readdir_r(fdir, dirent, &dt)) == 0) {
+		char *dentry;
+
+		if (!dt)
+			break;
+
+		dentry = dirent->d_name;
+
+		if (!strcmp(dentry, ".") || !strcmp(dentry, ".."))
+			continue;
+
+		err = actor(dentry, data);
+		if (err)
+			break;
+	}
+
+	closedir(fdir);
+	return err;
+
+}
+
+int iterate_dir_name(const char *dpath,
+		     int (*actor)(const char *dentry, void *data),
+		     void *data)
+{
+	struct dirent dt;
+
+	return __iter_dentry(dpath, actor, data, &dt);
 }
