@@ -31,4 +31,8 @@ int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 			  void *code, size_t code_size);
 
+int process_release_at(struct process_ctx_s *ctx, uint64_t addr,
+		       void *code, size_t code_size);
+int process_acquire(struct process_ctx_s *ctx);
+
 #endif
