@@ -188,7 +188,7 @@ static int task_cure(struct thread_s *t)
 
 	pr_debug("  %d\n", t->pid);
 
-	if (compel_resume_task(t->pid, TASK_ALIVE, TASK_ALIVE)) {
+	if (compel_resume_task(t->pid, COMPEL_TASK_ALIVE, COMPEL_TASK_ALIVE)) {
 		pr_err("Can't unseize from %d\n", t->pid);
 		return -1;
 	}
@@ -274,16 +274,16 @@ static int task_infect(struct thread_s *t)
 	pr_debug("  %d\n", t->pid);
 
 	switch (compel_stop_task(t->pid)) {
-		case TASK_ALIVE:
+		case COMPEL_TASK_ALIVE:
 			t->seized = true;
 			return 0;
-		case TASK_STOPPED:
+		case COMPEL_TASK_STOPPED:
 			pr_debug("BUSY\n");
 			return -EBUSY;
-		case TASK_ZOMBIE:
+		case COMPEL_TASK_ZOMBIE:
 			pr_debug("ZOMBIE\n");
 			break;
-		case TASK_DEAD:
+		case COMPEL_TASK_DEAD:
 			pr_debug("DEAD\n");
 			break;
 		default:
