@@ -1,13 +1,17 @@
 #ifndef __PATCHER_X86_64_H__
 #define __PATCHER_X86_64_H__
 
-/* In reality the maximum size is 15.
- * But the buffer with this size will be used for read data via ptrace,
- * which requires size, aligned by 8
+/*
+ * Maximum size of call command
  */
-#define X86_MAX_SIZE	16
+#define X86_64_CALL_MAX_SIZE	102
 
 int x86_jmpq_instruction(unsigned char *buf, size_t size,
 			 uint64_t cur_pos, uint64_t tgt_pos);
+
+ssize_t x86_64_call(uint64_t call, uint64_t where,
+		    uint64_t arg0, uint64_t arg1, uint64_t arg2,
+		    uint64_t arg3, uint64_t arg4, uint64_t arg5,
+		    void **code);
 
 #endif
