@@ -348,3 +348,88 @@ int service_start(struct process_ctx_s *ctx, struct service *service)
 
 	return 0;
 }
+
+int service_read(const struct service *service,
+		 void *dest, uint64_t rsrc, size_t n)
+{
+	struct nsb_service_request rq = {
+		.cmd = NSB_SERVICE_CMD_READ,
+	};
+	struct nsb_service_response rs;
+	struct nsb_service_data_rw *rw;
+	size_t rqlen = sizeof(rq.cmd) + sizeof(*rw);
+	ssize_t size;
+	int err;
+
+	if (n > NSB_SERVICE_RW_DATA_SIZE_MAX) {
+		pr_err("requested too much: %ld > %ld\n",
+				n, NSB_SERVICE_RW_DATA_SIZE_MAX);
+		return -E2BIG;
+	}
+
+	rw = (void *)rq.data;
+	rw->address = (void *)rsrc;
+	rw->size = n;
+
+	err = nsb_service_send_request(service, &rq, rqlen);
+	if (err)
+		return err;
+
+	size = nsb_service_receive_response(service, &rs);
+	if (size < 0)
+		return size;
+
+	if (rs.ret < 0) {
+		errno = -rs.ret;
+		pr_perror("read request failed");
+		return rs.ret;
+	}
+	if (size - sizeof(int) != n) {
+		pr_err("received differs from requested: %ld != %ld\n",
+				size - sizeof(rs.ret), n);
+		return -EFAULT;
+	}
+
+	memcpy(dest, rs.data, n);
+	return 0;
+}
+
+int service_write(const struct service *service,
+		  const void *src, uint64_t rdest, size_t n)
+{
+	struct nsb_service_request rq = {
+		.cmd = NSB_SERVICE_CMD_WRITE,
+	};
+	struct nsb_service_response rs;
+	struct nsb_service_data_rw *rw;
+	size_t rqlen = sizeof(rq.cmd) + sizeof(*rw);
+	ssize_t size;
+	int err;
+
+	if (n > NSB_SERVICE_RW_DATA_SIZE_MAX) {
+		pr_err("requested too much: %ld > %ld\n",
+				n, NSB_SERVICE_RW_DATA_SIZE_MAX);
+		return -E2BIG;
+	}
+
+	rw = (void *)rq.data;
+	rw->address = (void *)rdest;
+	rw->size = n;
+
+	memcpy(rs.data, src, n);
+
+	err = nsb_service_send_request(service, &rq, rqlen);
+	if (err)
+		return err;
+
+	size = nsb_service_receive_response(service, &rs);
+	if (size < 0)
+		return size;
+
+	if (rs.ret < 0) {
+		errno = -rs.ret;
+		pr_perror("write request failed");
+		return rs.ret;
+	}
+	return 0;
+}

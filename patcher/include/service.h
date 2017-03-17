@@ -19,4 +19,10 @@ struct process_ctx_s;
 int service_start(struct process_ctx_s *ctx, struct service *plugin);
 int service_stop(struct process_ctx_s *ctx, struct service *plugin);
 
+int service_read(const struct service *plugin,
+		    void *data, uint64_t address, size_t size);
+
+int service_write(const struct service *plugin,
+		     const void *data, uint64_t address, size_t size);
+
 #endif

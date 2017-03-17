@@ -96,6 +96,11 @@ static size_t nsb_service_rw_cmd(const void *data, size_t size,
 				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX) + 1;
 	}
 
+	if (rq->address == NULL) {
+		rs->ret = -EINVAL;
+		return sprintf(rs->data, "address is NULL\n") + 1;
+	}
+
 	rs->ret = 0;
 
 	if (read)
