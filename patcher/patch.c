@@ -178,6 +178,9 @@ static int func_jump_applied(struct process_ctx_s *ctx,
 
 	BUILD_BUG_ON(sizeof(code) != sizeof(fj->func_jump));
 
+	if (!fj->func_addr)
+		return 0;
+
 	err = process_read_data(ctx, fj->func_addr, code, sizeof(code));
 	if (err)
 		return err;
