@@ -575,3 +575,16 @@ int process_acquire(struct process_ctx_s *ctx)
 		pr_err("failed to catch process %d\n", err);
 	return err;
 }
+
+ssize_t process_emergency_sigframe(struct process_ctx_s *ctx, void *data,
+				   void *where)
+{
+	int err;
+
+	err = compel_emergency_sigframe(ctx->ctl, data, where);
+	if (err) {
+		pr_err("failed to get emergency sigframe: %d\n", err);
+		return err;
+	}
+	return sizeof(struct rt_sigframe);
+}

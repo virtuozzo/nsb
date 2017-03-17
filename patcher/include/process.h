@@ -35,4 +35,7 @@ int process_release_at(struct process_ctx_s *ctx, uint64_t addr,
 		       void *code, size_t code_size);
 int process_acquire(struct process_ctx_s *ctx);
 
+ssize_t process_emergency_sigframe(struct process_ctx_s *ctx, void *data,
+				   void *where);
+
 #endif
