@@ -84,9 +84,45 @@ static size_t nsb_service_cmd_stop(const void *data, size_t size,
 	return sprintf(rs->data, "stopped") + 1;
 }
 
+static size_t nsb_service_rw_cmd(const void *data, size_t size,
+				 struct nsb_service_response *rs,
+				 bool read)
+{
+	const struct nsb_service_data_rw *rq = data;
+
+	if (rq->size > NSB_SERVICE_RW_DATA_SIZE_MAX) {
+		rs->ret = -E2BIG;
+		return sprintf(rs->data, "requested too much: %ld > %ld\n",
+				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX) + 1;
+	}
+
+	rs->ret = 0;
+
+	if (read)
+		memcpy(rs->data, rq->address, rq->size);
+	else
+		memcpy(rq->address, rq->data, rq->size);
+
+	return read ? rq->size : 0;
+};
+
+static size_t nsb_service_cmd_read(const void *data, size_t size,
+				   struct nsb_service_response *rs)
+{
+	return nsb_service_rw_cmd(data, size, rs, true);
+};
+
+static size_t nsb_service_cmd_write(const void *data, size_t size,
+				    struct nsb_service_response *rs)
+{
+	return nsb_service_rw_cmd(data, size, rs, false);
+};
+
 static handler_t nsb_service_cmd_handlers[] = {
 	[NSB_SERVICE_CMD_EMERG_SIGFRAME] = nsb_service_cmd_emerg_sigframe,
 	[NSB_SERVICE_CMD_STOP] = nsb_service_cmd_stop,
+	[NSB_SERVICE_CMD_READ] = nsb_service_cmd_read,
+	[NSB_SERVICE_CMD_WRITE] = nsb_service_cmd_write,
 };
 
 static size_t nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t data_size, 
