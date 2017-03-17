@@ -1,4 +1,4 @@
-SUBDIRS = protobuf tests
+SUBDIRS = plugins protobuf tests
 
 ACLOCAL_AMFLAGS = -I m4
 
