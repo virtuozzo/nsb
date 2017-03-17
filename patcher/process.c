@@ -93,90 +93,85 @@ static const char *map_prot(unsigned prot, char *buf)
 	return buf;
 }
 
-int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
-		    unsigned long addr, size_t size, int flags, int prot)
+static long process_syscall(struct process_ctx_s *ctx, int nr,
+			    unsigned long arg1, unsigned long arg2,
+			    unsigned long arg3, unsigned long arg4,
+			    unsigned long arg5, unsigned long arg6)
 {
 	int ret;
 	long sret = -ENOSYS;
+
+	ret = compel_syscall(ctx->ctl, nr, &sret,
+			     arg1, arg2, arg3, arg4, arg5, arg6);
+	if (ret < 0) {
+		pr_err("Failed to execute syscall %d in %d\n", nr, ctx->pid);
+		return ret;
+	}
+	if (sret < 0) {
+		errno = -sret;
+		return -1;
+	}
+	return sret;
+}
+
+int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
+		    unsigned long addr, size_t size, int flags, int prot)
+{
+	long maddr;
 	char fbuf[512];
 	char pbuf[4];
 
-	ret = compel_syscall(ctx->ctl, __NR(mmap, false), &sret,
-			     addr, size, prot, flags, fd, offset);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", ctx->pid);
-		return -1;
-	}
-
-	if (sret < 0) {
-		errno = -sret;
+	maddr = process_syscall(ctx, __NR(mmap, false),
+				addr, size, prot, flags, fd, offset);
+	if (maddr < 0) {
 		pr_perror("Failed to create mmap with size %zu bytes", size);
-		return -1;
+		return -errno;
 	}
 
 	pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
-			sret, sret + size, offset,
+			maddr, maddr + size, offset,
 			map_prot(prot, pbuf),
 			map_flags(flags, fbuf));
-	return sret;
+	return maddr;
 }
 
 int process_close_file(struct process_ctx_s *ctx, int fd)
 {
-	int ret;
-	long sret = -ENOSYS;
+	int err;
 
-	ret = compel_syscall(ctx->ctl, __NR(close, false), &sret,
-			     (unsigned long)fd, 0, 0, 0, 0, 0);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", ctx->pid);
-		return -1;
-	}
-
-	if (sret < 0) {
-		errno = -sret;
+	err = process_syscall(ctx, __NR(close, false),
+			      fd, 0, 0, 0, 0, 0);
+	if (err < 0) {
 		pr_perror("Failed to close %d", fd);
-		return -1;
+		return -errno;
 	}
-
-	return (int)(long)sret;
+	return 0;
 }
 
-static int process_do_open_file(pid_t pid, struct parasite_ctl *ctl,
-				uint64_t process_addr,
+static int process_do_open_file(struct process_ctx_s *ctx,
 				const char *path, int flags, mode_t mode)
 {
-	int ret;
-	long sret = -ENOSYS;
+	int err, fd;
 
-	ret = process_write_data(pid, process_addr, path,
+	err = process_write_data(ctx->pid, ctx->remote_map, path,
 				 round_up(strlen(path) + 1, 8));
-	if (ret)
-		return ret;
+	if (err)
+		return err;
 
-	ret = compel_syscall(ctl, __NR(open, false), &sret,
-				process_addr,
-				(unsigned long)flags,
-				(unsigned long)mode, 0, 0, 0);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", pid);
-		return -1;
-	}
-
-	if (sret < 0) {
-		errno = -sret;
+	fd = process_syscall(ctx, __NR(open, false),
+			     ctx->remote_map, flags, mode, 0, 0, 0);
+	if (fd < 0) {
 		pr_perror("Failed to open %s", path);
-		return -1;
+		return -errno;
 	}
-
-	return (int)(long)sret;
+	return fd;
 }
 
 int process_open_file(struct process_ctx_s *ctx, const char *path, int flags, mode_t mode)
 {
 	int fd;
 
-	fd = process_do_open_file(ctx->pid, ctx->ctl, ctx->remote_map, path, flags, mode);
+	fd = process_do_open_file(ctx, path, flags, mode);
 	if (fd < 0)
 		pr_err("failed to open %s in process %d\n", path, ctx->pid);
 	return fd;
@@ -381,20 +376,13 @@ err:
 
 int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
 {
-	int ret;
-	long sret = -ENOSYS;
+	int err;
 
-	ret = compel_syscall(ctx->ctl, __NR(munmap, false), &sret,
-			addr, size, 0, 0, 0, 0);
-	if (ret < 0) {
-		pr_err("Failed to execute syscall for %d\n", ctx->pid);
-		return -1;
-	}
-
-	if (sret < 0) {
-		errno = -sret;
-		pr_perror("Failed to unmap with size %zu bytes", size);
-		return -1;
+	err = process_syscall(ctx, __NR(munmap, false),
+			      addr, size, 0, 0, 0, 0);
+	if (err < 0) {
+		pr_perror("Failed to unmap %#lx-%#lx", addr, addr + size);
+		return -errno;
 	}
 
 	pr_info("  - munmap: %#lx-%#lx\n", addr, addr + size);
