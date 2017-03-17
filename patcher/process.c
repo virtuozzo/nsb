@@ -502,6 +502,27 @@ static unsigned increase_timeout(unsigned current_msec)
 	return current_msec;
 }
 
+int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
+		void *code, size_t code_size)
+{
+	int err;
+	user_regs_struct_t regs;
+
+	err = process_write_data(ctx, addr, code, round_up(code_size, 8));
+	if (err) {
+		pr_err("failed to write code\n");
+		return err;
+	}
+
+	err = compel_run_at(ctx->ctl, addr, &regs);
+	if (err) {
+		pr_err("failed to call code at %#lx: %d\n", addr, err);
+		return err;
+	}
+
+	return get_user_reg(&regs, ax);
+}
+
 int process_suspend(struct process_ctx_s *ctx)
 {
 	int try = 0, tries = 25;
