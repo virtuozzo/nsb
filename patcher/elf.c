@@ -248,12 +248,6 @@ int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 		return -1;
 	}
 
-	fd = open(ei->path, O_RDONLY);
-	if (fd < 0) {
-		pr_perror("failed to open %s for read", ei->path);
-		return -1;
-	}
-
 	fd = process_open_file(ctx, ei->path, O_RDONLY, 0);
 	if (fd < 0)
 		return -1;
