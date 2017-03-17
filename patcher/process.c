@@ -29,8 +29,9 @@ struct thread_s {
 	int			seized;
 };
 
-int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
+int process_write_data(const struct process_ctx_s *ctx, uint64_t addr, const void *data, size_t size)
 {
+	pid_t pid = ctx->pid;
 	int err;
 
 	err = ptrace_poke_area(pid, (void *)data, (void *)addr, size);
@@ -47,8 +48,9 @@ int process_write_data(pid_t pid, uint64_t addr, const void *data, size_t size)
 	return 0;
 }
 
-int process_read_data(pid_t pid, uint64_t addr, void *data, size_t size)
+int process_read_data(const struct process_ctx_s *ctx, uint64_t addr, void *data, size_t size)
 {
+	pid_t pid = ctx->pid;
 	int err;
 
 	err = ptrace_peek_area(pid, data, (void *)addr, size);
@@ -153,7 +155,7 @@ static int process_do_open_file(struct process_ctx_s *ctx,
 {
 	int err, fd;
 
-	err = process_write_data(ctx->pid, ctx->remote_map, path,
+	err = process_write_data(ctx, ctx->remote_map, path,
 				 round_up(strlen(path) + 1, 8));
 	if (err)
 		return err;

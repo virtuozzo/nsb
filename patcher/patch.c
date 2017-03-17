@@ -39,7 +39,7 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("  - Restoring code in \"%s\":\n", fj->name);
 	pr_info("      old address: %#lx\n", fj->func_addr);
 
-	return process_write_data(ctx->pid, fj->func_addr,
+	return process_write_data(ctx, fj->func_addr,
 				  fj->code, sizeof(fj->code));
 }
 
@@ -52,7 +52,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	err = process_write_data(ctx->pid, fj->func_addr,
+	err = process_write_data(ctx, fj->func_addr,
 				 fj->func_jump, sizeof(fj->func_jump));
 	if (err)
 		return err;
@@ -80,7 +80,7 @@ static int apply_func_jumps(struct process_ctx_s *ctx)
 
 static int read_func_jump_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
-	return process_read_data(ctx->pid, fj->func_addr,
+	return process_read_data(ctx, fj->func_addr,
 				 fj->code, sizeof(fj->code));
 }
 
@@ -178,7 +178,7 @@ static int func_jump_applied(struct process_ctx_s *ctx,
 
 	BUILD_BUG_ON(sizeof(code) != sizeof(fj->func_jump));
 
-	err = process_read_data(ctx->pid, fj->func_addr, code, sizeof(code));
+	err = process_read_data(ctx, fj->func_addr, code, sizeof(code));
 	if (err)
 		return err;
 

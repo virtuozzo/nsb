@@ -206,7 +206,7 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 			((es->vma) ? es->vma->path : TVMA(ctx)->path),
 			es->address);
 
-	err = process_write_data(ctx->pid, plt_addr, &func_addr, sizeof(func_addr));
+	err = process_write_data(ctx, plt_addr, &func_addr, sizeof(func_addr));
 	if (err) {
 		pr_err("failed to write to addr %#lx in process %d\n",
 				plt_addr, ctx->pid);
