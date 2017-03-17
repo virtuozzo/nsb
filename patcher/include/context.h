@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include "list.h"
+#include "service.h"
 
 struct static_sym_s {
 	int32_t			idx;
@@ -56,6 +57,7 @@ struct process_ctx_s {
 	const char		*patchfile;
 	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
+	struct service		service;
 	struct list_head	vmas;
 	int64_t			remote_map;
 	size_t			remote_map_size;

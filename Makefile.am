@@ -38,6 +38,8 @@ nsb_SOURCES =						\
 			protobuf/staticsym.pb-c.c	\
 			protobuf/staticsym.pb-c.h	\
 							\
+			plugins/service.h		\
+							\
 			patcher/include/compiler.h	\
 			patcher/include/context.h	\
 			patcher/include/log.h		\
@@ -52,6 +54,7 @@ nsb_SOURCES =						\
 			patcher/include/backtrace.h	\
 			patcher/include/util.h		\
 			patcher/include/relocations.h	\
+			patcher/include/service.h	\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -63,6 +66,7 @@ nsb_SOURCES =						\
 			patcher/backtrace.c		\
 			patcher/util.c			\
 			patcher/relocations.c		\
+			patcher/service.c		\
 			patcher/patch.c
 
 

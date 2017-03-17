@@ -15,6 +15,8 @@
 #include "include/patch.h"
 #include "include/elf.h"
 #include "include/util.h"
+#include "include/x86_64.h"
+#include "include/service.h"
 
 struct patch_place_s {
 	struct list_head	list;
@@ -587,4 +589,130 @@ ssize_t process_emergency_sigframe(struct process_ctx_s *ctx, void *data,
 		return err;
 	}
 	return sizeof(struct rt_sigframe);
+}
+
+static int process_find_sym(struct process_ctx_s *ctx,
+			    const char *name, uint64_t *addr)
+{
+	int64_t value;
+
+	value = vma_get_symbol_value(&ctx->vmas, name);
+	if (value <= 0) {
+		pr_err("failed to find \"%s\" in process %d\n", name, ctx->pid);
+		return value ? value : -ENOENT;
+	}
+	*addr = value;
+	return 0;
+}
+
+static int process_find_dlopen(struct process_ctx_s *ctx, uint64_t *addr)
+{
+	return process_find_sym(ctx, "__libc_dlopen_mode", addr);
+}
+
+static int process_find_dlclose(struct process_ctx_s *ctx, uint64_t *addr)
+{
+	return process_find_sym(ctx, "__libc_dlclose", addr);
+}
+
+static int64_t process_call_dlopen(struct process_ctx_s *ctx,
+				   uint64_t dlopen_addr, const char *soname)
+{
+	void *dlopen_code;
+	ssize_t size;
+	uint64_t code_addr = ctx->remote_map;
+	uint64_t name_addr = round_up(code_addr + X86_64_CALL_MAX_SIZE, 8);
+	int err;
+
+	size = x86_64_dlopen(dlopen_addr, name_addr,
+			     code_addr,
+			     &dlopen_code);
+	if (size < 0) {
+		pr_err("failed to construct dlopen call\n");
+		return size;
+	}
+
+	err = process_write_data(ctx, name_addr,
+				 soname, round_up(strlen(soname) + 1, 8));
+	if (err) {
+		pr_err("failed to write file name\n");
+		return err;
+	}
+
+	return process_exec_code(ctx, code_addr, dlopen_code, size);
+}
+
+int process_inject_service(struct process_ctx_s *ctx)
+{
+	int err;
+	uint64_t dlopen_addr = 0;
+	int64_t handle;
+
+	pr_debug("= Injecting service \"%s\" into %d\n",
+			ctx->service.name, ctx->pid);
+
+	err = process_find_dlopen(ctx, &dlopen_addr);
+	if (err)
+		return err;
+
+	handle = process_call_dlopen(ctx, dlopen_addr, ctx->service.name);
+	if (handle <= 0) {
+		pr_err("failed to inject nsb service service\n");
+		return -EFAULT;
+	}
+
+	ctx->service.handle = handle;
+	ctx->service.pid = ctx->pid;
+
+	err = service_start(ctx, &ctx->service);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static int64_t process_call_dlclose(struct process_ctx_s *ctx,
+				    uint64_t dlclose_addr, uint64_t handle)
+{
+	void *dlclose_code;
+	ssize_t size;
+	uint64_t code_addr = ctx->remote_map;
+
+	size = x86_64_dlclose(dlclose_addr, handle,
+			      code_addr,
+			      &dlclose_code);
+	if (size < 0) {
+		pr_err("failed to construct dlclose call\n");
+		return size;
+	}
+
+	return process_exec_code(ctx, code_addr, dlclose_code, size);
+}
+
+int process_shutdown_service(struct process_ctx_s *ctx)
+{
+	int err;
+	uint64_t dlclose_addr = 0;
+
+	if (!ctx->service.handle)
+		return 0;
+
+	pr_debug("= Shutting down service service \"%s\" in %d\n",
+			ctx->service.name, ctx->pid);
+
+	err = service_stop(ctx, &ctx->service);
+	if (err)
+		return err;
+
+	err = process_find_dlclose(ctx, &dlclose_addr);
+	if (err)
+		return err;
+
+	err = process_call_dlclose(ctx, dlclose_addr, ctx->service.handle);
+	if (err) {
+		pr_err("failed to shutdown nsb service service\n");
+		return -EFAULT;
+	}
+
+	return 0;
 }

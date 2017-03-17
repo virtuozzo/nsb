@@ -29,6 +29,11 @@ struct process_ctx_s process_context = {
 		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
 		.segments = LIST_HEAD_INIT(process_context.p.segments),
 	},
+	.service = {
+		.name = "libnsb_service.so",
+		.vmas = LIST_HEAD_INIT(process_context.service.vmas),
+		.sock = -1,
+	},
 	.vmas = LIST_HEAD_INIT(process_context.vmas),
 	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
 	.threads = LIST_HEAD_INIT(process_context.threads),
@@ -484,6 +489,10 @@ int process_resume(struct process_ctx_s *ctx)
 {
 	int err;
 
+	err = process_shutdown_service(ctx);
+	if (err)
+		return err;
+
 	err = process_unlink(ctx);
 	if (err)
 		return err;
@@ -568,6 +577,10 @@ int patch_process(pid_t pid, const char *patchfile)
 	}
 
 	ret = process_link(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_inject_service(ctx);
 	if (ret)
 		goto resume;
 
