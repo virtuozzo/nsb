@@ -36,6 +36,11 @@ int process_write_data(const struct process_ctx_s *ctx, uint64_t addr, const voi
 	pid_t pid = ctx->pid;
 	int err;
 
+	if (ctx->service.released) {
+		pr_err("service plugin in running\n");
+		return -EBUSY;
+	}
+
 	err = ptrace_poke_area(pid, (void *)data, (void *)addr, size);
 	if (err) {
 		if (err == -1) {
@@ -54,6 +59,11 @@ int process_read_data(const struct process_ctx_s *ctx, uint64_t addr, void *data
 {
 	pid_t pid = ctx->pid;
 	int err;
+
+	if (ctx->service.released) {
+		pr_err("service plugin in running\n");
+		return -EBUSY;
+	}
 
 	err = ptrace_peek_area(pid, data, (void *)addr, size);
 	if (err) {
@@ -104,6 +114,12 @@ static long process_syscall(struct process_ctx_s *ctx, int nr,
 {
 	int ret;
 	long sret = -ENOSYS;
+
+	if (ctx->service.released) {
+		pr_err("service plugin in running\n");
+		errno = EBUSY;
+		return -1;
+	}
 
 	ret = compel_syscall(ctx->ctl, nr, &sret,
 			     arg1, arg2, arg3, arg4, arg5, arg6);
