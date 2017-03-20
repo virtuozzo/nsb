@@ -14,7 +14,6 @@ struct vma_area {
 	uint32_t		prot;
 	uint32_t		flags;
 	char			*path;
-	int			deleted;
 	char			*map_file;
 	struct elf_info_s	*ei;
 };
