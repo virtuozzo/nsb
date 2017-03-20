@@ -36,9 +36,6 @@ int process_write_data(const struct process_ctx_s *ctx, uint64_t addr, const voi
 	pid_t pid = ctx->pid;
 	int err;
 
-	if (ctx->service.released)
-		return service_write(&ctx->service, data, addr, size);
-
 	err = ptrace_poke_area(pid, (void *)data, (void *)addr, size);
 	if (err) {
 		if (err == -1) {
@@ -57,9 +54,6 @@ int process_read_data(const struct process_ctx_s *ctx, uint64_t addr, void *data
 {
 	pid_t pid = ctx->pid;
 	int err;
-
-	if (ctx->service.released)
-		return service_read(&ctx->service, data, addr, size);
 
 	err = ptrace_peek_area(pid, data, (void *)addr, size);
 	if (err) {
@@ -134,8 +128,11 @@ int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
 		    unsigned long addr, size_t length, int flags, int prot)
 {
 	long maddr;
-	char fbuf[512];
-	char pbuf[4];
+
+	if (ctx->service.loaded) {
+		pr_err("service is loaded\n");
+		return -EBUSY;
+	}
 
 	maddr = process_syscall(ctx, __NR(mmap, false),
 				addr, length, prot, flags, fd, offset);
@@ -146,11 +143,6 @@ int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
 				prot, flags, offset);
 		return -errno;
 	}
-
-	pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
-			maddr, maddr + length, offset,
-			map_prot(prot, pbuf),
-			map_flags(flags, fbuf));
 	return maddr;
 }
 
@@ -166,9 +158,24 @@ static int process_mmap_fd(struct process_ctx_s *ctx, int fd,
 }
 
 int process_munmap(struct process_ctx_s *ctx,
-		   const struct mmap_info_s *mmi)
+		   const struct list_head *mmaps)
 {
-	return process_unmap(ctx, mmi->addr, mmi->length);
+	struct mmap_info_s *mmi, *tmp;
+	int err;
+
+	list_for_each_entry(mmi, mmaps, list)
+		pr_info("  - munmap: %#lx-%#lx\n", mmi->addr,
+				mmi->addr + mmi->length);
+
+	if (ctx->service.loaded)
+		return service_munmap(ctx, &ctx->service, mmaps);
+
+	list_for_each_entry_safe(mmi, tmp, mmaps, list) {
+		err = process_unmap(ctx, mmi->addr, mmi->length);
+		if (err)
+			return err;
+	}
+	return 0;
 }
 
 int process_mmap_file(struct process_ctx_s *ctx, const char *path,
@@ -176,9 +183,17 @@ int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 {
 	int fd, err = 0;
 	struct mmap_info_s *mmi;
+	char fbuf[512];
+	char pbuf[4];
 
-	if (ctx->service.released)
-		return service_mmap_file(&ctx->service, path, mmaps);
+	list_for_each_entry(mmi, mmaps, list)
+		pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
+				mmi->addr, mmi->addr + mmi->length, mmi->offset,
+				map_prot(mmi->prot, pbuf),
+				map_flags(mmi->flags, fbuf));
+
+	if (ctx->service.loaded)
+		return service_mmap_file(ctx, &ctx->service, path, mmaps);
 
 	fd = process_open_file(ctx, path, O_RDONLY, 0);
 	if (fd < 0)
@@ -196,7 +211,7 @@ int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 
 unmap:
 	list_for_each_entry_reverse(mmi, mmaps, list)
-		(void)process_munmap(ctx, mmi);
+		(void)process_unmap(ctx, mmi->addr, mmi->length);
 	return err;
 }
 

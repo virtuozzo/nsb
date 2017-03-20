@@ -218,24 +218,9 @@ err:
 	return err;
 }
 
-static int unload_mmap(struct process_ctx_s *ctx, struct mmap_info_s *mmi)
-{
-	return process_unmap(ctx, mmi->addr, mmi->length);
-}
-
 int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
 {
-	struct mmap_info_s *mmi, *tmp;
-	int err;
-
-	list_for_each_entry_safe(mmi, tmp, segments, list) {
-		err = unload_mmap(ctx, mmi);
-		if (err)
-			return err;
-		list_del(&mmi->list);
-		free(mmi);
-	}
-	return 0;
+	return process_munmap(ctx, segments);
 }
 
 int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,

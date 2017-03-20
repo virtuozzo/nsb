@@ -27,6 +27,8 @@ int process_suspend(struct process_ctx_s *ctx);
 struct list_head;
 int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 		      const struct list_head *mmaps);
+int process_munmap(struct process_ctx_s *ctx,
+		   const struct list_head *mmaps);
 
 int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 			  void *code, size_t code_size);
