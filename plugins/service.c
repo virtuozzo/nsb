@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <stdarg.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <compel/asm/sigframe.h>
 
@@ -93,7 +96,7 @@ static size_t nsb_service_cmd_emerg_sigframe(const void *data, size_t size,
 {
 	if (size != sizeof(emergency_sigframe)) {
 		nsb_service_response_print(rd,
-				"frame size is invalid: %ld (%ld)\n",
+				"frame size is invalid: %ld (%ld)",
 				size, sizeof(emergency_sigframe));
 		return -EINVAL;
 	}
@@ -116,13 +119,13 @@ static size_t nsb_service_rw_cmd(const void *data, size_t size,
 
 	if (rq->size > NSB_SERVICE_RW_DATA_SIZE_MAX) {
 		 nsb_service_response_print(rd,
-				"requested too much: %ld > %ld\n",
+				"requested too much: %ld > %ld",
 				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX);
 		return -E2BIG;
 	}
 
 	if (rq->address == NULL) {
-		nsb_service_response_print(rd, "address is NULL\n");
+		nsb_service_response_print(rd, "address is NULL");
 		return -EINVAL;
 	}
 
@@ -146,11 +149,105 @@ static size_t nsb_service_cmd_write(const void *data, size_t size,
 	return nsb_service_rw_cmd(data, size, rd, false);
 };
 
+static size_t nsb_service_cmd_do_munmap(const struct nsb_service_map_addr_info *mai,
+					struct nsb_response_data *rd)
+{
+	int err;
+
+	err = munmap((void *)mai->addr, mai->length);
+	if (err == -1) {
+		nsb_service_response_print(rd,
+				"failed to munmap %#lx-%#lx",
+				mai->addr, mai->addr + mai->length);
+		return -errno;
+	}
+	return 0;
+}
+
+static size_t nsb_service_cmd_munmap(const void *data, size_t size,
+				   struct nsb_response_data *rd)
+{
+	const struct nsb_service_munmap_request *rq = data;
+	const struct nsb_service_map_addr_info *mai;
+	int nr;
+	size_t max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
+
+	if (rq->nr_munmaps > max_munmaps) {
+		nsb_service_response_print(rd, "too many numap requests: %d (max: %ld)",
+				rq->nr_munmaps, max_munmaps);
+		return -E2BIG;
+	}
+
+	for (nr = 0, mai = rq->munmap; nr < rq->nr_munmaps; nr++, mai++)
+		(void) nsb_service_cmd_do_munmap(mai, rd);
+
+	return 0;
+
+}
+
+static size_t nsb_service_cmd_do_mmap(int fd,
+				      const struct nsb_service_mmap_info *mi,
+				      struct nsb_response_data *rd)
+{
+	void *address;
+	const struct nsb_service_map_addr_info *mai = &mi->info;
+
+	address = mmap((void *)mai->addr, mai->length,
+			mi->prot, mi->flags, fd, mi->offset);
+	if (address == MAP_FAILED) {
+		nsb_service_response_print(rd,
+				"failed to create new mapping %#lx-%#lx "
+				"with flags %#x, prot %#x, offset %#lx",
+				mai->addr, mai->addr + mai->length,
+				mi->prot, mi->flags, mi->offset);
+		return -errno;
+	}
+	return 0;
+}
+
+static size_t nsb_service_cmd_mmap(const void *data, size_t size,
+				   struct nsb_response_data *rd)
+{
+	const struct nsb_service_mmap_request *rq = data;
+	const struct nsb_service_mmap_info *mi;
+	int fd, nr, err;
+	size_t max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
+
+	if (rq->nr_mmaps > max_mmaps) {
+		nsb_service_response_print(rd, "too many map requests: %d (max: %ld)",
+				rq->nr_mmaps, max_mmaps);
+		return -E2BIG;
+	}
+
+	fd = open(rq->path, O_RDONLY);
+	if (fd < 0) {
+		nsb_service_response_print(rd, "failed to open %s", rq->path);
+		return -errno;
+	}
+
+	for (nr = 0, mi = rq->mmap; nr < rq->nr_mmaps; nr++, mi++) {
+		err = nsb_service_cmd_do_mmap(fd, mi, rd);
+		if (err)
+			goto unmap;
+	}
+
+	close(fd);
+	return 0;
+
+unmap:
+	for (; nr > 0; nr--, mi--)
+		(void)nsb_service_cmd_do_munmap(&mi->info, rd);
+	return err;
+}
+
+
 static handler_t nsb_service_cmd_handlers[] = {
 	[NSB_SERVICE_CMD_EMERG_SIGFRAME] = nsb_service_cmd_emerg_sigframe,
 	[NSB_SERVICE_CMD_STOP] = nsb_service_cmd_stop,
 	[NSB_SERVICE_CMD_READ] = nsb_service_cmd_read,
 	[NSB_SERVICE_CMD_WRITE] = nsb_service_cmd_write,
+	[NSB_SERVICE_CMD_MMAP] = nsb_service_cmd_mmap,
+	[NSB_SERVICE_CMD_MUNMAP] = nsb_service_cmd_munmap,
 };
 
 static size_t nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t data_size, 
@@ -160,14 +257,14 @@ static size_t nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t dat
 
 	if (rq->cmd > NSB_SERVICE_CMD_MAX) {
 		nsb_service_response_print(rd,
-				"unknown command: %d\n", rq->cmd);
+				"unknown command: %d", rq->cmd);
 		return -EINVAL;
 	}
 
 	handler = nsb_service_cmd_handlers[rq->cmd];
 	if (!handler) {
 		 nsb_service_response_print(rd,
-				"unsupported command: %d\n", rq->cmd);
+				"unsupported command: %d", rq->cmd);
 		 return -EINVAL;
 	}
 
