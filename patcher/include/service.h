@@ -12,6 +12,7 @@ struct service {
 	struct list_head	vmas;
 	int			sock;
 	uint64_t		runner;
+	bool			loaded;
 	bool			released;
 };
 
@@ -19,10 +20,10 @@ struct process_ctx_s;
 int service_start(struct process_ctx_s *ctx, struct service *plugin);
 int service_stop(struct process_ctx_s *ctx, struct service *plugin);
 
-int service_read(const struct service *plugin,
-		    void *data, uint64_t address, size_t size);
-
-int service_write(const struct service *plugin,
-		     const void *data, uint64_t address, size_t size);
+struct list_head;
+int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
+		      const char *path, const struct list_head *mmaps);
+int service_munmap(struct process_ctx_s *ctx, const struct service *service,
+		   const struct list_head *mmaps);
 
 #endif

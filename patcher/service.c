@@ -205,12 +205,15 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 	return process_exec_code(ctx, code_addr, code, size);
 }
 
-static int service_run(struct process_ctx_s *ctx, struct service *service,
+static int service_run(struct process_ctx_s *ctx, const struct service *service,
 		       bool once)
 {
 	uint64_t code_addr = ctx->remote_map;
 	ssize_t size;
 	void *code;
+
+	if (service->released)
+		return 0;
 
 	size = x86_64_call(service->runner, code_addr,
 			   once, !once, 0, 0, 0, 0,
@@ -266,7 +269,7 @@ static int service_provide_sigframe(struct process_ctx_s *ctx, struct service *s
 
 	return err;
 }
-
+#if 0
 static int service_release(struct process_ctx_s *ctx, struct service *service)
 {
 	int err;
@@ -282,7 +285,7 @@ static int service_release(struct process_ctx_s *ctx, struct service *service)
 	service->released = true;
 	return 0;
 }
-
+#endif
 static int service_interrupt(struct process_ctx_s *ctx, struct service *service)
 {
 	int err;
@@ -330,9 +333,7 @@ static int service_connect(struct process_ctx_s *ctx, struct service *service)
 	if (err)
 		return err;
 
-	err = service_release(ctx, service);
-	if (err)
-		return err;
+	service->loaded = true;
 
 	return 0;
 }
@@ -345,7 +346,13 @@ int service_stop(struct process_ctx_s *ctx, struct service *service)
 	if (err)
 		return err;
 
-	return service_disconnect(ctx, service);
+	err = service_disconnect(ctx, service);
+	if (err)
+		return err;
+
+	service->loaded = true;
+
+	return 0;
 }
 
 int service_start(struct process_ctx_s *ctx, struct service *service)
@@ -359,33 +366,55 @@ int service_start(struct process_ctx_s *ctx, struct service *service)
 	err = service_connect(ctx, service);
 	if (err)
 		return err;
-
+#if 0
+	err = service_release(ctx, service);
+	if (err)
+		return err;
+#endif
 	return 0;
 }
 
-int service_read(const struct service *service,
-		 void *dest, uint64_t rsrc, size_t n)
+int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
+		      const char *path, const struct list_head *mmaps)
 {
 	struct nsb_service_request rq = {
-		.cmd = NSB_SERVICE_CMD_READ,
+		.cmd = NSB_SERVICE_CMD_MMAP,
 	};
+	struct mmap_info_s *mmi;
+	struct nsb_service_mmap_request *mrq;
+	struct nsb_service_mmap_info *mi;
+	size_t max_mmaps;
 	struct nsb_service_response rs;
-	struct nsb_service_data_rw *rw;
-	size_t rqlen = sizeof(rq.cmd) + sizeof(*rw);
-	ssize_t size;
+	size_t rqlen, size;
 	int err;
 
-	if (n > NSB_SERVICE_RW_DATA_SIZE_MAX) {
-		pr_err("requested too much: %ld > %ld\n",
-				n, NSB_SERVICE_RW_DATA_SIZE_MAX);
-		return -E2BIG;
-	}
+	max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
 
-	rw = (void *)rq.data;
-	rw->address = (void *)rsrc;
-	rw->size = n;
+	mrq = (void *)rq.data;
+	mi = mrq->mmap;
+
+	list_for_each_entry(mmi, mmaps, list) {
+		if (mrq->nr_mmaps == max_mmaps) {
+			pr_err("to many map request (max: %ld)\n", max_mmaps);
+			return -E2BIG;
+		}
+		mi->info.addr = mmi->addr;
+		mi->info.length = mmi->length;
+		mi->prot = mmi->prot;
+		mi->flags = mmi->flags;
+		mi->offset = mmi->offset;
+		mi++;
+		mrq->nr_mmaps++;
+	}
+	strcpy(mrq->path, path);
+
+	rqlen = sizeof(rq.cmd) + sizeof(*mrq) + sizeof(*mi) * mrq->nr_mmaps;
 
 	err = nsb_service_send_request(service, &rq, rqlen);
+	if (err)
+		return err;
+
+	err = service_run(ctx, service, true);
 	if (err)
 		return err;
 
@@ -395,44 +424,48 @@ int service_read(const struct service *service,
 
 	if (rs.ret < 0) {
 		errno = -rs.ret;
-		pr_perror("read request failed");
+		pr_perror("mmap request failed");
 		return rs.ret;
 	}
-	if (size - sizeof(int) != n) {
-		pr_err("received differs from requested: %ld != %ld\n",
-				size - sizeof(rs.ret), n);
-		return -EFAULT;
-	}
-
-	memcpy(dest, rs.data, n);
 	return 0;
 }
 
-int service_write(const struct service *service,
-		  const void *src, uint64_t rdest, size_t n)
+int service_munmap(struct process_ctx_s *ctx, const struct service *service,
+		   const struct list_head *mmaps)
 {
 	struct nsb_service_request rq = {
-		.cmd = NSB_SERVICE_CMD_WRITE,
+		.cmd = NSB_SERVICE_CMD_MUNMAP,
 	};
+	struct mmap_info_s *mmi;
+	struct nsb_service_munmap_request *mrq;
+	struct nsb_service_map_addr_info *mai;
+	size_t max_munmaps;
 	struct nsb_service_response rs;
-	struct nsb_service_data_rw *rw;
-	size_t rqlen = sizeof(rq.cmd) + sizeof(*rw);
-	ssize_t size;
+	size_t rqlen, size;
 	int err;
 
-	if (n > NSB_SERVICE_RW_DATA_SIZE_MAX) {
-		pr_err("requested too much: %ld > %ld\n",
-				n, NSB_SERVICE_RW_DATA_SIZE_MAX);
-		return -E2BIG;
+	max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
+
+	mrq = (void *)rq.data;
+	mai = mrq->munmap;
+
+	list_for_each_entry(mmi, mmaps, list) {
+		if (mrq->nr_munmaps == max_munmaps) {
+			pr_err("to many unmap request (max: %ld)\n", max_munmaps);
+			return -E2BIG;
+		}
+		mai->addr = mmi->addr;
+		mai->length = mmi->length;
+		mrq->nr_munmaps++;
 	}
 
-	rw = (void *)rq.data;
-	rw->address = (void *)rdest;
-	rw->size = n;
-
-	memcpy(rs.data, src, n);
+	rqlen = sizeof(rq.cmd) + sizeof(*mrq) + sizeof(*mai) * mrq->nr_munmaps;
 
 	err = nsb_service_send_request(service, &rq, rqlen);
+	if (err)
+		return err;
+
+	err = service_run(ctx, service, true);
 	if (err)
 		return err;
 
@@ -442,7 +475,7 @@ int service_write(const struct service *service,
 
 	if (rs.ret < 0) {
 		errno = -rs.ret;
-		pr_perror("write request failed");
+		pr_perror("mmap request failed");
 		return rs.ret;
 	}
 	return 0;

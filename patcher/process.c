@@ -177,6 +177,9 @@ int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 	int fd, err = 0;
 	struct mmap_info_s *mmi;
 
+	if (ctx->service.released)
+		return service_mmap_file(&ctx->service, path, mmaps);
+
 	fd = process_open_file(ctx, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
