@@ -14,6 +14,7 @@
 #include "include/elf.h"
 #include "include/context.h"
 #include "include/x86_64.h"
+#include "include/xmalloc.h"
 
 #include <plugins/service.h>
 
@@ -480,3 +481,49 @@ int service_munmap(struct process_ctx_s *ctx, const struct service *service,
 	}
 	return 0;
 }
+
+ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *service,
+			     uint64_t **needed_array)
+{
+	struct nsb_service_request rq = {
+		.cmd = NSB_SERVICE_CMD_NEEDED_LIST,
+	};
+	size_t rqlen, size;
+	struct nsb_service_response rs;
+	struct nsb_service_needed_list *nl = (void *)rs.data;
+	int err;
+	size_t array_size;
+	uint64_t *array;
+
+	rqlen = sizeof(rq.cmd);
+
+	err = nsb_service_send_request(service, &rq, rqlen);
+	if (err)
+		return err;
+
+	err = service_run(ctx, service, true);
+	if (err)
+		return err;
+
+	size = nsb_service_receive_response(service, &rs);
+	if (size < 0)
+		return size;
+
+	if (rs.ret < 0) {
+		errno = -rs.ret;
+		pr_perror("request for array of needed maps failed");
+		return rs.ret;
+	}
+
+	array_size = sizeof(nl->address) * nl->nr_addrs;
+
+	array = xmalloc(array_size);
+	if (!array)
+		return -ENOMEM;
+
+	memcpy(array, nl->address, array_size);
+	*needed_array = array;
+
+	return nl->nr_addrs;
+}
+

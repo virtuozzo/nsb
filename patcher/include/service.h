@@ -26,4 +26,7 @@ int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
 int service_munmap(struct process_ctx_s *ctx, const struct service *service,
 		   const struct list_head *mmaps);
 
+ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *service,
+			     uint64_t **needed_array);
+
 #endif
