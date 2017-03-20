@@ -31,17 +31,6 @@ class BinPatch:
 			print "Only shared object patches are supported"
 			return False
 
-		sized_objects = False
-		for k, s in self.bf_new.objects.iteritems():
-			if k.startswith("completed."):
-				continue
-			if s.size != 0:
-				print "Patch has object \"%s\" with size: %d" % (k, s.size)
-				sized_objects = True
-		if sized_objects:
-			print "Patch file with data objects (variables) is not supported"
-			return False
-
 		if not self.common_func:
 			print "Nothing to patch"
 			return False
