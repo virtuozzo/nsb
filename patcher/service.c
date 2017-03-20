@@ -32,6 +32,18 @@ static int nsb_service_send_request(const struct service *service,
 	return 0;
 }
 
+static void nsb_service_print_errors(const struct nsb_service_response *rp,
+				     size_t size)
+{
+	const char *msg = rp->data;
+	size_t dsize = size - sizeof(rp->ret);
+
+	while(msg < rp->data + dsize) {
+		pr_err("nsb_service: %s\n", msg);
+		msg += strlen(msg) + 1;
+	}
+}
+
 static ssize_t nsb_service_receive_response(const struct service *service,
 					    struct nsb_service_response *rp)
 {
@@ -46,6 +58,8 @@ static ssize_t nsb_service_receive_response(const struct service *service,
 		pr_err("message is truncated: %ld < %ld\n", size, sizeof(rp->ret));
 		return -EINVAL;
 	}
+	if (rp->ret < 0)
+		nsb_service_print_errors(rp, size);
 	return size;
 }
 
