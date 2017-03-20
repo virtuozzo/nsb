@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
+#include <stdarg.h>
 
 #include <compel/asm/sigframe.h>
 
@@ -35,7 +36,7 @@ static void emergency_sigreturn(void)
 		ARCH_RT_SIGRETURN_NATIVE(new_sp);
 }
 
-static int nsb_service_send_response(const struct nsb_service_response *rs,
+static ssize_t nsb_service_send_response(const struct nsb_service_response *rs,
 				     size_t rslen)
 {
 	ssize_t size;
@@ -60,67 +61,89 @@ static ssize_t nsb_service_receive_request(struct nsb_service_request *rq,
 	return size;
 }
 
+struct nsb_response_data {
+	ssize_t	used;
+	char	*data;
+};
+
+static void nsb_service_response_print(struct nsb_response_data *rd,
+				       const char *fmt, ...)
+{
+	size_t left = NSB_SERVICE_MESSAGE_DATA_SIZE - rd->used;
+	va_list ap;
+	int __errno_saved = errno;
+	ssize_t n;
+
+	if (!left)
+		return;
+
+	va_start(ap, fmt);
+	n = vsnprintf(rd->data + rd->used, left, fmt, ap);
+	rd->used += n + 1;
+	va_end(ap);
+
+	errno = __errno_saved;
+}
+
 typedef size_t (*handler_t)(const void *data, size_t size,
-			    struct nsb_service_response *rs);
+			    struct nsb_response_data *rd);
 
 static size_t nsb_service_cmd_emerg_sigframe(const void *data, size_t size,
-					     struct nsb_service_response *rs)
+					     struct nsb_response_data *rd)
 {
 	if (size != sizeof(emergency_sigframe)) {
-		rs->ret = -EINVAL;
-		return sprintf(rs->data, "frame size is invalid: %ld (%ld)\n",
-				size, sizeof(emergency_sigframe)) + 1;
+		nsb_service_response_print(rd,
+				"frame size is invalid: %ld (%ld)\n",
+				size, sizeof(emergency_sigframe));
+		return -EINVAL;
 	}
 	memcpy(&emergency_sigframe, data, size);
-	rs->ret = 0;
 	return 0;
 }
 
 static size_t nsb_service_cmd_stop(const void *data, size_t size,
-				   struct nsb_service_response *rs)
+				   struct nsb_response_data *rd)
 {
 	nsb_service_stop = 1;
-	rs->ret = 0;
-	return sprintf(rs->data, "stopped") + 1;
+	return 0;
 }
 
 static size_t nsb_service_rw_cmd(const void *data, size_t size,
-				 struct nsb_service_response *rs,
+				 struct nsb_response_data *rd,
 				 bool read)
 {
 	const struct nsb_service_data_rw *rq = data;
 
 	if (rq->size > NSB_SERVICE_RW_DATA_SIZE_MAX) {
-		rs->ret = -E2BIG;
-		return sprintf(rs->data, "requested too much: %ld > %ld\n",
-				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX) + 1;
+		 nsb_service_response_print(rd,
+				"requested too much: %ld > %ld\n",
+				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX);
+		return -E2BIG;
 	}
 
 	if (rq->address == NULL) {
-		rs->ret = -EINVAL;
-		return sprintf(rs->data, "address is NULL\n") + 1;
+		nsb_service_response_print(rd, "address is NULL\n");
+		return -EINVAL;
 	}
 
-	rs->ret = 0;
-
 	if (read)
-		memcpy(rs->data, rq->address, rq->size);
+		memcpy(rd->data, rq->address, rq->size);
 	else
 		memcpy(rq->address, rq->data, rq->size);
 
-	return read ? rq->size : 0;
+	return 0;
 };
 
 static size_t nsb_service_cmd_read(const void *data, size_t size,
-				   struct nsb_service_response *rs)
+				   struct nsb_response_data *rd)
 {
-	return nsb_service_rw_cmd(data, size, rs, true);
+	return nsb_service_rw_cmd(data, size, rd, true);
 };
 
 static size_t nsb_service_cmd_write(const void *data, size_t size,
-				    struct nsb_service_response *rs)
+				    struct nsb_response_data *rd)
 {
-	return nsb_service_rw_cmd(data, size, rs, false);
+	return nsb_service_rw_cmd(data, size, rd, false);
 };
 
 static handler_t nsb_service_cmd_handlers[] = {
@@ -131,30 +154,36 @@ static handler_t nsb_service_cmd_handlers[] = {
 };
 
 static size_t nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t data_size, 
-				struct nsb_service_response *rs)
+				struct nsb_response_data *rd)
 {
 	handler_t handler;
 
-	rs->ret = -EINVAL;
-
-	if (rq->cmd > NSB_SERVICE_CMD_MAX)
-		return sprintf(rs->data, "unknown command: %d\n", rq->cmd) + 1;
+	if (rq->cmd > NSB_SERVICE_CMD_MAX) {
+		nsb_service_response_print(rd,
+				"unknown command: %d\n", rq->cmd);
+		return -EINVAL;
+	}
 
 	handler = nsb_service_cmd_handlers[rq->cmd];
-	if (!handler)
-		return sprintf(rs->data, "unsupported command: %d\n", rq->cmd) + 1;
+	if (!handler) {
+		 nsb_service_response_print(rd,
+				"unsupported command: %d\n", rq->cmd);
+		 return -EINVAL;
+	}
 
-	return handler(rq->data, data_size, rs);
+	return handler(rq->data, data_size, rd);
 }
 
 static int nsb_handle_command(const struct nsb_service_request *rq, size_t data_size)
 {
-	struct nsb_service_response rs;
-	size_t rslen;
+	struct nsb_service_response rs = { };
+	struct nsb_response_data rd = {
+		.data = rs.data,
+	};
 
-	rslen = sizeof(rs.ret) + nsb_do_handle_cmd(rq, data_size, &rs);
+	rs.ret = nsb_do_handle_cmd(rq, data_size, &rd);
 
-	return nsb_service_send_response(&rs, rslen);
+	return nsb_service_send_response(&rs, sizeof(rs.ret) + rd.used);
 }
 
 int nsb_service_run(bool wait)
