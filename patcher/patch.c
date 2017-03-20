@@ -143,7 +143,7 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 		 * But jmpq command construction fails, if map lays ouside 2g offset.
 		 * This might be a bug in jmps construction
 		 */
-		hint = TVMA(ctx)->start & 0xfffffffff0000000;
+		hint = vma_start(TVMA(ctx)) & 0xfffffffff0000000;
 	else
 		hint = 0x1000000;
 	return load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
@@ -426,7 +426,7 @@ static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid
 		return -ENOENT;
 	}
 	pr_info("  - path   : %s\n", vma->path);
-	pr_info("  - address: %#lx\n", vma->start);
+	pr_info("  - address: %#lx\n", vma_start(vma));
 	TVMA(ctx) = vma;
 	return 0;
 }

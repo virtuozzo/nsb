@@ -237,7 +237,7 @@ int backtrace_check_vma(const struct backtrace_s *bt,
 	if (bt->depth == 1)
 		return -EAGAIN;
 
-	bf = bt_check_range(bt, vma->start, vma->end);
+	bf = bt_check_range(bt, vma_start(vma), vma_end(vma));
 	if (!bf)
 		return 0;
 
@@ -246,6 +246,7 @@ int backtrace_check_vma(const struct backtrace_s *bt,
 			 bf->name);
 	else
 		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
-			 "%#lx \n", vma->path, vma->start, vma->end, bf->ip);
+			 "%#lx \n", vma->path, vma_start(vma), vma_end(vma),
+			 bf->ip);
 	return -EAGAIN;
 }

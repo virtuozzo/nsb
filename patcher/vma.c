@@ -14,7 +14,7 @@
 uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr)
 {
         if (elf_type_dyn(vma->ei))
-		addr += vma->start;
+		addr += vma->mmi.addr;
 	return addr;
 }
 
@@ -27,29 +27,32 @@ static int parse_vma(char *line, struct vma_area *vma)
 	uint64_t ino;
 	uint32_t path_off;
 	int num;
+	struct mmap_info_s *mmi = &vma->mmi;
+	int64_t end;
 
 	memset(vma, 0, sizeof(*vma));
 
 	num = sscanf(line, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
-		     &vma->start, &vma->end, &r, &w, &x, &s, &vma->pgoff,
+		     &mmi->addr, &end, &r, &w, &x, &s, &mmi->offset,
 		     &dev_maj, &dev_min, &ino, &path_off);
 	if (num != 10) {
 		pr_err("Can't parse: %s\n", line);
 		return -EINVAL;
 	}
 
-	vma->prot = PROT_NONE;
+	mmi->length = end - mmi->addr;
+	mmi->prot = PROT_NONE;
 	if (r == 'r')
-		vma->prot |= PROT_READ;
+		mmi->prot |= PROT_READ;
 	if (w == 'w')
-		vma->prot |= PROT_WRITE;
+		mmi->prot |= PROT_WRITE;
 	if (x == 'x')
-		vma->prot |= PROT_EXEC;
+		mmi->prot |= PROT_EXEC;
 
 	if (s == 's')
-		vma->flags = MAP_SHARED;
+		mmi->flags = MAP_SHARED;
 	else if (s == 'p')
-		vma->flags = MAP_PRIVATE;
+		mmi->flags = MAP_PRIVATE;
 	else {
 		pr_err("Unexpected VMA met (%c)\n", s);
 		return -EINVAL;
@@ -59,6 +62,11 @@ static int parse_vma(char *line, struct vma_area *vma)
 		vma->path = line + path_off;
 
 	return 0;
+}
+
+static inline struct vma_area *mmi_vma(struct mmap_info_s *mmi)
+{
+	return container_of(mmi, struct vma_area, mmi);
 }
 
 static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
@@ -80,7 +88,7 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 	}
 
 	snprintf(map_file, sizeof(map_file), "/proc/%d/map_files/%lx-%lx",
-			pid, vma->start, vma->end);
+			pid, vma_start(vma), vma_end(vma));
 
 	if (!access(map_file, F_OK)) {
 		vma->map_file = xstrdup(map_file);
@@ -96,7 +104,7 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 		}
 	}
 
-	list_add_tail(&vma->list, head);
+	list_add_tail(&vma->mmi.list, head);
 
 	return 0;
 
@@ -141,12 +149,12 @@ static int __collect_vmas(pid_t pid, struct list_head *head,
 		}
 
 		pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
-				tmp.start, tmp.end,
-				(tmp.prot & PROT_READ) ? 'r' : '-',
-				(tmp.prot & PROT_WRITE) ? 'w' : '-',
-				(tmp.prot & PROT_EXEC) ? 'x' : '-',
-				(tmp.flags == MAP_SHARED) ? 's' : 'p',
-				tmp.pgoff,
+				vma_start(&tmp), vma_end(&tmp),
+				(vma_prot(&tmp) & PROT_READ) ? 'r' : '-',
+				(vma_prot(&tmp) & PROT_WRITE) ? 'w' : '-',
+				(vma_prot(&tmp) & PROT_EXEC) ? 'x' : '-',
+				(vma_flags(&tmp) == MAP_SHARED) ? 's' : 'p',
+				vma_offset(&tmp),
 				(tmp.path) ? tmp.path : "");
 
 		ret = collect_vma(pid, head, &tmp);
@@ -184,9 +192,10 @@ int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
 const struct vma_area *find_vma(const struct list_head *head, const void *data,
 			  int (*actor)(const struct vma_area *vma, const void *data))
 {
-	struct vma_area *vma;
+	struct mmap_info_s *mmi;
 
-	list_for_each_entry(vma, head, list) {
+	list_for_each_entry(mmi, head, list) {
+		struct vma_area *vma = mmi_vma(mmi);
 		int ret;
 
 		if (!vma->path)
@@ -205,9 +214,9 @@ static int compare_addr(const struct vma_area *vma, const void *data)
 {
 	unsigned long addr = *(const unsigned long *)data;
 
-	if (addr < vma->start)
+	if (addr < vma_start(vma))
 		return 0;
-	if (addr > vma->end)
+	if (addr > vma_end(vma))
 		return 0;
 
 	return 1;
@@ -223,7 +232,7 @@ static int compare_prot(const struct vma_area *vma, const void *data)
 {
 	int prot = *(const int *)data;
 
-	return vma->prot & prot;
+	return vma->mmi.prot & prot;
 }
 
 const struct vma_area *find_vma_by_prot(const struct list_head *vmas, int prot)
@@ -249,10 +258,10 @@ const struct vma_area *find_vma_by_path(const struct list_head *vmas,
 static int find_hole(const struct vma_area *vma, const void *data)
 {
 	size_t size = *(const size_t *)data;
-	const struct vma_area *next_vma;
+	struct mmap_info_s *next_mmi;
 
-	next_vma = list_entry(vma->list.next, typeof(*vma), list);
-	return next_vma->start - vma->end > size;
+	next_mmi = list_entry(vma->mmi.list.next, typeof(*next_mmi), list);
+	return next_mmi->addr - (vma->mmi.addr + vma->mmi.length) > size;
 }
 
 unsigned long find_vma_hole(const struct list_head *vmas,
@@ -262,7 +271,7 @@ unsigned long find_vma_hole(const struct list_head *vmas,
 
 	vma = find_vma(vmas, &size, find_hole);
 
-	return vma ? vma->end : 0;
+	return vma ? vma_end(vma) : 0;
 }
 
 static const char *vma_elf_bid(const struct vma_area *vma)
@@ -317,10 +326,12 @@ const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
 int iterate_file_vmas(struct list_head *head, void *data,
 		int (*actor)(struct vma_area *vma, void *data))
 {
-	struct vma_area *vma;
+	struct mmap_info_s *mmi;
 	int err = 0;
 
-	list_for_each_entry(vma, head, list) {
+	list_for_each_entry(mmi, head, list) {
+		struct vma_area *vma = mmi_vma(mmi);
+
 		if (!vma->path)
 			continue;
 
@@ -370,7 +381,7 @@ static int vma_find_sym(struct vma_area *vma, void *data)
 	if (value <= 0)
 		return value;
 
-	si->value = vma->start + value;
+	si->value = vma->mmi.addr + value;
 	return 1;
 }
 
