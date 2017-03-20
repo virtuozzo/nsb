@@ -24,4 +24,8 @@ int process_close_file(struct process_ctx_s *ctx, int fd);
 
 int process_suspend(struct process_ctx_s *ctx);
 
+struct list_head;
+int process_mmap_file(struct process_ctx_s *ctx, const char *path,
+		      const struct list_head *mmaps);
+
 #endif

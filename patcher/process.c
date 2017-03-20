@@ -117,24 +117,70 @@ static long process_syscall(struct process_ctx_s *ctx, int nr,
 }
 
 int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
-		    unsigned long addr, size_t size, int flags, int prot)
+		    unsigned long addr, size_t length, int flags, int prot)
 {
 	long maddr;
 	char fbuf[512];
 	char pbuf[4];
 
 	maddr = process_syscall(ctx, __NR(mmap, false),
-				addr, size, prot, flags, fd, offset);
+				addr, length, prot, flags, fd, offset);
 	if (maddr < 0) {
-		pr_perror("Failed to create mmap with size %zu bytes", size);
+		pr_err("failed to create new mapping %#lx-%#lx "
+				"in process %d with flags %#x, prot %#x, offset %#lx\n",
+				addr, addr + length, ctx->pid,
+				prot, flags, offset);
 		return -errno;
 	}
 
 	pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
-			maddr, maddr + size, offset,
+			maddr, maddr + length, offset,
 			map_prot(prot, pbuf),
 			map_flags(flags, fbuf));
 	return maddr;
+}
+
+static int process_mmap_fd(struct process_ctx_s *ctx, int fd,
+			   const struct mmap_info_s *mmi)
+{
+	int64_t addr;
+
+	addr = process_map(ctx, fd, mmi->offset, mmi->addr,
+			mmi->length, mmi->flags, mmi->prot);
+
+	return addr < 0 ? addr : 0;
+}
+
+int process_munmap(struct process_ctx_s *ctx,
+		   const struct mmap_info_s *mmi)
+{
+	return process_unmap(ctx, mmi->addr, mmi->length);
+}
+
+int process_mmap_file(struct process_ctx_s *ctx, const char *path,
+		      const struct list_head *mmaps)
+{
+	int fd, err = 0;
+	struct mmap_info_s *mmi;
+
+	fd = process_open_file(ctx, path, O_RDONLY, 0);
+	if (fd < 0)
+		return fd;
+
+	list_for_each_entry(mmi, mmaps, list) {
+		err = process_mmap_fd(ctx, fd, mmi);
+		if (err)
+			goto unmap;
+	}
+
+	(void)process_close_file(ctx, fd);
+
+	return 0;
+
+unmap:
+	list_for_each_entry_reverse(mmi, mmaps, list)
+		(void)process_munmap(ctx, mmi);
+	return err;
 }
 
 int process_close_file(struct process_ctx_s *ctx, int fd)
