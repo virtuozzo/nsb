@@ -166,13 +166,22 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 
 	err = apply_relocations(ctx);
 	if (err)
-		return err;
+		goto unload_patch;
 
 	err = tune_func_jumps(ctx);
 	if (err)
-		return err;
+		goto unload_patch;
 
-	return apply_func_jumps(ctx);
+	err = apply_func_jumps(ctx);
+	if (err)
+		goto unload_patch;
+
+	return 0;
+
+unload_patch:
+	if (ctx->ops->revert_patch(ctx))
+		pr_err("failed to revert patch\n");
+	return err;
 }
 
 static int func_jump_applied(struct process_ctx_s *ctx,
@@ -589,11 +598,8 @@ int patch_process(pid_t pid, const char *patchfile)
 		goto resume;
 
 	ret = ctx->ops->apply_patch(ctx);
-	if (ret) {
+	if (ret)
 		pr_err("failed to apply binary patch\n");
-		if (ctx->ops->revert_patch(ctx))
-			pr_err("failed to revert patch\n");
-	}
 
 resume:
 	err = process_resume(ctx);
