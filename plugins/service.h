@@ -6,6 +6,7 @@
 typedef enum {
 	NSB_SERVICE_CMD_EMERG_SIGFRAME,
 	NSB_SERVICE_CMD_STOP,
+	NSB_SERVICE_CMD_NEEDED_LIST,
 	NSB_SERVICE_CMD_MMAP,
 	NSB_SERVICE_CMD_MUNMAP,
 	NSB_SERVICE_CMD_MAX,
@@ -22,6 +23,14 @@ struct nsb_service_response {
 	int ret;
 	char data[NSB_SERVICE_MESSAGE_DATA_SIZE];
 };
+
+struct nsb_service_needed_list {
+	size_t nr_addrs;
+	uint64_t address[1];
+};
+
+#define NSB_SERVICE_NEEDED_LIST_SIZE_MAX	\
+	(NSB_SERVICE_MESSAGE_DATA_SIZE - sizeof(struct nsb_service_needed_list))
 
 struct nsb_service_map_addr_info {
 	uint64_t addr;

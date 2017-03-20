@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <link.h>
 
 #include <compel/asm/sigframe.h>
 
@@ -202,10 +203,70 @@ unmap:
 	return err;
 }
 
+static int64_t nsb_service_dynamic_tag_val(const ElfW(Dyn) *l_ld, uint32_t d_tag)
+{
+	const ElfW(Dyn) *d;
+
+	for (d = l_ld; d->d_tag != DT_NULL; ++d) {
+		if (d->d_tag == d_tag)
+			return d->d_un.d_val;
+	}
+	return -ENOENT;
+}
+
+static size_t nsb_service_cmd_needed_list(const void *data, size_t size,
+					  struct nsb_response_data *rd)
+{
+	struct nsb_service_needed_list *nl = (void *)rd->data;
+        struct link_map *lm;
+	size_t nr = 0;
+	size_t max_base_addrs = NSB_SERVICE_NEEDED_LIST_SIZE_MAX /
+						sizeof(nl->address);
+
+	lm = _r_debug.r_map;
+
+	do {
+		int64_t dt_symtab_addr;
+
+		if (nr == max_base_addrs) {
+			rd->used = 0;
+			nsb_service_response_print(rd, "to many base addresses (max: %ld)",
+					max_base_addrs);
+			return -E2BIG;
+		}
+
+		/* We rely upon presense of DT_SYMTAB, because it's mandatory */
+		dt_symtab_addr = nsb_service_dynamic_tag_val(lm->l_ld, DT_SYMTAB);
+		if (dt_symtab_addr == -ENOENT) {
+			rd->used = 0;
+			nsb_service_response_print(rd,
+					"failed to find DT_SYMTAB (l_addr: %lx)",
+					lm->l_addr);
+			return -ENOENT;
+		}
+
+		/* Check dt_symtab_addr for non-negative value.
+		 * This is diferent in VDSO, which has negative addresses
+		 * (offsets from base)?
+		 */
+		if (dt_symtab_addr >= 0) {
+			nl->address[nr] = dt_symtab_addr;
+			rd->used += sizeof(nl->address);
+			nr++;
+		}
+		lm = lm->l_next;
+		/* Last link is this module. Skip it. */
+	} while (lm->l_next);
+
+	nl->nr_addrs = nr;
+	rd->used = sizeof(nl->nr_addrs) + sizeof(nl->address) * nr;
+	return 0;
+}
 
 static handler_t nsb_service_cmd_handlers[] = {
 	[NSB_SERVICE_CMD_EMERG_SIGFRAME] = nsb_service_cmd_emerg_sigframe,
 	[NSB_SERVICE_CMD_STOP] = nsb_service_cmd_stop,
+	[NSB_SERVICE_CMD_NEEDED_LIST] = nsb_service_cmd_needed_list,
 	[NSB_SERVICE_CMD_MMAP] = nsb_service_cmd_mmap,
 	[NSB_SERVICE_CMD_MUNMAP] = nsb_service_cmd_munmap,
 };
