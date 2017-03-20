@@ -397,3 +397,14 @@ int64_t vma_get_symbol_value(struct list_head *vmas, const char *name)
 		return ret;
 	return si.value;
 }
+
+static int always_match(const struct vma_area *vma, const void *data)
+{
+	return 1;
+}
+
+const struct vma_area *first_vma(const struct list_head *vmas)
+{
+	return find_vma(vmas, NULL, always_match);
+}
+
