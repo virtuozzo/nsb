@@ -43,8 +43,6 @@ int iterate_file_vmas(struct list_head *head, void *data,
 
 const char *vma_soname(const struct vma_area *vma);
 
-int vma_is_executable(const struct vma_area *vma);
-
 uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr);
 
 int64_t vma_get_symbol_value(struct list_head *vmas, const char *name);

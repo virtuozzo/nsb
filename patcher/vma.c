@@ -353,11 +353,6 @@ const struct vma_area *find_vma_by_soname(const struct list_head *vmas, const ch
 	return find_vma(vmas, soname, compare_soname);
 }
 
-int vma_is_executable(const struct vma_area *vma)
-{
-	return vma->prot & PROT_EXEC;
-}
-
 struct sym_info {
 	const char	*name;
 	uint64_t	value;
