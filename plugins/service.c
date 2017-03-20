@@ -47,7 +47,7 @@ static ssize_t nsb_service_send_response(const struct nsb_service_response *rs,
 	size = send(cmd_sock, rs, rslen, 0);
 	if (size < 0)
 		return -errno;
-	return 0;
+	return size;
 }
 
 static ssize_t nsb_service_receive_request(struct nsb_service_request *rq,
@@ -110,44 +110,6 @@ static size_t nsb_service_cmd_stop(const void *data, size_t size,
 	nsb_service_stop = 1;
 	return 0;
 }
-
-static size_t nsb_service_rw_cmd(const void *data, size_t size,
-				 struct nsb_response_data *rd,
-				 bool read)
-{
-	const struct nsb_service_data_rw *rq = data;
-
-	if (rq->size > NSB_SERVICE_RW_DATA_SIZE_MAX) {
-		 nsb_service_response_print(rd,
-				"requested too much: %ld > %ld",
-				rq->size, NSB_SERVICE_RW_DATA_SIZE_MAX);
-		return -E2BIG;
-	}
-
-	if (rq->address == NULL) {
-		nsb_service_response_print(rd, "address is NULL");
-		return -EINVAL;
-	}
-
-	if (read)
-		memcpy(rd->data, rq->address, rq->size);
-	else
-		memcpy(rq->address, rq->data, rq->size);
-
-	return 0;
-};
-
-static size_t nsb_service_cmd_read(const void *data, size_t size,
-				   struct nsb_response_data *rd)
-{
-	return nsb_service_rw_cmd(data, size, rd, true);
-};
-
-static size_t nsb_service_cmd_write(const void *data, size_t size,
-				    struct nsb_response_data *rd)
-{
-	return nsb_service_rw_cmd(data, size, rd, false);
-};
 
 static size_t nsb_service_cmd_do_munmap(const struct nsb_service_map_addr_info *mai,
 					struct nsb_response_data *rd)
@@ -244,8 +206,6 @@ unmap:
 static handler_t nsb_service_cmd_handlers[] = {
 	[NSB_SERVICE_CMD_EMERG_SIGFRAME] = nsb_service_cmd_emerg_sigframe,
 	[NSB_SERVICE_CMD_STOP] = nsb_service_cmd_stop,
-	[NSB_SERVICE_CMD_READ] = nsb_service_cmd_read,
-	[NSB_SERVICE_CMD_WRITE] = nsb_service_cmd_write,
 	[NSB_SERVICE_CMD_MMAP] = nsb_service_cmd_mmap,
 	[NSB_SERVICE_CMD_MUNMAP] = nsb_service_cmd_munmap,
 };
@@ -277,10 +237,16 @@ static int nsb_handle_command(const struct nsb_service_request *rq, size_t data_
 	struct nsb_response_data rd = {
 		.data = rs.data,
 	};
+	ssize_t size;
 
 	rs.ret = nsb_do_handle_cmd(rq, data_size, &rd);
 
-	return nsb_service_send_response(&rs, sizeof(rs.ret) + rd.used);
+	size = nsb_service_send_response(&rs, sizeof(rs.ret) + rd.used);
+	if (size < 0)
+		return size;
+	if (!size)
+		emergency_sigreturn();
+	return 0;
 }
 
 int nsb_service_run(bool wait)
