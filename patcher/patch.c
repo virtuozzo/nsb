@@ -560,12 +560,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
 		return 1;
 
-	if (get_process_needed(ctx))
-		return 1;
-
-	if (collect_relocations(ctx))
-		return 1;
-
 	return 0;
 }
 
@@ -590,6 +584,14 @@ int patch_process(pid_t pid, const char *patchfile)
 		goto resume;
 
 	ret = process_inject_service(ctx);
+	if (ret)
+		goto resume;
+
+	ret = get_process_needed(ctx);
+	if (ret)
+		goto resume;
+
+	ret = collect_relocations(ctx);
 	if (ret)
 		goto resume;
 
