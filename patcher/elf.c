@@ -169,15 +169,6 @@ static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p, uint64_t bas
 	return mmi;
 }
 
-static int64_t first_mmap_addr(const struct list_head *mmaps)
-{
-	if (list_empty(mmaps)) {
-		pr_err("no mmaps were loaded\n");
-		return -ENOENT;
-	}
-	return list_entry(mmaps->next, typeof(struct mmap_info_s), list)->addr;
-}
-
 static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 			    const struct elf_info_s *ei, uint64_t hint)
 {
@@ -223,8 +214,8 @@ int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
 	return process_munmap(ctx, segments);
 }
 
-int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
-		 const struct elf_info_s *ei, uint64_t hint)
+int load_elf(struct process_ctx_s *ctx, struct list_head *segments,
+	     const struct elf_info_s *ei, uint64_t hint)
 {
 	int err;
 	LIST_HEAD(mmaps);
@@ -233,11 +224,7 @@ int64_t load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 	if (err)
 		return err;
 
-	err = process_mmap_file(ctx, ei->path, segments);
-	if (err)
-		return err;
-
-	return first_mmap_addr(segments);
+	return process_mmap_file(ctx, ei->path, segments);
 }
 
 static Elf *elf_fd(const char *path, int fd)

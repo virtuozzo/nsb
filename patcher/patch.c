@@ -139,6 +139,8 @@ static int unload_patch(struct process_ctx_s *ctx)
 static int64_t load_patch(struct process_ctx_s *ctx)
 {
 	uint64_t hint;
+	const struct vma_area *vma;
+	int err;
 
 	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
 
@@ -151,17 +153,30 @@ static int64_t load_patch(struct process_ctx_s *ctx)
 		hint = vma_start(TVMA(ctx)) & 0xfffffffff0000000;
 	else
 		hint = 0x1000000;
-	return load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
+
+	err = load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
+	if (err)
+		return err;
+
+	vma = first_vma(&P(ctx)->segments);
+	if (!vma) {
+		pr_err("patch segments list is empty\n");
+		return -EFAULT;
+	}
+
+	P(ctx)->load_addr = vma_start(vma);
+
+	return 0;
 }
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
 
-	P(ctx)->load_addr = load_patch(ctx);
-	if (P(ctx)->load_addr < 0) {
+	err = load_patch(ctx);
+	if (err) {
 		pr_err("failed to load patch\n");
-		return P(ctx)->load_addr;
+		return err;
 	}
 
 	err = apply_relocations(ctx);
