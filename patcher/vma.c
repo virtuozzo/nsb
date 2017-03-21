@@ -198,9 +198,6 @@ const struct vma_area *find_vma(const struct list_head *head, const void *data,
 		struct vma_area *vma = mmi_vma(mmi);
 		int ret;
 
-		if (!vma->path)
-			continue;
-
 		ret = actor(vma, data);
 		if (ret < 0)
 			break;
@@ -232,7 +229,7 @@ static int compare_prot(const struct vma_area *vma, const void *data)
 {
 	int prot = *(const int *)data;
 
-	return vma->mmi.prot & prot;
+	return vma_prot(vma) & prot;
 }
 
 const struct vma_area *find_vma_by_prot(const struct list_head *vmas, int prot)
