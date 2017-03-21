@@ -2,14 +2,12 @@ from __future__ import print_function
 
 from elftools.dwarf import enums, dwarf_expr
 
-def set_dw_consts(const_dict):
-	globals().update((const, const) for const in const_dict
-		if not const.startswith('_'))
+from consts import *
 
-set_dw_consts(enums.ENUM_DW_TAG)
-set_dw_consts(enums.ENUM_DW_AT)
-set_dw_consts(enums.ENUM_DW_FORM)
-set_dw_consts(dwarf_expr.DW_OP_name2opcode)
+set_const_str(enums.ENUM_DW_TAG)
+set_const_str(enums.ENUM_DW_AT)
+set_const_str(enums.ENUM_DW_FORM)
+set_const_str(dwarf_expr.DW_OP_name2opcode)
 
 class ExprVisitor(dwarf_expr.GenericExprVisitor):
 	def __init__(self, structs):
@@ -18,7 +16,7 @@ class ExprVisitor(dwarf_expr.GenericExprVisitor):
 		self.__supported = True
 
 	def _after_visit(self, opcode, opcode_name, args):
-		if opcode_name != DW_OP_addr:
+		if opcode_name != STR.DW_OP_addr:
 			print("Can't interpret {0}".format(opcode_name))
 			self.__supported = False
 
@@ -28,8 +26,8 @@ class ExprVisitor(dwarf_expr.GenericExprVisitor):
 		return self.__value if self.__supported else None
 
 def get_die_name(die):
-	attr = die.attributes[DW_AT_name]
-	assert attr.form in [DW_FORM_string, DW_FORM_strp], attr.form
+	attr = die.attributes[STR.DW_AT_name]
+	assert attr.form in [STR.DW_FORM_string, STR.DW_FORM_strp], attr.form
 	return attr.value
 
 def get_die_key(die, demangler):
@@ -43,17 +41,17 @@ def get_die_key(die, demangler):
 	return tuple(result)
 
 def get_addr(die, structs):
-	if die.tag == DW_TAG_subprogram:
-		if DW_AT_entry_pc in die.attributes:
+	if die.tag == STR.DW_TAG_subprogram:
+		if STR.DW_AT_entry_pc in die.attributes:
 			raise Exception("DW_AT_entry_pc is not supported")
 
-		attr = die.attributes[DW_AT_low_pc]
-		assert attr.form == DW_FORM_addr, attr.form
+		attr = die.attributes[STR.DW_AT_low_pc]
+		assert attr.form == STR.DW_FORM_addr, attr.form
 		return attr.value
 
-	elif die.tag == DW_TAG_variable:
-		attr = die.attributes[DW_AT_location]
-		assert attr.form == DW_FORM_exprloc, attr.form
+	elif die.tag == STR.DW_TAG_variable:
+		attr = die.attributes[STR.DW_AT_location]
+		assert attr.form == STR.DW_FORM_exprloc, attr.form
 
 		expr_visitor = ExprVisitor(structs)
 		expr_visitor.process_expr(attr.value)
@@ -69,16 +67,16 @@ def read(elf, sym_names=None,
 	dwarf_info = elf.get_dwarf_info()
 
 	result = {}
-	sym_tags = [DW_TAG_subprogram, DW_TAG_variable]
+	sym_tags = [STR.DW_TAG_subprogram, STR.DW_TAG_variable]
 
 	def should_process(die):
 		if die.tag not in sym_tags:
 			return False
 
-		if DW_AT_abstract_origin in die.attributes:
+		if STR.DW_AT_abstract_origin in die.attributes:
 			return False
 
-		if DW_AT_declaration in die.attributes:
+		if STR.DW_AT_declaration in die.attributes:
 			return False
 
 		if sym_names is None:
