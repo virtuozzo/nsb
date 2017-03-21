@@ -9,7 +9,7 @@ check_LTLIBRARIES = libtest.la
 
 nsbtest_library_SOURCES = main.c
 nsbtest_library_LDADD = libtest.la -lpthread
-nsbtest_static_CFLAGS = $(AM_CFLAGS) -g
+nsbtest_library_CFLAGS = $(AM_CFLAGS) -g
 
 nsbtest_static_SOURCES = main.c library.c test_type.h
 nsbtest_static_LDADD = -lpthread
