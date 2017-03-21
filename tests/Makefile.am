@@ -26,7 +26,7 @@ nsb_test_types.py$(EXEEXT): test_types.h
 
 nsb_test_types.py$(EXEEXT):  convert_test_types.py
 
-check_PROGRAMS += nsb_test_types.py
+check_SCRIPTS = nsb_test_types.py
 
 #########################
 # Patches
