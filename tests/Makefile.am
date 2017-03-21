@@ -45,14 +45,14 @@ patch_global_var_addr.so$(EXEEXT): global_var_addr.c
 patch_static_func_cb.so$(EXEEXT): static_func_cb.c
 patch_static_var.so$(EXEEXT): static_var.c
 
-check_DATA = patch_global_func.so
-check_DATA += patch_static_func.so
-check_DATA += patch_ext_global_func.so
-check_DATA += patch_global_func_cb.so
-check_DATA += patch_global_func_p.so
-check_DATA += patch_global_var.so
-check_DATA += patch_global_var_addr.so
-check_DATA += patch_static_func_cb.so
-check_DATA += patch_static_var.so
+check_DATA = patch_global_func.so$(EXEEXT)
+check_DATA += patch_static_func.so$(EXEEXT)
+check_DATA += patch_ext_global_func.so$(EXEEXT)
+check_DATA += patch_global_func_cb.so$(EXEEXT)
+check_DATA += patch_global_func_p.so$(EXEEXT)
+check_DATA += patch_global_var.so$(EXEEXT)
+check_DATA += patch_global_var_addr.so$(EXEEXT)
+check_DATA += patch_static_func_cb.so$(EXEEXT)
+check_DATA += patch_static_var.so$(EXEEXT)
 
 ctags:
