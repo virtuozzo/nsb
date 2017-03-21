@@ -89,11 +89,11 @@ static void nsb_service_response_print(struct nsb_response_data *rd,
 	errno = __errno_saved;
 }
 
-typedef size_t (*handler_t)(const void *data, size_t size,
-			    struct nsb_response_data *rd);
+typedef int (*handler_t)(const void *data, size_t size,
+			 struct nsb_response_data *rd);
 
-static size_t nsb_service_cmd_emerg_sigframe(const void *data, size_t size,
-					     struct nsb_response_data *rd)
+static int nsb_service_cmd_emerg_sigframe(const void *data, size_t size,
+					  struct nsb_response_data *rd)
 {
 	if (size != sizeof(emergency_sigframe)) {
 		nsb_service_response_print(rd,
@@ -105,15 +105,15 @@ static size_t nsb_service_cmd_emerg_sigframe(const void *data, size_t size,
 	return 0;
 }
 
-static size_t nsb_service_cmd_stop(const void *data, size_t size,
-				   struct nsb_response_data *rd)
+static int nsb_service_cmd_stop(const void *data, size_t size,
+				struct nsb_response_data *rd)
 {
 	nsb_service_stop = 1;
 	return 0;
 }
 
-static size_t nsb_service_cmd_do_munmap(const struct nsb_service_map_addr_info *mai,
-					struct nsb_response_data *rd)
+static int nsb_service_cmd_do_munmap(const struct nsb_service_map_addr_info *mai,
+				     struct nsb_response_data *rd)
 {
 	int err;
 
@@ -127,12 +127,12 @@ static size_t nsb_service_cmd_do_munmap(const struct nsb_service_map_addr_info *
 	return 0;
 }
 
-static size_t nsb_service_cmd_munmap(const void *data, size_t size,
-				   struct nsb_response_data *rd)
+static int nsb_service_cmd_munmap(const void *data, size_t size,
+				  struct nsb_response_data *rd)
 {
 	const struct nsb_service_munmap_request *rq = data;
 	const struct nsb_service_map_addr_info *mai;
-	int nr;
+	int nr, err;
 	size_t max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
 
 	if (rq->nr_munmaps > max_munmaps) {
@@ -141,16 +141,19 @@ static size_t nsb_service_cmd_munmap(const void *data, size_t size,
 		return -E2BIG;
 	}
 
-	for (nr = 0, mai = rq->munmap; nr < rq->nr_munmaps; nr++, mai++)
-		(void) nsb_service_cmd_do_munmap(mai, rd);
+	for (nr = 0, mai = rq->munmap; nr < rq->nr_munmaps; nr++, mai++) {
+		err = nsb_service_cmd_do_munmap(mai, rd);
+		if (err)
+			return err;
+	}
 
 	return 0;
 
 }
 
-static size_t nsb_service_cmd_do_mmap(int fd,
-				      const struct nsb_service_mmap_info *mi,
-				      struct nsb_response_data *rd)
+static int nsb_service_cmd_do_mmap(int fd,
+				   const struct nsb_service_mmap_info *mi,
+				   struct nsb_response_data *rd)
 {
 	void *address;
 	const struct nsb_service_map_addr_info *mai = &mi->info;
@@ -158,6 +161,10 @@ static size_t nsb_service_cmd_do_mmap(int fd,
 	address = mmap((void *)mai->addr, mai->length,
 			mi->prot, mi->flags, fd, mi->offset);
 	if (address == MAP_FAILED) {
+		printf("failed to create new mapping %#lx-%#lx "
+				"with flags %#x, prot %#x, offset %#lx",
+				mai->addr, mai->addr + mai->length,
+				mi->prot, mi->flags, mi->offset);
 		nsb_service_response_print(rd,
 				"failed to create new mapping %#lx-%#lx "
 				"with flags %#x, prot %#x, offset %#lx",
@@ -165,11 +172,14 @@ static size_t nsb_service_cmd_do_mmap(int fd,
 				mi->prot, mi->flags, mi->offset);
 		return -errno;
 	}
+	printf("  - mmap: %#lx-%#lx, off: %#lx, prot: %x, flags: %x\n",
+			mai->addr, mai->addr + mai->length,
+			mi->offset, mi->prot, mi->flags);
 	return 0;
 }
 
-static size_t nsb_service_cmd_mmap(const void *data, size_t size,
-				   struct nsb_response_data *rd)
+static int nsb_service_cmd_mmap(const void *data, size_t size,
+				struct nsb_response_data *rd)
 {
 	const struct nsb_service_mmap_request *rq = data;
 	const struct nsb_service_mmap_info *mi;
@@ -182,6 +192,11 @@ static size_t nsb_service_cmd_mmap(const void *data, size_t size,
 		return -E2BIG;
 	}
 
+	if (rq->nr_mmaps != 2) {
+		nsb_service_response_print(rd, "rq->nr_mmaps: %d",
+				rq->nr_mmaps);
+		return -EINVAL;
+	}
 	fd = open(rq->path, O_RDONLY);
 	if (fd < 0) {
 		nsb_service_response_print(rd, "failed to open %s", rq->path);
@@ -214,8 +229,8 @@ static int64_t nsb_service_dynamic_tag_val(const ElfW(Dyn) *l_ld, uint32_t d_tag
 	return -ENOENT;
 }
 
-static size_t nsb_service_cmd_needed_list(const void *data, size_t size,
-					  struct nsb_response_data *rd)
+static int nsb_service_cmd_needed_list(const void *data, size_t size,
+				       struct nsb_response_data *rd)
 {
 	struct nsb_service_needed_list *nl = (void *)rd->data;
         struct link_map *lm;
@@ -271,7 +286,7 @@ static handler_t nsb_service_cmd_handlers[] = {
 	[NSB_SERVICE_CMD_MUNMAP] = nsb_service_cmd_munmap,
 };
 
-static size_t nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t data_size, 
+static int nsb_do_handle_cmd(const struct nsb_service_request *rq, size_t data_size, 
 				struct nsb_response_data *rd)
 {
 	handler_t handler;
