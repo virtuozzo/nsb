@@ -5,11 +5,13 @@
 
 #include "list.h"
 
+struct vma_area;
+
 struct service {
 	const char		*name;
 	pid_t			pid;
 	uint64_t		handle;
-	struct list_head	vmas;
+	const struct vma_area	*first_vma;
 	int			sock;
 	uint64_t		runner;
 	bool			loaded;

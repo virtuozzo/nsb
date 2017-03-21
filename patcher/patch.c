@@ -31,7 +31,6 @@ struct process_ctx_s process_context = {
 	},
 	.service = {
 		.name = "libnsb_service.so",
-		.vmas = LIST_HEAD_INIT(process_context.service.vmas),
 		.sock = -1,
 	},
 	.vmas = LIST_HEAD_INIT(process_context.vmas),

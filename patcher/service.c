@@ -79,6 +79,7 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 	char path[PATH_MAX];
 	char dentry[256];
 	ssize_t res;
+	LIST_HEAD(service_vmas);
 
 	err = process_read_data(ctx, service->handle, &base, sizeof(base));
 	if (err)
@@ -107,14 +108,19 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 	}
 	path[res] = '\0';
 
-	err = collect_vmas_by_path(service->pid, &service->vmas, path);
+	err = collect_vmas_by_path(service->pid, &service_vmas, path);
 	if (err)
 		return err;
 
-	if (list_empty(&service->vmas)) {
+	if (list_empty(&service_vmas)) {
 		pr_err("failed to collect service VMAs by path %s\n", path);
 		return -ENOENT;
 	}
+
+	service->first_vma = first_vma(&service_vmas);
+
+	list_splice_tail(&service_vmas, &ctx->vmas);
+
 	return 0;
 }
 
@@ -166,19 +172,18 @@ static int service_local_connect(struct service *service)
 
 static int64_t service_sym_addr(struct service *service, const char *symbol)
 {
-	const struct vma_area *vma;
+	const struct vma_area *vma = service->first_vma;
 	int64_t value;
 
-
-	vma = first_vma(&service->vmas);
-	if (!vma && !vma->ei) {
-		pr_err("WTF?!!\n");
+	if (!vma->ei) {
+		pr_err("no ELF object for service vma?!!\n");
 		return -EINVAL;
 	}
 
 	value = elf_dyn_sym_value(vma->ei, symbol);
 	if (value <= 0) {
-		pr_err("failed to find symbol \"%s\" in %s\n", symbol, vma->path);
+		pr_err("failed to find symbol \"%s\" in %s\n",
+				symbol, vma->path);
 		return value;
 	}
 
