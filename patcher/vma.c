@@ -252,23 +252,38 @@ const struct vma_area *find_vma_by_path(const struct list_head *vmas,
 	return find_vma(vmas, path, compare_path);
 }
 
+struct address_hole {
+	uint64_t	hint;
+	size_t		size;
+};
+
 static int find_hole(const struct vma_area *vma, const void *data)
 {
-	size_t size = *(const size_t *)data;
+	const struct address_hole *hole = data;
 	struct mmap_info_s *next_mmi;
+	const struct vma_area *next_vma;
 
 	next_mmi = list_entry(vma->mmi.list.next, typeof(*next_mmi), list);
-	return next_mmi->addr - (vma->mmi.addr + vma->mmi.length) > size;
+	next_vma = mmi_vma(next_mmi);
+
+	if (vma_start(next_vma) < hole->hint)
+		return 0;
+
+	return vma_start(next_vma) - max(hole->hint, vma_end(vma)) > hole->size;
 }
 
-unsigned long find_vma_hole(const struct list_head *vmas,
-			    unsigned long hint, size_t size)
+int64_t find_vma_hole(const struct list_head *vmas,
+		      uint64_t hint, size_t size)
 {
 	const struct vma_area *vma;
+	struct address_hole hole = {
+		.hint = hint,
+		.size = size,
+	};
 
-	vma = find_vma(vmas, &size, find_hole);
+	vma = find_vma(vmas, &hole, find_hole);
 
-	return vma ? vma_end(vma) : 0;
+	return vma ? max(hole.hint, vma_end(vma)) : -ENOENT;
 }
 
 static const char *vma_elf_bid(const struct vma_area *vma)

@@ -63,8 +63,8 @@ struct stat;
 const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
 					const struct stat *st);
 
-unsigned long find_vma_hole(const struct list_head *vmas,
-			    unsigned long hint, size_t size);
+int64_t find_vma_hole(const struct list_head *vmas,
+		      uint64_t hint, size_t size);
 
 int iterate_file_vmas(struct list_head *head, void *data,
 		      int (*actor)(struct vma_area *vma, void *data));
