@@ -147,7 +147,7 @@ int elf_library_status(void)
 	return 0;
 }
 
-static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p, uint64_t base)
+static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p)
 {
 	struct mmap_info_s *mmi;
 
@@ -155,7 +155,7 @@ static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p, uint64_t bas
 	if (!mmi)
 		return NULL;
 
-	mmi->addr = ELF_PAGESTART(base + p->p_vaddr);
+	mmi->addr = p->p_vaddr;
 	mmi->length = ELF_PAGEALIGN(p->p_filesz + ELF_PAGEOFFSET(p->p_vaddr));
 	mmi->flags = MAP_PRIVATE | MAP_FIXED;
 	mmi->prot = 0;
@@ -170,7 +170,7 @@ static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p, uint64_t bas
 }
 
 static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
-			    const struct elf_info_s *ei, uint64_t hint)
+			    const struct elf_info_s *ei)
 {
 	int i, err = -1;
 	size_t pnum;
@@ -193,7 +193,7 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 		if (phdr.p_type != PT_LOAD)
 			continue;
 
-		mmi = create_elf_mmap_info(&phdr, hint);
+		mmi = create_elf_mmap_info(&phdr);
 		if (!mmi)
 			goto err;
 
@@ -209,9 +209,15 @@ err:
 	return err;
 }
 
-int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
+static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
+			  uint64_t hint)
 {
-	return process_munmap(ctx, segments);
+	struct mmap_info_s *mmi;
+
+	list_for_each_entry(mmi, mmaps, list)
+		mmi->addr = ELF_PAGESTART(hint + mmi->addr);
+
+	return 0;
 }
 
 int load_elf(struct process_ctx_s *ctx, struct list_head *segments,
@@ -220,11 +226,20 @@ int load_elf(struct process_ctx_s *ctx, struct list_head *segments,
 	int err;
 	LIST_HEAD(mmaps);
 
-	err = create_elf_mmaps(ctx, segments, ei, hint);
+	err = create_elf_mmaps(ctx, segments, ei);
+	if (err)
+		return err;
+
+	err = pin_elf_mmaps(ctx, segments, hint);
 	if (err)
 		return err;
 
 	return process_mmap_file(ctx, ei->path, segments);
+}
+
+int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
+{
+	return process_munmap(ctx, segments);
 }
 
 static Elf *elf_fd(const char *path, int fd)
