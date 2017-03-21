@@ -213,9 +213,32 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 			  uint64_t hint)
 {
 	struct mmap_info_s *mmi;
+	const struct vma_area *fvma, *lvma;
+	size_t load_size;
+	int64_t hole;
 
+	fvma = first_vma(mmaps);
+	lvma = last_vma(mmaps);
+	if (!fvma || !lvma) {
+		pr_err("elf doesn't have load segments\n");
+		return -EINVAL;
+	}
+
+	load_size = ELF_PAGESTART(vma_start(lvma)) + lvma->mmi.length -
+		    ELF_PAGESTART(vma_start(fvma));
+
+	hole = find_vma_hole(&ctx->vmas, hint, load_size);
+	if (hole < 0) {
+		pr_err("failed to find address space hole with size %lx "
+			"starting from address %lx\n", load_size, hint);
+		return hole;
+	}
+
+	/* TODO: need to check, that found hole fits into 2GB boundary range
+	 * from VMA to patch.
+	 */
 	list_for_each_entry(mmi, mmaps, list)
-		mmi->addr = ELF_PAGESTART(hint + mmi->addr);
+		mmi->addr = ELF_PAGESTART(hole + mmi->addr);
 
 	return 0;
 }
