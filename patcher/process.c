@@ -746,3 +746,55 @@ int process_shutdown_service(struct process_ctx_s *ctx)
 
 	return 0;
 }
+
+static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
+			  const struct vma_area *vma)
+{
+	struct ctx_dep *cd;
+
+	cd = xmalloc(sizeof(*cd));
+	if (!cd)
+		return -ENOMEM;
+
+	cd->vma = vma;
+	list_add_tail(&cd->list, head);
+
+	pr_debug("  - %lx-%lx - %s\n", vma_start(cd->vma),
+			vma_end(cd->vma), cd->vma->path);
+	return 0;
+}
+
+int process_collect_needed(struct process_ctx_s *ctx)
+{
+	int err = -ENOENT;
+	ssize_t nr, i;
+	uint64_t *needed_array;
+
+	pr_debug("= Process soname search list:\n");
+
+	nr = service_needed_array(ctx, &ctx->service, &needed_array);
+	if (nr < 0)
+		return err;
+
+	for (i = 0; i < nr; i++) {
+		const struct vma_area *vma;
+		uint64_t address = needed_array[i];
+
+		vma = find_vma_by_addr(&ctx->vmas, address);
+		if (!vma) {
+			pr_err("failed to find VMA by address %#lx\n", address);
+			continue;
+			err = -ENOENT;
+			goto free_array;
+		}
+
+		err = collect_needed(ctx, &ctx->objdeps, vma);
+		if (err)
+			goto free_array;
+
+	}
+
+free_array:
+	free(needed_array);
+	return err;
+}
