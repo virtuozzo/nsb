@@ -76,5 +76,6 @@ uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr);
 int64_t vma_get_symbol_value(struct list_head *vmas, const char *name);
 
 const struct vma_area *first_vma(const struct list_head *vmas);
+const struct vma_area *last_vma(const struct list_head *vmas);
 
 #endif /* __PATCHER_VMA_H__ */

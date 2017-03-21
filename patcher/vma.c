@@ -395,13 +395,18 @@ int64_t vma_get_symbol_value(struct list_head *vmas, const char *name)
 	return si.value;
 }
 
-static int always_match(const struct vma_area *vma, const void *data)
-{
-	return 1;
-}
-
 const struct vma_area *first_vma(const struct list_head *vmas)
 {
-	return find_vma(vmas, NULL, always_match);
+	if (list_empty(vmas))
+		return NULL;
+
+	return mmi_vma(list_entry(vmas->next, typeof(struct mmap_info_s), list));
 }
 
+const struct vma_area *last_vma(const struct list_head *vmas)
+{
+	if (list_empty(vmas))
+		return NULL;
+
+	return mmi_vma(list_entry(vmas->prev, typeof(struct mmap_info_s), list));
+}
