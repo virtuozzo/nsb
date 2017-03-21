@@ -26,3 +26,6 @@ SUFFIXES = .dep .proto _pb2.py .pb-c.c
 	$(AM_V_GEN) protoc-c -I=. --c_out=. $<
 
 CLEANFILES = $(BUILT_SOURCES) $(PROTO_C_OUT:.c=.h) $(PROTO_C_OUT:.c=.o) $(PROTO_PY_OUT:.py=.pyc) $(DEPS)
+
+tags: $(BUILT_SOURCES)
+ctags: $(BUILT_SOURCES)
