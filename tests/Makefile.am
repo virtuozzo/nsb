@@ -54,5 +54,3 @@ check_DATA += patch_global_var.so$(EXEEXT)
 check_DATA += patch_global_var_addr.so$(EXEEXT)
 check_DATA += patch_static_func_cb.so$(EXEEXT)
 check_DATA += patch_static_var.so$(EXEEXT)
-
-ctags:
