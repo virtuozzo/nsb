@@ -38,7 +38,6 @@ struct patch_info_s {
 
 struct patch_s {
 	struct patch_info_s	pi;
-	const struct vma_area	*target_vma;
 	const struct dl_map	*target_dlm;
 	int64_t			load_addr;
 	struct list_head	rela_plt;
@@ -71,7 +70,6 @@ struct process_ctx_s {
 #define P(ctx)			(&ctx->p)
 #define PI(ctx)			(&ctx->p.pi)
 #define PLA(ctx)		(ctx->p.load_addr)
-#define TVMA(ctx)		(ctx->p.target_vma)
 #define TDLM(ctx)		(ctx->p.target_dlm)
 
 #endif
