@@ -470,8 +470,7 @@ int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
 }
 
 static int task_check_stack(const struct process_ctx_s *ctx, const struct thread_s *t,
-			    int (*check)(const struct process_ctx_s *ctx,
-					 const struct backtrace_s *bt))
+			    const struct vma_area *vma)
 {
 	int err;
 	struct backtrace_s *bt;
@@ -484,22 +483,21 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 		return err;
 	}
 
-	err = check(ctx, bt);
+	err = ctx->ops->check_backtrace(ctx, bt, vma);
 
 	destroy_backtrace(bt);
 	return err;
 }
 
 static int process_check_stack(const struct process_ctx_s *ctx,
-			      int (*check)(const struct process_ctx_s *ctx,
-					   const struct backtrace_s *bt))
+			       const struct vma_area *vma)
 {
 	struct thread_s *t;
 	int err;
 
 	pr_info("= Checking %d stack...\n", ctx->pid);
 	list_for_each_entry(t, &ctx->threads, list) {
-		err = task_check_stack(ctx, t, check);
+		err = task_check_stack(ctx, t, vma);
 		if (err)
 			return err;
 	}
@@ -514,7 +512,7 @@ static int process_catch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	ret = process_check_stack(ctx, ctx->ops->check_backtrace);
+	ret = process_check_stack(ctx, TVMA(ctx));
 	if (ret)
 		goto err;
 

@@ -206,14 +206,14 @@ static const struct backtrace_frame_s *bt_check_range(const struct backtrace_s *
 	return NULL;
 }
 
-int backtrace_check_func(const struct process_ctx_s *ctx,
-			 const struct func_jump_s *fj,
-			 const struct backtrace_s *bt)
+int backtrace_check_func(const struct func_jump_s *fj,
+			 const struct backtrace_s *bt,
+			 const struct vma_area *vma)
 {
 	uint64_t func_start, func_end;
 	const struct backtrace_frame_s *bf;
 
-	func_start = vma_func_addr(TVMA(ctx), fj->func_value);
+	func_start = vma_func_addr(vma, fj->func_value);
 	func_end = func_start + fj->func_size;
 
 	bf = bt_check_range(bt, func_start, func_end);

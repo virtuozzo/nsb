@@ -306,13 +306,14 @@ int process_resume(struct process_ctx_s *ctx)
 }
 
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
-				 const struct backtrace_s *bt)
+				 const struct backtrace_s *bt,
+				 const struct vma_area *vma)
 {
 	const struct patch_info_s *pi = PI(ctx);
 	int i, err;
 
 	for (i = 0; i < pi->n_func_jumps; i++) {
-		err = backtrace_check_func(ctx, pi->func_jumps[i], bt);
+		err = backtrace_check_func(pi->func_jumps[i], bt, vma);
 		if (err)
 			return err;
 	}
