@@ -843,7 +843,7 @@ static struct extern_symbol *create_ext_sym(char *name, const GElf_Rela *rela,
 	es->ed = ed;
 	es->name = name;
 	es->address = 0;
-	es->vma = NULL;
+	es->dlm = NULL;
 	return es;
 }
 

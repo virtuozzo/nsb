@@ -40,11 +40,12 @@ int elf_rela_dyn(struct elf_info_s *ei, struct list_head *head);
 int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 
 struct elf_data_s;
+struct dl_map;
 struct extern_symbol {
 	struct list_head	list;
 	char			*name;
 	struct elf_data_s	*ed;
-	const struct vma_area	*vma;
+	const struct dl_map	*dlm;
 	int64_t			address;
 };
 

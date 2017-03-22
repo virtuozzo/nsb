@@ -45,17 +45,16 @@ int collect_relocations(struct process_ctx_s *ctx)
 }
 
 static int64_t __find_dym_sym(const struct list_head *deps,
-			      const struct vma_area *stop_vma,
+			      const struct dl_map *stop_dlm,
 			      struct extern_symbol *es,
 			      uint64_t patch_value)
 {
 	int64_t value;
 	const struct ctx_dep *n;
 
-	es->vma = NULL;
+	es->dlm = NULL;
 	list_for_each_entry(n, deps, list) {
 		const struct dl_map *dlm = n->dlm;
-		const struct vma_area *vma = first_dl_vma(dlm);
 
 		/* If symbol is defined in the patch and we reached the old
 		 * library, stop and returm patch value.
@@ -64,17 +63,17 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 		 * Without this check we can find the symbol not in the patch,
 		 * but somewhere else in soname list, which is wrong.
 		 */
-		if (patch_value && (vma == stop_vma))
+		if (patch_value && (dlm == stop_dlm))
 			/* Note, that VMA remains NULL. It will be used is
 			 * patch marker in apply_es()
 			 */
 			return patch_value;
 
-		value = elf_dyn_sym_value(vma->ei, es->name);
+		value = elf_dyn_sym_value(first_dl_vma(dlm)->ei, es->name);
 		if (value < 0)
 			return value;
 		if (value) {
-			es->vma = vma;
+			es->dlm = dlm;
 			return value;
 		}
 	}
@@ -91,7 +90,7 @@ static int64_t check_sym_info(const struct process_ctx_s *ctx,
 		const struct static_sym_s *si = pi->static_syms[i];
 
 		if (si->idx == es_r_sym(es)) {
-			es->vma = TVMA(ctx);
+			es->dlm = TDLM(ctx);
 			return si->addr;
 		}
 	}
@@ -107,7 +106,7 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 	if (value)
 		return value;
 
-	value = __find_dym_sym(&ctx->objdeps, TVMA(ctx), es, es_s_value(es));
+	value = __find_dym_sym(&ctx->objdeps, TDLM(ctx), es, es_s_value(es));
 	if (value != -ENOENT)
 		return value;
 
@@ -146,7 +145,7 @@ static void print_resolution(struct process_ctx_s *ctx,
 				es_s_size(es), es_type(es), es_binding(es),
 				es->name,
 				(es->address == 0) ? "" :
-				((es->vma) ? es->vma->path : TVMA(ctx)->path));
+				((es->dlm) ? es->dlm->path : TDLM(ctx)->path));
 }
 
 static int resolve_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
@@ -198,14 +197,14 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 
 	plt_addr = PLA(ctx) + es_r_offset(es);
 
-	if (es->vma)
-		func_addr = vma_func_addr(es->vma, es->address);
+	if (es->dlm)
+		func_addr = vma_func_addr(first_dl_vma(es->dlm), es->address);
 	else
 		func_addr = PLA(ctx) + es->address;
 
 	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
 			es_r_sym(es), plt_addr, func_addr, es->name,
-			((es->vma) ? es->vma->path : TVMA(ctx)->path),
+			((es->dlm) ? es->dlm->path : TDLM(ctx)->path),
 			es->address);
 
 	err = process_write_data(ctx, plt_addr, &func_addr, sizeof(func_addr));
