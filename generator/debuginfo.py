@@ -92,7 +92,6 @@ def read(elf, sym_names=None,
 
 			sym_addr = get_addr(die, cu.structs)
 			if sym_addr is not None:
-				print("{0:016x} {1}".format(sym_addr, die_key))
 				result[die_key] = sym_addr
 
 		for child_die in die.iter_children():
