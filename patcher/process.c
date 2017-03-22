@@ -816,6 +816,11 @@ int process_collect_vmas(struct process_ctx_s *ctx)
 		pr_err("Can't collect mappings for %d\n", ctx->pid);
 		return err;
 	}
+
+	err = collect_dl_maps(&ctx->vmas, &ctx->dl_maps);
+	if (err)
+		return err;
+
 	return 0;
 }
 

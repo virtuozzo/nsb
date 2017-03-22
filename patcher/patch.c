@@ -375,10 +375,6 @@ int patch_process(pid_t pid, const char *patchfile)
 	if (ret)
 		goto resume;
 
-	ret = collect_dl_maps(ctx->pid, &ctx->dl_maps);
-	if (ret)
-		goto resume;
-
 	ret = process_find_patch(ctx);
 	if (ret)
 		goto resume;
@@ -417,19 +413,19 @@ resume:
 int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
-	LIST_HEAD(dl_maps);
 	char *bid;
+	struct process_ctx_s *ctx = &process_context;
 
-	err = collect_dl_maps(pid, &dl_maps);
-	if (err) {
-		pr_err("Can't collect mappings for %d\n", pid);
+	ctx->pid = pid;
+
+	err = process_collect_vmas(ctx);
+	if (err)
 		return err;
-	}
 
 	bid = protobuf_get_bid(patchfile);
 	if (!bid)
 		return -1;
 
-	return !find_dl_map_by_bid(&dl_maps, bid);
+	return !find_dl_map_by_bid(&ctx->dl_maps, bid);
 }
 

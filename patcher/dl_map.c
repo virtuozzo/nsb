@@ -72,19 +72,13 @@ static int collect_dl_map(struct vma_area *vma, void *data)
 	return 0;
 }
 
-int collect_dl_maps(pid_t pid, struct list_head *head)
+int collect_dl_maps(const struct list_head *vmas, struct list_head *head)
 {
-	int err;
-	LIST_HEAD(vmas);
 	struct dl_info dl_info = {
 		.head = head,
 	};
 
-	err = collect_vmas(pid, &vmas);
-	if (err)
-		return err;
-
-	return iterate_file_vmas(&vmas, &dl_info, collect_dl_map);
+	return iterate_file_vmas(vmas, &dl_info, collect_dl_map);
 }
 
 static const struct dl_map *find_dl_map(const struct list_head *head, const void *data,
