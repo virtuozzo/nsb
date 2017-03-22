@@ -46,6 +46,8 @@ static inline off_t vma_offset(const struct vma_area *vma)
 	return vma->mmi.offset;
 }
 
+void free_vma(struct vma_area *vma);
+void free_vmas(struct list_head *head);
 int collect_vmas(pid_t pid, struct list_head *head);
 int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path);
 

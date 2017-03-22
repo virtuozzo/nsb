@@ -69,6 +69,27 @@ static inline struct vma_area *mmi_vma(struct mmap_info_s *mmi)
 	return container_of(mmi, struct vma_area, mmi);
 }
 
+void free_vma(struct vma_area *vma)
+{
+	if (vma->ei)
+		elf_destroy_info(vma->ei);
+	free(vma->path);
+	free(vma->map_file);
+	free(vma);
+}
+
+void free_vmas(struct list_head *head)
+{
+	struct mmap_info_s *mmi, *tmp;
+
+	list_for_each_entry_safe(mmi, tmp, head, list) {
+		struct vma_area *vma = mmi_vma(mmi);
+
+		list_del(&mmi->list);
+		free_vma(vma);
+	}
+}
+
 static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
 {
 	struct vma_area *vma;
