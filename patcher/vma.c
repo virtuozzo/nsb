@@ -189,6 +189,7 @@ err:
 struct vma_collect {
 	struct list_head	*head;
 	const void		*data;
+	struct vma_area		**vma;
 };
 
 static int __collect_vmas(pid_t pid, struct list_head *head,
@@ -250,22 +251,55 @@ static int compare_vma_bid(pid_t pid, const struct vma_area *vma, void *data)
 {
 	struct vma_collect *vmc = data;
 	const char *bid = vmc->data;
+	struct vma_area *vma_area;
+	int err;
 
-	if (!vma->ei)
+	if (!vma->path)
 		return 0;
 
-	if (!elf_bid(vma->ei))
-		return 0;
+	err = create_vma(pid, vma, &vma_area);
+	if (err)
+		return err;
 
-	if (strcmp(elf_bid(vma->ei), bid))
-		return 0;
+	if (!vma_area->ei)
+		goto free_vma;
 
-	return collect_vma(pid, vmc->head, vma);
+	if (!elf_bid(vma_area->ei))
+		goto free_vma;
+
+	if (strcmp(elf_bid(vma_area->ei), bid))
+		goto free_vma;
+
+	if (vmc->head) {
+		list_add_tail(&vma_area->mmi.list, vmc->head);
+		return 0;
+	}
+
+	*vmc->vma = vma_area;
+	return 1;
+
+free_vma:
+	free_vma(vma_area);
+	return 0;
 }
 
 int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid)
 {
 	return __collect_vmas(pid, head, compare_vma_bid, bid);
+}
+
+int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma)
+{
+	struct vma_collect vmc = {
+		.data = bid,
+		.vma = vma,
+	};
+	int ret;
+
+	ret = iter_map_files(pid, compare_vma_bid, &vmc);
+	if (ret < 0)
+		return ret;
+	return ret ? 0 : -ENOENT;
 }
 
 static const struct vma_area *find_vma(const struct list_head *head, const void *data,
