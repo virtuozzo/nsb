@@ -78,18 +78,6 @@ void free_vma(struct vma_area *vma)
 	free(vma);
 }
 
-void free_vmas(struct list_head *head)
-{
-	struct mmap_info_s *mmi, *tmp;
-
-	list_for_each_entry_safe(mmi, tmp, head, list) {
-		struct vma_area *vma = mmi_vma(mmi);
-
-		list_del(&mmi->list);
-		free_vma(vma);
-	}
-}
-
 static int create_vma(pid_t pid, const struct vma_area *template,
 		      struct vma_area **vma_area)
 {
@@ -283,11 +271,6 @@ free_vma:
 	return 0;
 }
 
-int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid)
-{
-	return __collect_vmas(pid, head, compare_vma_bid, bid);
-}
-
 int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma)
 {
 	struct vma_collect vmc = {
@@ -318,51 +301,6 @@ static const struct vma_area *find_vma(const struct list_head *head, const void 
 			return vma;
 	}
 	return NULL;
-}
-
-static int compare_addr(const struct vma_area *vma, const void *data)
-{
-	unsigned long addr = *(const unsigned long *)data;
-
-	if (addr < vma_start(vma))
-		return 0;
-	if (addr > vma_end(vma))
-		return 0;
-
-	return 1;
-}
-
-const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
-					unsigned long addr)
-{
-	return find_vma(vmas, &addr, compare_addr);
-}
-
-static int compare_prot(const struct vma_area *vma, const void *data)
-{
-	int prot = *(const int *)data;
-
-	return vma_prot(vma) & prot;
-}
-
-const struct vma_area *find_vma_by_prot(const struct list_head *vmas, int prot)
-{
-	return find_vma(vmas, &prot, compare_prot);
-}
-
-static int compare_path(const struct vma_area *vma, const void *data)
-{
-	const char *path = data;
-
-	if (!vma->path)
-		return 0;
-	return !strcmp(vma->path, path);
-}
-
-const struct vma_area *find_vma_by_path(const struct list_head *vmas,
-					const char *path)
-{
-	return find_vma(vmas, path, compare_path);
 }
 
 struct address_hole {
@@ -399,55 +337,6 @@ int64_t find_vma_hole(const struct list_head *vmas,
 	return vma ? max(hole.hint, vma_end(vma)) : -ENOENT;
 }
 
-static const char *vma_elf_bid(const struct vma_area *vma)
-{
-	if (vma->ei)
-		return elf_bid(vma->ei);
-	return NULL;
-}
-
-
-static int compare_bid(const struct vma_area *vma, const void *data)
-{
-	const char *bid = data;
-	const char *vma_bid;
-
-	vma_bid = vma_elf_bid(vma);
-
-	if (!vma_bid)
-		return 0;
-
-	return !strcmp(vma_bid, bid);
-}
-
-const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char *bid)
-{
-	return find_vma(vmas, bid, compare_bid);
-}
-
-static int compare_stat(const struct vma_area *vma, const void *data)
-{
-	const struct stat *st = data;
-	struct stat vma_st;
-
-	if (!vma->map_file)
-		return 0;
-
-	if (stat(vma->map_file, &vma_st)) {
-		pr_perror("failed to stat %s", vma->map_file);
-		return -errno;
-	}
-
-	return  (vma_st.st_dev == st->st_dev) &&
-		(vma_st.st_ino == st->st_ino);
-}
-
-const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
-					const struct stat *st)
-{
-	return find_vma(vmas, st, compare_stat);
-}
-
 int iterate_file_vmas(const struct list_head *head, void *data,
 		      int (*actor)(struct vma_area *vma, void *data))
 {
@@ -465,62 +354,6 @@ int iterate_file_vmas(const struct list_head *head, void *data,
 			break;
 	}
 	return err;
-}
-
-const char *vma_soname(const struct vma_area *vma)
-{
-	if (vma->ei)
-		return elf_get_soname(vma->ei);
-	return NULL;
-}
-
-static int compare_soname(const struct vma_area *vma, const void *data)
-{
-	const char *soname = data;
-
-	if (!vma_soname(vma))
-		return 0;
-
-	return !strcmp(vma_soname(vma), soname);
-}
-
-const struct vma_area *find_vma_by_soname(const struct list_head *vmas, const char *soname)
-{
-	return find_vma(vmas, soname, compare_soname);
-}
-
-struct sym_info {
-	const char	*name;
-	uint64_t	value;
-};
-
-static int vma_find_sym(struct vma_area *vma, void *data)
-{
-	struct sym_info *si = data;
-	int64_t value;
-
-	if (!vma->ei)
-		return 0;
-
-	value = elf_dyn_sym_value(vma->ei, si->name);
-	if (value <= 0)
-		return value;
-
-	si->value = vma_start(vma) + value;
-	return 1;
-}
-
-int64_t vma_get_symbol_value(struct list_head *vmas, const char *name)
-{
-	struct sym_info si = {
-		.name = name,
-	};
-	int ret;
-
-	ret = iterate_file_vmas(vmas, &si, vma_find_sym);
-	if (ret <= 0)
-		return ret;
-	return si.value;
 }
 
 const struct vma_area *first_vma(const struct list_head *vmas)

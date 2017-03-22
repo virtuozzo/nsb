@@ -61,29 +61,13 @@ int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid);
 void free_vma(struct vma_area *vma);
 int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma);
 
-const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
-					unsigned long addr);
-const struct vma_area *find_vma_by_prot(const struct list_head *head, int prot);
-const struct vma_area *find_vma_by_path(const struct list_head *head,
-					const char *path);
-const struct vma_area *find_vma_by_bid(const struct list_head *head, const char *bid);
-const struct vma_area *find_vma_by_soname(const struct list_head *vmas,
-					  const char *soname);
-struct stat;
-const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
-					const struct stat *st);
-
 int64_t find_vma_hole(const struct list_head *vmas,
 		      uint64_t hint, size_t size);
 
 int iterate_file_vmas(const struct list_head *head, void *data,
 		      int (*actor)(struct vma_area *vma, void *data));
 
-const char *vma_soname(const struct vma_area *vma);
-
 uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr);
-
-int64_t vma_get_symbol_value(struct list_head *vmas, const char *name);
 
 const struct vma_area *first_vma(const struct list_head *vmas);
 const struct vma_area *last_vma(const struct list_head *vmas);
