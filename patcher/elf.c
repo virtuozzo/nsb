@@ -224,7 +224,7 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 		return -EINVAL;
 	}
 
-	load_size = ELF_PAGESTART(vma_start(lvma)) + lvma->mmi.length -
+	load_size = ELF_PAGESTART(vma_start(lvma)) + vma_length(lvma) -
 		    ELF_PAGESTART(vma_start(fvma));
 
 	hole = find_vma_hole(&ctx->vmas, hint, load_size);

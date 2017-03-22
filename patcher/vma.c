@@ -14,7 +14,7 @@
 uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr)
 {
         if (elf_type_dyn(vma->ei))
-		addr += vma->mmi.addr;
+		addr += vma_start(vma);
 	return addr;
 }
 
@@ -506,7 +506,7 @@ static int vma_find_sym(struct vma_area *vma, void *data)
 	if (value <= 0)
 		return value;
 
-	si->value = vma->mmi.addr + value;
+	si->value = vma_start(vma) + value;
 	return 1;
 }
 

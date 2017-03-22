@@ -21,6 +21,11 @@ struct vma_area {
 	struct elf_info_s	*ei;
 };
 
+static inline size_t vma_length(const struct vma_area *vma)
+{
+	return vma->mmi.length;
+}
+
 static inline uint64_t vma_start(const struct vma_area *vma)
 {
 	return vma->mmi.addr;
