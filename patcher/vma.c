@@ -189,8 +189,8 @@ int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
 	return __collect_vmas(pid, head, compare_vma_path, path);
 }
 
-const struct vma_area *find_vma(const struct list_head *head, const void *data,
-			  int (*actor)(const struct vma_area *vma, const void *data))
+static const struct vma_area *find_vma(const struct list_head *head, const void *data,
+				       int (*actor)(const struct vma_area *vma, const void *data))
 {
 	struct mmap_info_s *mmi;
 
