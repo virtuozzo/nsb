@@ -59,6 +59,7 @@ struct process_ctx_s {
 	struct parasite_ctl	*ctl;
 	struct service		service;
 	struct list_head	vmas;
+	struct list_head	dl_maps;
 	int64_t			remote_map;
 	size_t			remote_map_size;
 	struct list_head	objdeps;

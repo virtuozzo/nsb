@@ -21,6 +21,7 @@
 #include "include/backtrace.h"
 #include "include/protobuf.h"
 #include "include/relocations.h"
+#include "include/dl_map.h"
 
 struct process_ctx_s process_context = {
 	.p = {
@@ -34,6 +35,7 @@ struct process_ctx_s process_context = {
 		.sock = -1,
 	},
 	.vmas = LIST_HEAD_INIT(process_context.vmas),
+	.dl_maps = LIST_HEAD_INIT(process_context.dl_maps),
 	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
 	.threads = LIST_HEAD_INIT(process_context.threads),
 };
@@ -370,6 +372,10 @@ int patch_process(pid_t pid, const char *patchfile)
 		goto resume;
 
 	ret = process_collect_vmas(ctx);
+	if (ret)
+		goto resume;
+
+	ret = collect_dl_maps(ctx->pid, &ctx->dl_maps);
 	if (ret)
 		goto resume;
 

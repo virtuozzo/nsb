@@ -55,6 +55,7 @@ nsb_SOURCES =						\
 			patcher/include/util.h		\
 			patcher/include/relocations.h	\
 			patcher/include/service.h	\
+			patcher/include/dl_map.h	\
 							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
@@ -67,6 +68,7 @@ nsb_SOURCES =						\
 			patcher/util.c			\
 			patcher/relocations.c		\
 			patcher/service.c		\
+			patcher/dl_map.c		\
 			patcher/patch.c
 
 
