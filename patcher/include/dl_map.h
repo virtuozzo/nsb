@@ -2,6 +2,7 @@
 #define __PATCHER_DL_MAP_H__
 
 #include <unistd.h>
+#include <stdint.h>
 
 #include "list.h"
 
@@ -21,5 +22,10 @@ const struct dl_map *find_dl_map_by_bid(const struct list_head *dl_maps,
 					const char *bid);
 const struct dl_map *find_dl_map_by_addr(const struct list_head *dl_maps,
 					 unsigned long addr);
+
+int64_t dl_get_symbol_value(const struct list_head *dl_maps, const char *name);
+
+uint64_t dl_map_start(const struct dl_map *dlm);
+uint64_t dl_map_end(const struct dl_map *dlm);
 
 #endif /* __PATCHER_DL_MAP_H__ */

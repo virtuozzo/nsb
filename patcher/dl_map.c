@@ -27,6 +27,16 @@ const struct vma_area *last_dl_vma(const struct dl_map *dlm)
 	return list_entry(dlm->vmas.prev, typeof(struct vma_area), dl);
 }
 
+uint64_t dl_map_start(const struct dl_map *dlm)
+{
+	return vma_start(first_dl_vma(dlm));
+}
+
+uint64_t dl_map_end(const struct dl_map *dlm)
+{
+	return vma_end(last_dl_vma(dlm));
+}
+
 static struct dl_map *create_dl_map(const struct vma_area *vma)
 {
 	struct dl_map *dlm;
@@ -123,5 +133,52 @@ const struct dl_map *find_dl_map_by_addr(const struct list_head *dl_maps,
 					 unsigned long addr)
 {
 	return find_dl_map(dl_maps, &addr, compare_addr);
+}
+
+static int iterate_dl_maps(const struct list_head *head, void *data,
+			   int (*actor)(struct dl_map *dlm, void *data))
+{
+	int ret;
+	struct dl_map *dlm;
+
+	list_for_each_entry(dlm, head, list) {
+		ret = actor(dlm, data);
+		if (ret)
+			return ret;
+	}
+	return 0;
+}
+
+struct sym_info {
+	const char	*name;
+	uint64_t	value;
+};
+
+static int dlm_find_sym(struct dl_map *dlm, void *data)
+{
+	struct sym_info *si = data;
+	int64_t value;
+
+	value = elf_dyn_sym_value(dlm->ei, si->name);
+	if (value <= 0)
+		return value;
+
+	si->value = dl_map_start(dlm) + value;
+	return 1;
+}
+
+int64_t dl_get_symbol_value(const struct list_head *dl_maps, const char *name)
+{
+	struct sym_info si = {
+		.name = name,
+	};
+	int ret;
+
+	ret = iterate_dl_maps(dl_maps, &si, dlm_find_sym);
+	if (ret < 0)
+		return ret;
+	if (!ret)
+		return -ENOENT;
+	return si.value;
 }
 
