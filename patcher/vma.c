@@ -90,7 +90,8 @@ void free_vmas(struct list_head *head)
 	}
 }
 
-static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
+static int create_vma(pid_t pid, const struct vma_area *template,
+		      struct vma_area **vma_area)
 {
 	struct vma_area *vma;
 	char map_file[PATH_MAX];
@@ -125,7 +126,7 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 		}
 	}
 
-	list_add_tail(&vma->mmi.list, head);
+	*vma_area = vma;
 
 	return 0;
 
@@ -138,9 +139,23 @@ free_vma:
 	return ret;
 }
 
-static int __collect_vmas(pid_t pid, struct list_head *head,
-			  int (*check)(const struct vma_area *vma, const void *data),
-			  const void *data)
+static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
+{
+	struct vma_area *vma;
+	int err;
+
+	err = create_vma(pid, template, &vma);
+	if (err)
+		return err;
+
+	list_add_tail(&vma->mmi.list, head);
+	return 0;
+}
+
+static int iter_map_files(pid_t pid,
+			  int (*actor)(pid_t pid, const struct vma_area *vma,
+				       void *data),
+			  void *data)
 {
 	struct vma_area tmp;
 	int ret = -1;
@@ -161,24 +176,7 @@ static int __collect_vmas(pid_t pid, struct list_head *head,
 		if (ret)
 			goto err;
 
-		if (check) {
-			ret = check(&tmp, data);
-			if (ret < 0)
-				return ret;
-			if (!ret)
-				continue;
-		}
-
-		pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
-				vma_start(&tmp), vma_end(&tmp),
-				(vma_prot(&tmp) & PROT_READ) ? 'r' : '-',
-				(vma_prot(&tmp) & PROT_WRITE) ? 'w' : '-',
-				(vma_prot(&tmp) & PROT_EXEC) ? 'x' : '-',
-				(vma_flags(&tmp) == MAP_SHARED) ? 's' : 'p',
-				vma_offset(&tmp),
-				(tmp.path) ? tmp.path : "");
-
-		ret = collect_vma(pid, head, &tmp);
+		ret = actor(pid, &tmp, data);
 		if (ret)
 			goto err;
 	}
@@ -188,26 +186,86 @@ err:
 	return ret;
 }
 
+struct vma_collect {
+	struct list_head	*head;
+	const void		*data;
+};
+
+static int __collect_vmas(pid_t pid, struct list_head *head,
+			  int (*actor)(pid_t pid, const struct vma_area *vma,
+				       void *data),
+			  const void *data)
+{
+	struct vma_collect vmc = {
+		.head = head,
+		.data = data,
+	};
+
+	return iter_map_files(pid, actor, &vmc);
+}
+
+static int collect_one_vma(pid_t pid, const struct vma_area *vma, void *data)
+{
+	struct vma_collect *vmc = data;
+
+	pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
+			vma_start(vma), vma_end(vma),
+			(vma_prot(vma) & PROT_READ) ? 'r' : '-',
+			(vma_prot(vma) & PROT_WRITE) ? 'w' : '-',
+			(vma_prot(vma) & PROT_EXEC) ? 'x' : '-',
+			(vma_flags(vma) == MAP_SHARED) ? 's' : 'p',
+			vma_offset(vma),
+			(vma->path) ? vma->path : "");
+
+	return collect_vma(pid, vmc->head, vma);
+}
+
 int collect_vmas(pid_t pid, struct list_head *head)
 {
 	pr_debug("= Collecting mappings for %d\n", pid);
 
-	return __collect_vmas(pid, head, NULL, NULL);
+	return __collect_vmas(pid, head, collect_one_vma, NULL);
 }
 
-static int compare_vma_path(const struct vma_area *vma, const void *data)
+static int compare_vma_path(pid_t pid, const struct vma_area *vma, void *data)
 {
-	const char *path = data;
+	struct vma_collect *vmc = data;
+	const char *path = vmc->data;
 
 	if (!vma->path)
 		return 0;
 
-	return !strcmp(vma->path, path);
+	if (strcmp(vma->path, path))
+		return 0;
+
+	return collect_vma(pid, vmc->head, vma);
 }
 
 int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
 {
 	return __collect_vmas(pid, head, compare_vma_path, path);
+}
+
+static int compare_vma_bid(pid_t pid, const struct vma_area *vma, void *data)
+{
+	struct vma_collect *vmc = data;
+	const char *bid = vmc->data;
+
+	if (!vma->ei)
+		return 0;
+
+	if (!elf_bid(vma->ei))
+		return 0;
+
+	if (strcmp(elf_bid(vma->ei), bid))
+		return 0;
+
+	return collect_vma(pid, vmc->head, vma);
+}
+
+int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid)
+{
+	return __collect_vmas(pid, head, compare_vma_bid, bid);
 }
 
 static const struct vma_area *find_vma(const struct list_head *head, const void *data,
@@ -331,11 +389,6 @@ static int compare_bid(const struct vma_area *vma, const void *data)
 const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char *bid)
 {
 	return find_vma(vmas, bid, compare_bid);
-}
-
-int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid)
-{
-	return __collect_vmas(pid, head, compare_bid, bid);
 }
 
 static int compare_stat(const struct vma_area *vma, const void *data)
