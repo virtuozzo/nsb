@@ -373,10 +373,9 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
 	pr_info("  Patch path    : %s\n", PI(ctx)->path);
-	if (collect_vmas(ctx->pid, &ctx->vmas)) {
-		pr_err("Can't collect mappings for %d\n", ctx->pid);
+
+	if (process_collect_vmas(ctx))
 		return 1;
-	}
 
 	if (process_find_patch(ctx, PI(ctx)->new_bid))
 		return 1;

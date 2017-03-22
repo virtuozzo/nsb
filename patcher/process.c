@@ -798,3 +798,15 @@ free_array:
 	free(needed_array);
 	return err;
 }
+
+int process_collect_vmas(struct process_ctx_s *ctx)
+{
+	int err;
+
+	err = collect_vmas(ctx->pid, &ctx->vmas);
+	if (err) {
+		pr_err("Can't collect mappings for %d\n", ctx->pid);
+		return err;
+	}
+	return 0;
+}
