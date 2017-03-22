@@ -810,3 +810,22 @@ int process_collect_vmas(struct process_ctx_s *ctx)
 	}
 	return 0;
 }
+
+int process_find_target_vma(struct process_ctx_s *ctx)
+{
+	const struct vma_area *vma;
+	const char *bid = PI(ctx)->old_bid;
+
+	pr_info("= Searching source VMA:\n");
+
+	vma = find_vma_by_bid(&ctx->vmas, bid);
+	if (!vma) {
+		pr_err("failed to find vma with Build ID %s in process %d\n",
+				bid, ctx->pid);
+		return -ENOENT;
+	}
+	pr_info("  - path   : %s\n", vma->path);
+	pr_info("  - address: %#lx\n", vma_start(vma));
+	TVMA(ctx) = vma;
+	return 0;
+}

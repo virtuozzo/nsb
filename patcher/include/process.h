@@ -46,5 +46,6 @@ int process_shutdown_service(struct process_ctx_s *ctx);
 int process_collect_needed(struct process_ctx_s *ctx);
 
 int process_collect_vmas(struct process_ctx_s *ctx);
+int process_find_target_vma(struct process_ctx_s *ctx);
 
 #endif

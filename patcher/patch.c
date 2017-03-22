@@ -251,24 +251,6 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	return unload_patch(ctx);
 }
 
-static int process_find_patchable_vma(struct process_ctx_s *ctx, const char *bid)
-{
-	const struct vma_area *vma;
-
-	pr_info("= Searching source VMA:\n");
-
-	vma = find_vma_by_bid(&ctx->vmas, bid);
-	if (!vma) {
-		pr_err("failed to find vma with Build ID %s in process %d\n",
-				bid, ctx->pid);
-		return -ENOENT;
-	}
-	pr_info("  - path   : %s\n", vma->path);
-	pr_info("  - address: %#lx\n", vma_start(vma));
-	TVMA(ctx) = vma;
-	return 0;
-}
-
 static int process_find_patch(struct process_ctx_s *ctx, const char *bid)
 {
 	pr_info("= Cheking for patch is applied...\n");
@@ -380,7 +362,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (process_find_patch(ctx, PI(ctx)->new_bid))
 		return 1;
 
-	if (process_find_patchable_vma(ctx, PI(ctx)->old_bid))
+	if (process_find_target_vma(ctx))
 		return 1;
 
 	return 0;
