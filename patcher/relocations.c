@@ -69,7 +69,7 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 			 */
 			return patch_value;
 
-		value = elf_dyn_sym_value(first_dl_vma(dlm)->ei, es->name);
+		value = elf_dyn_sym_value(dlm->ei, es->name);
 		if (value < 0)
 			return value;
 		if (value) {

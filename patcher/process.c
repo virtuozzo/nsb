@@ -635,7 +635,7 @@ static int process_find_sym(struct process_ctx_s *ctx,
 {
 	int64_t value;
 
-	value = vma_get_symbol_value(&ctx->vmas, name);
+	value = dl_get_symbol_value(&ctx->dl_maps, name);
 	if (value <= 0) {
 		pr_err("failed to find \"%s\" in process %d\n", name, ctx->pid);
 		return value ? value : -ENOENT;
@@ -768,8 +768,8 @@ static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
 	cd->dlm = dlm;
 	list_add_tail(&cd->list, head);
 
-	pr_debug("  - %lx-%lx - %s\n", vma_start(first_dl_vma(cd->dlm)),
-			vma_end(first_dl_vma(cd->dlm)), cd->dlm->path);
+	pr_debug("  - %lx-%lx - %s\n", dl_map_start(cd->dlm),
+			dl_map_start(cd->dlm), cd->dlm->path);
 	return 0;
 }
 
@@ -833,7 +833,7 @@ int process_find_target_dlm(struct process_ctx_s *ctx)
 		return -ENOENT;
 	}
 	pr_info("  - path   : %s\n", dlm->path);
-	pr_info("  - address: %#lx\n", vma_start(first_dl_vma(dlm)));
+	pr_info("  - address: %#lx\n", dl_map_start(dlm));
 	TDLM(ctx) = dlm;
 	return 0;
 }

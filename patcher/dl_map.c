@@ -121,9 +121,9 @@ static int compare_addr(const struct dl_map *dlm, const void *data)
 {
 	unsigned long addr = *(const unsigned long *)data;
 
-	if (addr < vma_start(first_dl_vma(dlm)))
+	if (addr < dl_map_start(dlm))
 		return 0;
-	if (addr > vma_end(last_dl_vma(dlm)))
+	if (addr > dl_map_end(dlm))
 		return 0;
 
 	return 1;
