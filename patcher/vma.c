@@ -333,6 +333,11 @@ const struct vma_area *find_vma_by_bid(const struct list_head *vmas, const char 
 	return find_vma(vmas, bid, compare_bid);
 }
 
+int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid)
+{
+	return __collect_vmas(pid, head, compare_bid, bid);
+}
+
 static int compare_stat(const struct vma_area *vma, const void *data)
 {
 	const struct stat *st = data;

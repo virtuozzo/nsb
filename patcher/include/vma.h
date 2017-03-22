@@ -50,6 +50,7 @@ void free_vma(struct vma_area *vma);
 void free_vmas(struct list_head *head);
 int collect_vmas(pid_t pid, struct list_head *head);
 int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path);
+int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid);
 
 const struct vma_area *find_vma_by_addr(const struct list_head *vmas,
 					unsigned long addr);
