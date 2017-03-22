@@ -346,15 +346,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
 	pr_info("  Patch path    : %s\n", PI(ctx)->path);
 
-	if (process_collect_vmas(ctx))
-		return 1;
-
-	if (process_find_patch(ctx))
-		return 1;
-
-	if (process_find_target_vma(ctx))
-		return 1;
-
 	return 0;
 }
 
@@ -375,6 +366,18 @@ int patch_process(pid_t pid, const char *patchfile)
 	}
 
 	ret = process_link(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_collect_vmas(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_find_patch(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_find_target_vma(ctx);
 	if (ret)
 		goto resume;
 
