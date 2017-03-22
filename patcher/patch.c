@@ -417,10 +417,10 @@ resume:
 int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
-	LIST_HEAD(vmas);
+	LIST_HEAD(dl_maps);
 	char *bid;
 
-	err = collect_vmas(pid, &vmas);
+	err = collect_dl_maps(pid, &dl_maps);
 	if (err) {
 		pr_err("Can't collect mappings for %d\n", pid);
 		return err;
@@ -430,6 +430,6 @@ int check_process(pid_t pid, const char *patchfile)
 	if (!bid)
 		return -1;
 
-	return !find_vma_by_bid(&vmas, bid);
+	return !find_dl_map_by_bid(&dl_maps, bid);
 }
 

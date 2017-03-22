@@ -17,6 +17,7 @@
 #include "include/util.h"
 #include "include/x86_64.h"
 #include "include/service.h"
+#include "include/dl_map.h"
 
 struct patch_place_s {
 	struct list_head	list;
@@ -821,17 +822,20 @@ int process_collect_vmas(struct process_ctx_s *ctx)
 
 int process_find_target_vma(struct process_ctx_s *ctx)
 {
+	const struct dl_map *dlm;
 	const struct vma_area *vma;
 	const char *bid = PI(ctx)->old_bid;
 
-	pr_info("= Searching source VMA:\n");
+	pr_info("= Searching target VMA:\n");
 
-	vma = find_vma_by_bid(&ctx->vmas, bid);
-	if (!vma) {
+	dlm = find_dl_map_by_bid(&ctx->dl_maps, bid);
+	if (!dlm) {
 		pr_err("failed to find vma with Build ID %s in process %d\n",
 				bid, ctx->pid);
 		return -ENOENT;
 	}
+	vma = first_dl_vma(dlm);
+	pr_info("  - vma   : %p\n", vma);
 	pr_info("  - path   : %s\n", vma->path);
 	pr_info("  - address: %#lx\n", vma_start(vma));
 	TVMA(ctx) = vma;
@@ -844,7 +848,7 @@ int process_find_patch(struct process_ctx_s *ctx)
 
 	pr_info("= Cheking for patch is applied...\n");
 
-	if (find_vma_by_bid(&ctx->vmas, bid)) {
+	if (find_dl_map_by_bid(&ctx->dl_maps, bid)) {
 		pr_err("Patch with Build ID %s is already applied\n", bid);
 		return -EEXIST;
 	}
