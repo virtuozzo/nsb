@@ -5,6 +5,7 @@
 #include "include/process.h"
 #include "include/context.h"
 #include "include/vma.h"
+#include "include/dl_map.h"
 
 static void print_relocation(const struct list_head *head, const char *name)
 {
@@ -53,7 +54,8 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 
 	es->vma = NULL;
 	list_for_each_entry(n, deps, list) {
-		const struct vma_area *vma = n->vma;
+		const struct dl_map *dlm = n->dlm;
+		const struct vma_area *vma = first_dl_vma(dlm);
 
 		/* If symbol is defined in the patch and we reached the old
 		 * library, stop and returm patch value.

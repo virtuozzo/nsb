@@ -757,7 +757,7 @@ int process_shutdown_service(struct process_ctx_s *ctx)
 }
 
 static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
-			  const struct vma_area *vma)
+			  const struct dl_map *dlm)
 {
 	struct ctx_dep *cd;
 
@@ -765,11 +765,11 @@ static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
 	if (!cd)
 		return -ENOMEM;
 
-	cd->vma = vma;
+	cd->dlm = dlm;
 	list_add_tail(&cd->list, head);
 
-	pr_debug("  - %lx-%lx - %s\n", vma_start(cd->vma),
-			vma_end(cd->vma), cd->vma->path);
+	pr_debug("  - %lx-%lx - %s\n", vma_start(first_dl_vma(cd->dlm)),
+			vma_end(first_dl_vma(cd->dlm)), cd->dlm->path);
 	return 0;
 }
 
@@ -786,18 +786,17 @@ int process_collect_needed(struct process_ctx_s *ctx)
 		return err;
 
 	for (i = 0; i < nr; i++) {
-		const struct vma_area *vma;
+		const struct dl_map *dlm;
 		uint64_t address = needed_array[i];
 
-		vma = find_vma_by_addr(&ctx->vmas, address);
-		if (!vma) {
+		dlm = find_dl_map_by_addr(&ctx->dl_maps, address);
+		if (!dlm) {
 			pr_err("failed to find VMA by address %#lx\n", address);
-			continue;
 			err = -ENOENT;
 			goto free_array;
 		}
 
-		err = collect_needed(ctx, &ctx->objdeps, vma);
+		err = collect_needed(ctx, &ctx->objdeps, dlm);
 		if (err)
 			goto free_array;
 

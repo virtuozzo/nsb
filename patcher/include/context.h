@@ -49,7 +49,7 @@ struct patch_s {
 
 struct ctx_dep {
 	struct list_head	list;
-	const struct vma_area	*vma;
+	const struct dl_map	*dlm;
 };
 
 struct process_ctx_s {
