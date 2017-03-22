@@ -448,8 +448,8 @@ const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
 	return find_vma(vmas, st, compare_stat);
 }
 
-int iterate_file_vmas(struct list_head *head, void *data,
-		int (*actor)(struct vma_area *vma, void *data))
+int iterate_file_vmas(const struct list_head *head, void *data,
+		      int (*actor)(struct vma_area *vma, void *data))
 {
 	struct mmap_info_s *mmi;
 	int err = 0;

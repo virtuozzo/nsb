@@ -76,7 +76,7 @@ const struct vma_area *find_vma_by_stat(const struct list_head *vmas,
 int64_t find_vma_hole(const struct list_head *vmas,
 		      uint64_t hint, size_t size);
 
-int iterate_file_vmas(struct list_head *head, void *data,
+int iterate_file_vmas(const struct list_head *head, void *data,
 		      int (*actor)(struct vma_area *vma, void *data));
 
 const char *vma_soname(const struct vma_area *vma);
