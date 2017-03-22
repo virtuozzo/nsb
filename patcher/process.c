@@ -829,3 +829,16 @@ int process_find_target_vma(struct process_ctx_s *ctx)
 	TVMA(ctx) = vma;
 	return 0;
 }
+
+int process_find_patch(struct process_ctx_s *ctx)
+{
+	const char *bid = PI(ctx)->new_bid;
+
+	pr_info("= Cheking for patch is applied...\n");
+
+	if (find_vma_by_bid(&ctx->vmas, bid)) {
+		pr_err("Patch with Build ID %s is already applied\n", bid);
+		return -EEXIST;
+	}
+	return 0;
+}
