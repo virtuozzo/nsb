@@ -507,18 +507,28 @@ static int process_check_stack(const struct process_ctx_s *ctx,
 static int process_catch(struct process_ctx_s *ctx)
 {
 	int ret, err;
+	struct vma_area *vma;
 
 	err = process_infect(ctx);
 	if (err)
 		return err;
 
-	ret = process_check_stack(ctx, TVMA(ctx));
+	ret = create_vma_by_bid(ctx->pid, PI(ctx)->old_bid, &vma);
+	if (ret) {
+		errno = -ret;
+		pr_perror("failed to create target vma with Build ID %s in process %d",
+				PI(ctx)->old_bid, ctx->pid);
+		goto cure;
+	}
+
+	ret = process_check_stack(ctx, vma);
+	free_vma(vma);
 	if (ret)
-		goto err;
+		goto cure;
 
 	return 0;
 
-err:
+cure:
 	err = process_cure(ctx);
 	return ret ? ret : err;
 }
