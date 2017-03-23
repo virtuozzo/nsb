@@ -195,12 +195,12 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 	uint64_t plt_addr;
 	uint64_t func_addr;
 
-	plt_addr = PLA(ctx) + es_r_offset(es);
+	plt_addr = dl_map_start(PDLM(ctx)) + es_r_offset(es);
 
 	if (es->dlm)
 		func_addr = vma_func_addr(first_dl_vma(es->dlm), es->address);
 	else
-		func_addr = PLA(ctx) + es->address;
+		func_addr = dl_map_start(PDLM(ctx)) + es->address;
 
 	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
 			es_r_sym(es), plt_addr, func_addr, es->name,

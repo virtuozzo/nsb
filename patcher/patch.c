@@ -53,7 +53,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	uint64_t patch_addr;
 	int err;
 
-	patch_addr = PLA(ctx) + fj->patch_value;
+	patch_addr = dl_map_start(PDLM(ctx)) + fj->patch_value;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
@@ -98,7 +98,7 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	fj->func_addr = vma_func_addr(first_dl_vma(TDLM(ctx)), fj->func_value);
 
-	patch_addr = PLA(ctx) + fj->patch_value;
+	patch_addr = dl_map_start(PDLM(ctx)) + fj->patch_value;
 
 	pr_info("      original address: %#lx\n", fj->func_addr);
 	pr_info("      patch address   : %#lx\n", patch_addr);
@@ -138,17 +138,9 @@ static int unload_patch(struct process_ctx_s *ctx)
 
 static int64_t load_patch(struct process_ctx_s *ctx)
 {
-	int err;
-
 	pr_info("= Loading %s:\n", PDLM(ctx)->path);
 
-	err = load_elf(ctx, PDLM(ctx), dl_map_end(TDLM(ctx)));
-	if (err)
-		return err;
-
-	P(ctx)->load_addr = dl_map_start(PDLM(ctx));
-
-	return 0;
+	return load_elf(ctx, PDLM(ctx), dl_map_end(TDLM(ctx)));
 }
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
