@@ -70,4 +70,9 @@ const struct vma_area *first_vma(const struct list_head *vmas);
 const struct vma_area *last_vma(const struct list_head *vmas);
 const struct vma_area *next_vma(const struct vma_area *vma);
 
+int iter_map_files(pid_t pid,
+		   int (*actor)(pid_t pid, const struct vma_area *vma,
+				void *data),
+		   void *data);
+
 #endif /* __PATCHER_VMA_H__ */

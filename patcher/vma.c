@@ -141,10 +141,10 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 	return 0;
 }
 
-static int iter_map_files(pid_t pid,
-			  int (*actor)(pid_t pid, const struct vma_area *vma,
-				       void *data),
-			  void *data)
+int iter_map_files(pid_t pid,
+		   int (*actor)(pid_t pid, const struct vma_area *vma,
+				void *data),
+		   void *data)
 {
 	struct vma_area tmp;
 	int ret = -1;
