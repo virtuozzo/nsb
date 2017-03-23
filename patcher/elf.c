@@ -151,25 +151,22 @@ int elf_library_status(void)
 static struct vma_area *create_elf_vma(const GElf_Phdr *p)
 {
 	struct vma_area *vma;
-	struct mmap_info_s *mmi;
 
 	vma = xmalloc(sizeof(*vma));
 	if (!vma)
 		return NULL;
 
-	mmi = &vma->mmi;
-
-	mmi->addr = p->p_vaddr;
-	mmi->length = ELF_PAGEALIGN(p->p_filesz + ELF_PAGEOFFSET(p->p_vaddr));
-	mmi->flags = MAP_PRIVATE | MAP_FIXED;
-	mmi->prot = 0;
+	vma->addr = p->p_vaddr;
+	vma->length = ELF_PAGEALIGN(p->p_filesz + ELF_PAGEOFFSET(p->p_vaddr));
+	vma->flags = MAP_PRIVATE | MAP_FIXED;
+	vma->prot = 0;
 	if (p->p_flags & PF_R)
-		mmi->prot |= PROT_READ;
+		vma->prot |= PROT_READ;
 	if (p->p_flags & PF_W)
-		mmi->prot |= PROT_WRITE;
+		vma->prot |= PROT_WRITE;
 	if (p->p_flags & PF_X)
-		mmi->prot |= PROT_EXEC;
-	mmi->offset = p->p_offset - ELF_PAGEOFFSET(p->p_vaddr);
+		vma->prot |= PROT_EXEC;
+	vma->offset = p->p_offset - ELF_PAGEOFFSET(p->p_vaddr);
 	return vma;
 }
 
@@ -219,10 +216,9 @@ err:
 
 static int pin_elf_mmap(struct vma_area *vma, void *data)
 {
-	struct mmap_info_s *mmi = &vma->mmi;
 	int64_t hole = *(int64_t *)data;
 
-	mmi->addr = ELF_PAGESTART(hole + mmi->addr);
+	vma->addr = ELF_PAGESTART(hole + vma->addr);
 
 	return 0;
 }

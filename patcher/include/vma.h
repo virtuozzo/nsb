@@ -5,51 +5,50 @@
 #include <stdlib.h>
 #include "list.h"
 
-struct mmap_info_s {
+struct vma_area {
 	struct list_head        list;
+
 	uint64_t                addr;
 	size_t                  length;
 	int                     flags;
 	int                     prot;
 	off_t                   offset;
-};
 
-struct vma_area {
-	struct mmap_info_s	mmi;
 	char			*path;
 	char			*map_file;
+
 	struct list_head        dl;
 	const void		*dlm;
 };
 
 static inline size_t vma_length(const struct vma_area *vma)
 {
-	return vma->mmi.length;
+	return vma->length;
 }
 
 static inline uint64_t vma_start(const struct vma_area *vma)
 {
-	return vma->mmi.addr;
+	return vma->addr;
 }
 
 static inline uint64_t vma_end(const struct vma_area *vma)
 {
-	return vma->mmi.addr + vma->mmi.length;
+	return vma->addr + vma->length;
 }
 
 static inline int vma_prot(const struct vma_area *vma)
 {
-	return vma->mmi.prot;
+	return vma->prot;
 }
 
 static inline int vma_flags(const struct vma_area *vma)
 {
-	return vma->mmi.flags;
+	return vma->flags;
 }
 
 static inline off_t vma_offset(const struct vma_area *vma)
 {
-	return vma->mmi.offset;
+	return vma->offset;
 }
 
 void free_vma(struct vma_area *vma);

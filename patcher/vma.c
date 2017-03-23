@@ -20,32 +20,31 @@ static int parse_vma(char *line, struct vma_area *vma)
 	uint64_t ino;
 	uint32_t path_off;
 	int num;
-	struct mmap_info_s *mmi = &vma->mmi;
 	int64_t end;
 
 	memset(vma, 0, sizeof(*vma));
 
 	num = sscanf(line, "%lx-%lx %c%c%c%c %lx %x:%x %lu %n",
-		     &mmi->addr, &end, &r, &w, &x, &s, &mmi->offset,
+		     &vma->addr, &end, &r, &w, &x, &s, &vma->offset,
 		     &dev_maj, &dev_min, &ino, &path_off);
 	if (num != 10) {
 		pr_err("Can't parse: %s\n", line);
 		return -EINVAL;
 	}
 
-	mmi->length = end - mmi->addr;
-	mmi->prot = PROT_NONE;
+	vma->length = end - vma->addr;
+	vma->prot = PROT_NONE;
 	if (r == 'r')
-		mmi->prot |= PROT_READ;
+		vma->prot |= PROT_READ;
 	if (w == 'w')
-		mmi->prot |= PROT_WRITE;
+		vma->prot |= PROT_WRITE;
 	if (x == 'x')
-		mmi->prot |= PROT_EXEC;
+		vma->prot |= PROT_EXEC;
 
 	if (s == 's')
-		mmi->flags = MAP_SHARED;
+		vma->flags = MAP_SHARED;
 	else if (s == 'p')
-		mmi->flags = MAP_PRIVATE;
+		vma->flags = MAP_PRIVATE;
 	else {
 		pr_err("Unexpected VMA met (%c)\n", s);
 		return -EINVAL;
@@ -55,11 +54,6 @@ static int parse_vma(char *line, struct vma_area *vma)
 		vma->path = line + path_off;
 
 	return 0;
-}
-
-static inline struct vma_area *mmi_vma(struct mmap_info_s *mmi)
-{
-	return container_of(mmi, struct vma_area, mmi);
 }
 
 static int create_vma(pid_t pid, const struct vma_area *template,
@@ -113,7 +107,7 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 	if (err)
 		return err;
 
-	list_add_tail(&vma->mmi.list, head);
+	list_add_tail(&vma->list, head);
 	return 0;
 }
 
@@ -215,12 +209,10 @@ int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
 int iterate_vmas(const struct list_head *head, void *data,
 		 int (*actor)(struct vma_area *vma, void *data))
 {
-	struct mmap_info_s *mmi;
+	struct vma_area *vma;
 	int err = 0;
 
-	list_for_each_entry(mmi, head, list) {
-		struct vma_area *vma = mmi_vma(mmi);
-
+	list_for_each_entry(vma, head, list) {
 		err = actor(vma, data);
 		if (err)
 			break;
@@ -233,7 +225,7 @@ const struct vma_area *first_vma(const struct list_head *vmas)
 	if (list_empty(vmas))
 		return NULL;
 
-	return mmi_vma(list_entry(vmas->next, typeof(struct mmap_info_s), list));
+	return list_entry(vmas->next, typeof(struct vma_area), list);
 }
 
 const struct vma_area *last_vma(const struct list_head *vmas)
@@ -241,10 +233,10 @@ const struct vma_area *last_vma(const struct list_head *vmas)
 	if (list_empty(vmas))
 		return NULL;
 
-	return mmi_vma(list_entry(vmas->prev, typeof(struct mmap_info_s), list));
+	return list_entry(vmas->prev, typeof(struct vma_area), list);
 }
 
 const struct vma_area *next_vma(const struct vma_area *vma)
 {
-	return mmi_vma(list_entry(vma->mmi.list.next, typeof(struct mmap_info_s), list));
+	return list_entry(vma->list.next, typeof(struct vma_area), list);
 }

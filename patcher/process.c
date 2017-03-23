@@ -149,12 +149,12 @@ int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
 }
 
 static int process_mmap_fd(struct process_ctx_s *ctx, int fd,
-			   const struct mmap_info_s *mmi)
+			   const struct vma_area *vma)
 {
 	int64_t addr;
 
-	addr = process_map(ctx, fd, mmi->offset, mmi->addr,
-			mmi->length, mmi->flags, mmi->prot);
+	addr = process_map(ctx, fd, vma->offset, vma->addr,
+			vma->length, vma->flags, vma->prot);
 
 	return addr < 0 ? addr : 0;
 }
@@ -176,7 +176,7 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 		return service_munmap_dlm(ctx, &ctx->service, dlm);
 
 	list_for_each_entry_safe(vma, tmp, &dlm->vmas, dl) {
-		err = process_unmap(ctx, vma->mmi.addr, vma->mmi.length);
+		err = process_unmap(ctx, vma->addr, vma->length);
 		if (err)
 			return err;
 	}
@@ -210,7 +210,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 		return fd;
 
 	list_for_each_entry(vma, &dlm->vmas, dl) {
-		err = process_mmap_fd(ctx, fd, &vma->mmi);
+		err = process_mmap_fd(ctx, fd, vma);
 		if (err)
 			goto unmap;
 	}
@@ -221,7 +221,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 
 unmap:
 	list_for_each_entry_reverse(vma, &dlm->vmas, dl)
-		(void)process_unmap(ctx, vma->mmi.addr, vma->mmi.length);
+		(void)process_unmap(ctx, vma->addr, vma->length);
 	return err;
 }
 
