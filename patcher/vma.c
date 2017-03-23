@@ -88,6 +88,7 @@ static int create_vma(pid_t pid, const struct vma_area *template,
 	vma = xmemdup(template, sizeof(*vma));
 	if (!vma)
 		return -ENOMEM;
+	vma->dlm = NULL;
 
 	if (template->path) {
 		vma->path = xstrdup(template->path);

@@ -69,6 +69,7 @@ static int collect_dl_map_vma(struct vma_area *vma, void *data)
 			list_add_tail(&dlm->list, dl_info->head);
 	}
 
+	vma->dlm = dlm;
 	list_add_tail(&vma->dl, &dlm->vmas);
 	return 0;
 }

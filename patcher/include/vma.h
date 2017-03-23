@@ -20,6 +20,7 @@ struct vma_area {
 	char			*map_file;
 	struct elf_info_s	*ei;
 	struct list_head        dl;
+	const void		*dlm;
 };
 
 static inline size_t vma_length(const struct vma_area *vma)
