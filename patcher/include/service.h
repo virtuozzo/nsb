@@ -11,7 +11,7 @@ struct service {
 	const char		*name;
 	pid_t			pid;
 	uint64_t		handle;
-	const struct vma_area	*first_vma;
+	struct dl_map		*dlm;
 	int			sock;
 	uint64_t		runner;
 	bool			loaded;

@@ -15,6 +15,7 @@
 #include "include/context.h"
 #include "include/x86_64.h"
 #include "include/xmalloc.h"
+#include "include/dl_map.h"
 
 #include <plugins/service.h>
 
@@ -117,7 +118,9 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 		return -ENOENT;
 	}
 
-	service->first_vma = first_vma(&service_vmas);
+	err = create_dl_map(&service_vmas, &service->dlm);
+	if (err)
+		return err;
 
 	list_splice_tail(&service_vmas, &ctx->vmas);
 
@@ -172,22 +175,13 @@ static int service_local_connect(struct service *service)
 
 static int64_t service_sym_addr(struct service *service, const char *symbol)
 {
-	const struct vma_area *vma = service->first_vma;
 	int64_t value;
 
-	if (!vma->ei) {
-		pr_err("no ELF object for service vma?!!\n");
-		return -EINVAL;
-	}
-
-	value = elf_dyn_sym_value(vma->ei, symbol);
-	if (value <= 0) {
-		pr_err("failed to find symbol \"%s\" in %s\n",
-				symbol, vma->path);
-		return value;
-	}
-
-	return vma_start(vma) + value;
+	value = dl_map_symbol_value(service->dlm, symbol);
+	if (value < 0)
+		pr_err("failed to find symbol %s in %s\n", symbol,
+				service->dlm->path);
+	return value;
 }
 
 static int service_remote_accept(struct process_ctx_s *ctx, struct service *service)
