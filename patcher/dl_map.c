@@ -37,7 +37,7 @@ uint64_t dl_map_end(const struct dl_map *dlm)
 	return vma_end(last_dl_vma(dlm));
 }
 
-static struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
+struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 {
 	struct dl_map *dlm;
 

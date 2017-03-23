@@ -30,4 +30,6 @@ int64_t dl_map_symbol_value(const struct dl_map *dlm, const char *name);
 uint64_t dl_map_start(const struct dl_map *dlm);
 uint64_t dl_map_end(const struct dl_map *dlm);
 
+struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path);
+
 #endif /* __PATCHER_DL_MAP_H__ */
