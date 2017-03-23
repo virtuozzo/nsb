@@ -51,7 +51,7 @@ static struct dl_map *create_dl_map(struct elf_info_s *ei, const char *path)
 	return dlm;
 }
 
-static int collect_dl_map(struct vma_area *vma, void *data)
+static int collect_dl_map_vma(struct vma_area *vma, void *data)
 {
 	struct dl_info *dl_info = data;
 	struct dl_map *dlm = dl_info->dlm;
@@ -78,7 +78,7 @@ int collect_dl_maps(const struct list_head *vmas, struct list_head *head)
 		.head = head,
 	};
 
-	return iterate_file_vmas(vmas, &dl_info, collect_dl_map);
+	return iterate_file_vmas(vmas, &dl_info, collect_dl_map_vma);
 }
 
 static const struct dl_map *find_dl_map(const struct list_head *head, const void *data,
