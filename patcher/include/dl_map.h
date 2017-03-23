@@ -17,6 +17,7 @@ const struct vma_area *first_dl_vma(const struct dl_map *dlm);
 const struct vma_area *last_dl_vma(const struct dl_map *dlm);
 
 int collect_dl_maps(const struct list_head *vmas, struct list_head *head);
+int create_dl_map(const struct list_head *vmas, struct dl_map **dl_map);
 
 const struct dl_map *find_dl_map_by_bid(const struct list_head *dl_maps,
 					const char *bid);

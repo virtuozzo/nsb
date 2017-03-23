@@ -63,9 +63,10 @@ static int collect_dl_map_vma(struct vma_area *vma, void *data)
 		dlm = alloc_dl_map(vma->ei, vma->path);
 		if (!dlm)
 			return -ENOMEM;
-
-		list_add_tail(&dlm->list, dl_info->head);
 		dl_info->dlm = dlm;
+
+		if (dl_info->head)
+			list_add_tail(&dlm->list, dl_info->head);
 	}
 
 	list_add_tail(&vma->dl, &dlm->vmas);
@@ -79,6 +80,19 @@ int collect_dl_maps(const struct list_head *vmas, struct list_head *head)
 	};
 
 	return iterate_file_vmas(vmas, &dl_info, collect_dl_map_vma);
+}
+
+int create_dl_map(const struct list_head *vmas, struct dl_map **dl_map)
+{
+	struct dl_info dl_info = { };
+	int err;
+
+	err = iterate_file_vmas(vmas, &dl_info, collect_dl_map_vma);
+	if (err)
+		return err;
+
+	*dl_map = dl_info.dlm;
+	return 0;
 }
 
 static const struct dl_map *find_dl_map(const struct list_head *head, const void *data,
