@@ -69,15 +69,6 @@ static inline struct vma_area *mmi_vma(struct mmap_info_s *mmi)
 	return container_of(mmi, struct vma_area, mmi);
 }
 
-void free_vma(struct vma_area *vma)
-{
-	if (vma->ei)
-		elf_destroy_info(vma->ei);
-	free(vma->path);
-	free(vma->map_file);
-	free(vma);
-}
-
 static int create_vma(pid_t pid, const struct vma_area *template,
 		      struct vma_area **vma_area)
 {
@@ -234,56 +225,6 @@ static int compare_vma_path(pid_t pid, const struct vma_area *vma, void *data)
 int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path)
 {
 	return __collect_vmas(pid, head, compare_vma_path, path);
-}
-
-static int compare_vma_bid(pid_t pid, const struct vma_area *vma, void *data)
-{
-	struct vma_collect *vmc = data;
-	const char *bid = vmc->data;
-	struct vma_area *vma_area;
-	int err;
-
-	if (!vma->path)
-		return 0;
-
-	err = create_vma(pid, vma, &vma_area);
-	if (err)
-		return err;
-
-	if (!vma_area->ei)
-		goto free_vma;
-
-	if (!elf_bid(vma_area->ei))
-		goto free_vma;
-
-	if (strcmp(elf_bid(vma_area->ei), bid))
-		goto free_vma;
-
-	if (vmc->head) {
-		list_add_tail(&vma_area->mmi.list, vmc->head);
-		return 0;
-	}
-
-	*vmc->vma = vma_area;
-	return 1;
-
-free_vma:
-	free_vma(vma_area);
-	return 0;
-}
-
-int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma)
-{
-	struct vma_collect vmc = {
-		.data = bid,
-		.vma = vma,
-	};
-	int ret;
-
-	ret = iter_map_files(pid, compare_vma_bid, &vmc);
-	if (ret < 0)
-		return ret;
-	return ret ? 0 : -ENOENT;
 }
 
 int iterate_vmas(const struct list_head *head, void *data,
