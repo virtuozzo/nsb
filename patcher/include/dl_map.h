@@ -32,4 +32,7 @@ uint64_t dl_map_end(const struct dl_map *dlm);
 
 struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path);
 
+int iterate_dl_vmas(const struct dl_map *dlm, void *data,
+		    int (*actor)(struct vma_area *vma, void *data));
+
 #endif /* __PATCHER_DL_MAP_H__ */

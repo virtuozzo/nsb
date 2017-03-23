@@ -207,3 +207,16 @@ int64_t dl_get_symbol_value(const struct list_head *dl_maps, const char *name)
 	return si.value;
 }
 
+int iterate_dl_vmas(const struct dl_map *dlm, void *data,
+		    int (*actor)(struct vma_area *vma, void *data))
+{
+	struct vma_area *vma;
+	int err = 0;
+
+	list_for_each_entry(vma, &dlm->vmas, dl) {
+		err = actor(vma, data);
+		if (err)
+			break;
+	}
+	return err;
+}
