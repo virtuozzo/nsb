@@ -479,7 +479,7 @@ int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
 }
 
 static int task_check_stack(const struct process_ctx_s *ctx, const struct thread_s *t,
-			    const struct vma_area *vma)
+			    uint64_t target_base)
 {
 	int err;
 	struct backtrace_s *bt;
@@ -492,21 +492,21 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 		return err;
 	}
 
-	err = ctx->ops->check_backtrace(ctx, bt, vma);
+	err = ctx->ops->check_backtrace(ctx, bt, target_base);
 
 	destroy_backtrace(bt);
 	return err;
 }
 
 static int process_check_stack(const struct process_ctx_s *ctx,
-			       const struct vma_area *vma)
+			       uint64_t target_base)
 {
 	struct thread_s *t;
 	int err;
 
 	pr_info("= Checking %d stack...\n", ctx->pid);
 	list_for_each_entry(t, &ctx->threads, list) {
-		err = task_check_stack(ctx, t, vma);
+		err = task_check_stack(ctx, t, target_base);
 		if (err)
 			return err;
 	}
@@ -517,6 +517,7 @@ static int process_catch(struct process_ctx_s *ctx)
 {
 	int ret, err;
 	struct vma_area *vma;
+	uint64_t target_base;
 
 	err = process_infect(ctx);
 	if (err)
@@ -530,7 +531,9 @@ static int process_catch(struct process_ctx_s *ctx)
 		goto cure;
 	}
 
-	ret = process_check_stack(ctx, vma);
+	target_base = elf_type_dyn(vma->ei) ? vma_start(vma) : 0;
+
+	ret = process_check_stack(ctx, target_base);
 	free_vma(vma);
 	if (ret)
 		goto cure;

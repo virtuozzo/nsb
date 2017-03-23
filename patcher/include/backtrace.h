@@ -9,7 +9,7 @@ struct func_jump_s;
 struct vma_area;
 int backtrace_check_func(const struct func_jump_s *fj,
 			 const struct backtrace_s *bt,
-			 const struct vma_area *vma);
+			 uint64_t elf_base);
 
 int backtrace_check_vma(const struct backtrace_s *bt,
 			const struct vma_area *vma);
