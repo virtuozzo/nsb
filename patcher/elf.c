@@ -15,6 +15,7 @@
 #include "include/protobuf.h"
 #include "include/util.h"
 #include "include/vma.h"
+#include "include/dl_map.h"
 
 #define ELF_MIN_ALIGN		PAGE_SIZE
 
@@ -169,14 +170,14 @@ static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p)
 	return mmi;
 }
 
-static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
-			    const struct elf_info_s *ei)
+static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 {
 	int i, err = -1;
 	size_t pnum;
 	struct mmap_info_s *mmi, *tmp;
+	LIST_HEAD(mmaps);
 
-	if (elf_getphdrnum(ei->e, &pnum)) {
+	if (elf_getphdrnum(dlm->ei->e, &pnum)) {
 		pr_err("elf_getphdrnum() failed: %s\n", elf_errmsg(-1));
 		return -1;
 	}
@@ -185,7 +186,7 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 		GElf_Phdr phdr;
 		struct mmap_info_s *mmi;
 
-		if (gelf_getphdr(P(ctx)->ei->e, i, &phdr) != &phdr) {
+		if (gelf_getphdr(dlm->ei->e, i, &phdr) != &phdr) {
 			pr_err("gelf_getphdr() failed: %s\n", elf_errmsg(-1));
 			goto err;
 		}
@@ -197,35 +198,42 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 		if (!mmi)
 			goto err;
 
-		list_add_tail(&mmi->list, mmaps);
+		list_add_tail(&mmi->list, &dlm->vmas);
 	}
 
+	if (list_empty(&dlm->vmas)) {
+		pr_err("ELF file %s doesn't have PT_LOAD segments\n", dlm->path);
+		return -EINVAL;
+	}
 	return 0;
 err:
-	list_for_each_entry_safe(mmi, tmp, mmaps, list) {
+	list_for_each_entry_safe(mmi, tmp, &mmaps, list) {
 		list_del(&mmi->list);
 		free(mmi);
 	}
 	return err;
 }
 
-static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
-			  uint64_t hint)
+static int pin_elf_mmap(struct vma_area *vma, void *data)
 {
-	struct mmap_info_s *mmi;
-	const struct vma_area *fvma, *lvma;
+	struct mmap_info_s *mmi = &vma->mmi;
+	int64_t hole = *(int64_t *)data;
+
+	mmi->addr = ELF_PAGESTART(hole + mmi->addr);
+
+	return 0;
+}
+
+static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
+			 uint64_t hint)
+{
 	size_t load_size;
 	int64_t hole;
 
-	fvma = first_vma(mmaps);
-	lvma = last_vma(mmaps);
-	if (!fvma || !lvma) {
-		pr_err("elf doesn't have load segments\n");
-		return -EINVAL;
-	}
+	load_size = ELF_PAGESTART(dl_map_end(dlm)) -
+		    ELF_PAGESTART(dl_map_start(dlm));
 
-	load_size = ELF_PAGESTART(vma_start(lvma)) + vma_length(lvma) -
-		    ELF_PAGESTART(vma_start(fvma));
+	pr_debug("load size: %lx\n", load_size);
 
 	hole = process_find_place_for_elf(ctx, hint, load_size);
 	if (hole < 0) {
@@ -237,32 +245,28 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 	/* TODO: need to check, that found hole fits into 2GB boundary range
 	 * from VMA to patch.
 	 */
-	list_for_each_entry(mmi, mmaps, list)
-		mmi->addr = ELF_PAGESTART(hole + mmi->addr);
 
-	return 0;
+	return iterate_vmas(&dlm->vmas, &hole, pin_elf_mmap);
 }
 
-int load_elf(struct process_ctx_s *ctx, struct list_head *segments,
-	     const struct elf_info_s *ei, uint64_t hint)
+int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
 {
 	int err;
-	LIST_HEAD(mmaps);
 
-	err = create_elf_mmaps(ctx, segments, ei);
+	err = create_elf_mmaps(ctx, dlm);
 	if (err)
 		return err;
 
-	err = pin_elf_mmaps(ctx, segments, hint);
+	err = pin_elf_mmaps(ctx, dlm, hint);
 	if (err)
 		return err;
 
-	return process_mmap_file(ctx, ei->path, segments);
+	return process_mmap_file(ctx, dlm->ei->path, &dlm->vmas);
 }
 
-int unload_elf(struct process_ctx_s *ctx, struct list_head *segments)
+int unload_elf(struct process_ctx_s *ctx, struct dl_map *dlm)
 {
-	return process_munmap(ctx, segments);
+	return process_munmap(ctx, &dlm->vmas);
 }
 
 static Elf *elf_fd(const char *path, int fd)

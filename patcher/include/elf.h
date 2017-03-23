@@ -12,11 +12,11 @@ struct patch_info_s;
 int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile);
 
 struct process_ctx_s;
-struct elf_info_s;
-int load_elf(struct process_ctx_s *ctx, struct list_head *segments,
-	     const struct elf_info_s *ei, uint64_t hint);
-int unload_elf(struct process_ctx_s *ctx, struct list_head *segments);
+struct dl_map;
+int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint);
+int unload_elf(struct process_ctx_s *ctx, struct dl_map *dlm);
 
+struct elf_info_s;
 int elf_create_info(const char *path, struct elf_info_s **elf_info);
 void elf_destroy_info(struct elf_info_s *ei);
 
