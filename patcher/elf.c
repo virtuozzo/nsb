@@ -461,7 +461,7 @@ static Elf_Scn *elf_get_section_by_name(struct elf_info_s *ei, const char *name)
 
 	scn = find_section(ei, scn_compare_name, name);
 	if (!scn)
-		pr_err("failed to find \"%s\" section in %s\n", name, ei->path);
+		pr_warn("failed to find \"%s\" section in %s\n", name, ei->path);
 	return scn;
 }
 
