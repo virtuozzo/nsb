@@ -42,9 +42,8 @@ struct patch_s {
 	int64_t			load_addr;
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
-	struct elf_info_s	*ei;
 	struct list_head	objdeps;
-	struct list_head	segments;
+	struct dl_map		*patch_dlm;
 };
 
 struct ctx_dep {
@@ -70,6 +69,7 @@ struct process_ctx_s {
 #define P(ctx)			(&ctx->p)
 #define PI(ctx)			(&ctx->p.pi)
 #define PLA(ctx)		(ctx->p.load_addr)
+#define PDLM(ctx)		(ctx->p.patch_dlm)
 #define TDLM(ctx)		(ctx->p.target_dlm)
 
 #endif

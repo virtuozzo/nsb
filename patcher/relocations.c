@@ -30,13 +30,13 @@ int collect_relocations(struct process_ctx_s *ctx)
 
 	pr_debug("= Collect relocations:\n");
 
-	err = elf_rela_plt(P(ctx)->ei, &P(ctx)->rela_plt);
+	err = elf_rela_plt(PDLM(ctx)->ei, &P(ctx)->rela_plt);
 	if (err)
 		return err;
 
 	print_relocation(&P(ctx)->rela_plt, ".rela.plt");
 
-	err = elf_rela_dyn(P(ctx)->ei, &P(ctx)->rela_dyn);
+	err = elf_rela_dyn(PDLM(ctx)->ei, &P(ctx)->rela_dyn);
 	if (err)
 		return err;
 

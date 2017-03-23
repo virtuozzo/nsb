@@ -22,11 +22,11 @@ struct process_ctx_s;
 int service_start(struct process_ctx_s *ctx, struct service *plugin);
 int service_stop(struct process_ctx_s *ctx, struct service *plugin);
 
-struct list_head;
-int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
-		      const char *path, const struct list_head *vmas);
-int service_munmap(struct process_ctx_s *ctx, const struct service *service,
-		   const struct list_head *vmas);
+struct dl_map;
+int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
+		     const struct dl_map *dlm);
+int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
+		       const struct dl_map *dlm);
 
 ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *service,
 			     uint64_t **needed_array);

@@ -28,7 +28,6 @@ struct process_ctx_s process_context = {
 		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
 		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
-		.segments = LIST_HEAD_INIT(process_context.p.segments),
 	},
 	.service = {
 		.name = "libnsb_service.so",
@@ -132,29 +131,22 @@ static int tune_func_jumps(struct process_ctx_s *ctx)
 
 static int unload_patch(struct process_ctx_s *ctx)
 {
-	pr_info("= Unloading %s:\n", elf_path(P(ctx)->ei));
+	pr_info("= Unloading %s:\n", PDLM(ctx)->path);
 
-	return unload_elf(ctx, &P(ctx)->segments);
+	return unload_elf(ctx, PDLM(ctx));
 }
 
 static int64_t load_patch(struct process_ctx_s *ctx)
 {
-	const struct vma_area *vma;
 	int err;
 
-	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
+	pr_info("= Loading %s:\n", PDLM(ctx)->path);
 
-	err = load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, dl_map_end(TDLM(ctx)));
+	err = load_elf(ctx, PDLM(ctx), dl_map_end(TDLM(ctx)));
 	if (err)
 		return err;
 
-	vma = first_vma(&P(ctx)->segments);
-	if (!vma) {
-		pr_err("patch segments list is empty\n");
-		return -EFAULT;
-	}
-
-	P(ctx)->load_addr = vma_start(vma);
+	P(ctx)->load_addr = dl_map_start(PDLM(ctx));
 
 	return 0;
 }
@@ -261,22 +253,30 @@ static int init_patch_info(struct patch_info_s *pi, const char *patchfile)
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;
-	struct patch_s *p = P(ctx);
+	struct dl_map *dlm;
 
 	err = init_patch_info(PI(ctx), ctx->patchfile);
 	if (err)
 		return err;
 
-	err = elf_create_info(PI(ctx)->path, &p->ei);
+	dlm = alloc_dl_map(NULL, PI(ctx)->path);
+	if (!dlm)
+		return -ENOMEM;
+
+	err = elf_create_info(dlm->path, &dlm->ei);
 	if (err)
 		return err;
 
-	if (strcmp(elf_bid(p->ei), PI(ctx)->new_bid)) {
+	if (strcmp(elf_bid(dlm->ei), PI(ctx)->new_bid)) {
 		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				PI(ctx)->path, elf_bid(p->ei),
+				PI(ctx)->path, elf_bid(dlm->ei),
 				PI(ctx)->new_bid);
 		return -EINVAL;
+
 	}
+
+	ctx->p.patch_dlm = dlm;
+
 	return 0;
 }
 

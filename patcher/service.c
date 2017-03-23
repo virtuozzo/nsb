@@ -400,8 +400,8 @@ static int service_set_map_info(struct vma_area *vma, void *data)
 	return 0;
 }
 
-int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
-		      const char *path, const struct list_head *vmas)
+int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
+		     const struct dl_map *dlm)
 {
 	struct nsb_service_request rq = {
 		.cmd = NSB_SERVICE_CMD_MMAP,
@@ -411,11 +411,11 @@ int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
 	size_t rqlen, size;
 	int err;
 
-	err = iterate_vmas(vmas, mrq, service_set_map_info);
+	err = iterate_dl_vmas(dlm, mrq, service_set_map_info);
 	if (err)
 		return err;
 
-	strcpy(mrq->path, path);
+	strcpy(mrq->path, dlm->path);
 
 	rqlen = sizeof(rq.cmd) + sizeof(*mrq) +
 		sizeof(struct nsb_service_mmap_info) * mrq->nr_mmaps;
@@ -463,8 +463,8 @@ static int service_set_map_addr_info(struct vma_area *vma, void *data)
 	return 0;
 }
 
-int service_munmap(struct process_ctx_s *ctx, const struct service *service,
-		   const struct list_head *vmas)
+int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
+		       const struct dl_map *dlm)
 {
 	struct nsb_service_request rq = {
 		.cmd = NSB_SERVICE_CMD_MUNMAP,
@@ -474,7 +474,7 @@ int service_munmap(struct process_ctx_s *ctx, const struct service *service,
 	size_t rqlen, size;
 	int err;
 
-	err = iterate_vmas(vmas, mrq, service_set_map_addr_info);
+	err = iterate_dl_vmas(dlm, mrq, service_set_map_addr_info);
 	if (err)
 		return err;
 

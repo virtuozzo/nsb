@@ -148,13 +148,16 @@ int elf_library_status(void)
 	return 0;
 }
 
-static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p)
+static struct vma_area *create_elf_vma(const GElf_Phdr *p)
 {
+	struct vma_area *vma;
 	struct mmap_info_s *mmi;
 
-	mmi = xmalloc(sizeof(*mmi));
-	if (!mmi)
+	vma = xmalloc(sizeof(*vma));
+	if (!vma)
 		return NULL;
+
+	mmi = &vma->mmi;
 
 	mmi->addr = p->p_vaddr;
 	mmi->length = ELF_PAGEALIGN(p->p_filesz + ELF_PAGEOFFSET(p->p_vaddr));
@@ -167,15 +170,15 @@ static struct mmap_info_s *create_elf_mmap_info(const GElf_Phdr *p)
 	if (p->p_flags & PF_X)
 		mmi->prot |= PROT_EXEC;
 	mmi->offset = p->p_offset - ELF_PAGEOFFSET(p->p_vaddr);
-	return mmi;
+	return vma;
 }
 
 static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 {
 	int i, err = -1;
 	size_t pnum;
-	struct mmap_info_s *mmi, *tmp;
-	LIST_HEAD(mmaps);
+	struct vma_area *vma, *tmp;
+	LIST_HEAD(vmas);
 
 	if (elf_getphdrnum(dlm->ei->e, &pnum)) {
 		pr_err("elf_getphdrnum() failed: %s\n", elf_errmsg(-1));
@@ -184,7 +187,7 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 
 	for (i = 0; i < pnum; i++) {
 		GElf_Phdr phdr;
-		struct mmap_info_s *mmi;
+		struct vma_area *vma;
 
 		if (gelf_getphdr(dlm->ei->e, i, &phdr) != &phdr) {
 			pr_err("gelf_getphdr() failed: %s\n", elf_errmsg(-1));
@@ -194,11 +197,11 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 		if (phdr.p_type != PT_LOAD)
 			continue;
 
-		mmi = create_elf_mmap_info(&phdr);
-		if (!mmi)
+		vma = create_elf_vma(&phdr);
+		if (!vma)
 			goto err;
 
-		list_add_tail(&mmi->list, &dlm->vmas);
+		list_add_tail(&vma->dl, &dlm->vmas);
 	}
 
 	if (list_empty(&dlm->vmas)) {
@@ -207,9 +210,9 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 	}
 	return 0;
 err:
-	list_for_each_entry_safe(mmi, tmp, &mmaps, list) {
-		list_del(&mmi->list);
-		free(mmi);
+	list_for_each_entry_safe(vma, tmp, &vmas, dl) {
+		list_del(&vma->dl);
+		free(vma);
 	}
 	return err;
 }
@@ -233,8 +236,6 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 	load_size = ELF_PAGESTART(dl_map_end(dlm)) -
 		    ELF_PAGESTART(dl_map_start(dlm));
 
-	pr_debug("load size: %lx\n", load_size);
-
 	hole = process_find_place_for_elf(ctx, hint, load_size);
 	if (hole < 0) {
 		pr_err("failed to find address space hole with size %lx "
@@ -245,8 +246,7 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 	/* TODO: need to check, that found hole fits into 2GB boundary range
 	 * from VMA to patch.
 	 */
-
-	return iterate_vmas(&dlm->vmas, &hole, pin_elf_mmap);
+	return iterate_dl_vmas(dlm, &hole, pin_elf_mmap);
 }
 
 int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
@@ -261,12 +261,12 @@ int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
 	if (err)
 		return err;
 
-	return process_mmap_file(ctx, dlm->ei->path, &dlm->vmas);
+	return process_mmap_dl_map(ctx, dlm);
 }
 
 int unload_elf(struct process_ctx_s *ctx, struct dl_map *dlm)
 {
-	return process_munmap(ctx, &dlm->vmas);
+	return process_munmap_dl_map(ctx, dlm);
 }
 
 static Elf *elf_fd(const char *path, int fd)

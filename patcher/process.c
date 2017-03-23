@@ -158,50 +158,58 @@ static int process_mmap_fd(struct process_ctx_s *ctx, int fd,
 	return addr < 0 ? addr : 0;
 }
 
-int process_munmap(struct process_ctx_s *ctx,
-		   const struct list_head *mmaps)
+static int print_dl_munmap(struct vma_area *vma, void *data)
 {
-	struct mmap_info_s *mmi, *tmp;
+	pr_info("  - munmap: %#lx-%#lx\n", vma_start(vma), vma_end(vma));
+	return 0;
+}
+
+int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
+{
+	struct vma_area *vma, *tmp;
 	int err;
 
-	list_for_each_entry(mmi, mmaps, list)
-		pr_info("  - munmap: %#lx-%#lx\n", mmi->addr,
-				mmi->addr + mmi->length);
+	(void)iterate_dl_vmas(dlm, NULL, print_dl_munmap);
 
 	if (ctx->service.loaded)
-		return service_munmap(ctx, &ctx->service, mmaps);
+		return service_munmap_dlm(ctx, &ctx->service, dlm);
 
-	list_for_each_entry_safe(mmi, tmp, mmaps, list) {
-		err = process_unmap(ctx, mmi->addr, mmi->length);
+	list_for_each_entry_safe(vma, tmp, &dlm->vmas, dl) {
+		err = process_unmap(ctx, vma->mmi.addr, vma->mmi.length);
 		if (err)
 			return err;
 	}
 	return 0;
 }
 
-int process_mmap_file(struct process_ctx_s *ctx, const char *path,
-		      const struct list_head *mmaps)
+static int print_dl_mmap(struct vma_area *vma, void *data)
 {
-	int fd, err = 0;
-	struct mmap_info_s *mmi;
 	char fbuf[512];
 	char pbuf[4];
 
-	list_for_each_entry(mmi, mmaps, list)
-		pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
-				mmi->addr, mmi->addr + mmi->length, mmi->offset,
-				map_prot(mmi->prot, pbuf),
-				map_flags(mmi->flags, fbuf));
+	pr_info("  - mmap: %#lx-%#lx, off: %#lx, prot: %s, flags: %s\n",
+			vma_start(vma), vma_end(vma), vma_offset(vma),
+			map_prot(vma_prot(vma), pbuf),
+			map_flags(vma_flags(vma), fbuf));
+	return 0;
+}
+
+int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
+{
+	int fd, err;
+	struct vma_area *vma;
+
+	(void)iterate_dl_vmas(dlm, NULL, print_dl_mmap);
 
 	if (ctx->service.loaded)
-		return service_mmap_file(ctx, &ctx->service, path, mmaps);
+		return service_mmap_dlm(ctx, &ctx->service, dlm);
 
-	fd = process_open_file(ctx, path, O_RDONLY, 0);
+	fd = process_open_file(ctx, dlm->path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
 
-	list_for_each_entry(mmi, mmaps, list) {
-		err = process_mmap_fd(ctx, fd, mmi);
+	list_for_each_entry(vma, &dlm->vmas, dl) {
+		err = process_mmap_fd(ctx, fd, &vma->mmi);
 		if (err)
 			goto unmap;
 	}
@@ -211,8 +219,8 @@ int process_mmap_file(struct process_ctx_s *ctx, const char *path,
 	return 0;
 
 unmap:
-	list_for_each_entry_reverse(mmi, mmaps, list)
-		(void)process_unmap(ctx, mmi->addr, mmi->length);
+	list_for_each_entry_reverse(vma, &dlm->vmas, dl)
+		(void)process_unmap(ctx, vma->mmi.addr, vma->mmi.length);
 	return err;
 }
 
