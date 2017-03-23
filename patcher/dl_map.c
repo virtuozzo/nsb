@@ -79,7 +79,7 @@ int collect_dl_maps(const struct list_head *vmas, struct list_head *head)
 		.head = head,
 	};
 
-	return iterate_file_vmas(vmas, &dl_info, collect_dl_map_vma);
+	return iterate_vmas(vmas, &dl_info, collect_dl_map_vma);
 }
 
 int create_dl_map(const struct list_head *vmas, struct dl_map **dl_map)
@@ -87,7 +87,7 @@ int create_dl_map(const struct list_head *vmas, struct dl_map **dl_map)
 	struct dl_info dl_info = { };
 	int err;
 
-	err = iterate_file_vmas(vmas, &dl_info, collect_dl_map_vma);
+	err = iterate_vmas(vmas, &dl_info, collect_dl_map_vma);
 	if (err)
 		return err;
 

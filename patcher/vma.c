@@ -337,17 +337,14 @@ int64_t find_vma_hole(const struct list_head *vmas,
 	return vma ? max(hole.hint, vma_end(vma)) : -ENOENT;
 }
 
-int iterate_file_vmas(const struct list_head *head, void *data,
-		      int (*actor)(struct vma_area *vma, void *data))
+int iterate_vmas(const struct list_head *head, void *data,
+		 int (*actor)(struct vma_area *vma, void *data))
 {
 	struct mmap_info_s *mmi;
 	int err = 0;
 
 	list_for_each_entry(mmi, head, list) {
 		struct vma_area *vma = mmi_vma(mmi);
-
-		if (!vma->path)
-			continue;
 
 		err = actor(vma, data);
 		if (err)
