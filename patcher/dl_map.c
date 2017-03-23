@@ -117,6 +117,9 @@ static int compare_bid(const struct dl_map *dlm, const void *data)
 {
 	const char *bid = data;
 
+	if (!elf_bid(dlm->ei))
+		return 0;
+
 	return !strcmp(elf_bid(dlm->ei), bid);
 }
 
