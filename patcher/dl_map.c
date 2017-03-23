@@ -175,6 +175,19 @@ static int dlm_find_sym(const struct dl_map *dlm, void *data)
 	return 1;
 }
 
+int64_t dl_map_symbol_value(const struct dl_map *dlm, const char *name)
+{
+	struct sym_info si = {
+		.name = name,
+	};
+	int ret;
+
+	ret = dlm_find_sym(dlm, &si);
+	if (ret == 1)
+		return si.value;
+	return ret < 0 ? ret : -ENOENT;
+}
+
 int64_t dl_get_symbol_value(const struct list_head *dl_maps, const char *name)
 {
 	struct sym_info si = {
