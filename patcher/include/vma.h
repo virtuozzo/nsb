@@ -61,9 +61,6 @@ int collect_vmas_by_bid(pid_t pid, struct list_head *head, const char *bid);
 void free_vma(struct vma_area *vma);
 int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma);
 
-int64_t find_vma_hole(const struct list_head *vmas,
-		      uint64_t hint, size_t size);
-
 int iterate_vmas(const struct list_head *head, void *data,
 		 int (*actor)(struct vma_area *vma, void *data));
 

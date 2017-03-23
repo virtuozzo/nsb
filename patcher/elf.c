@@ -227,7 +227,7 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct list_head *mmaps,
 	load_size = ELF_PAGESTART(vma_start(lvma)) + vma_length(lvma) -
 		    ELF_PAGESTART(vma_start(fvma));
 
-	hole = find_vma_hole(&ctx->vmas, hint, load_size);
+	hole = process_find_place_for_elf(ctx, hint, load_size);
 	if (hole < 0) {
 		pr_err("failed to find address space hole with size %lx "
 			"starting from address %lx\n", load_size, hint);

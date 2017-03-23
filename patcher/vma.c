@@ -285,58 +285,6 @@ int create_vma_by_bid(pid_t pid, const char *bid, struct vma_area **vma)
 	return ret ? 0 : -ENOENT;
 }
 
-static const struct vma_area *find_vma(const struct list_head *head, const void *data,
-				       int (*actor)(const struct vma_area *vma, const void *data))
-{
-	struct mmap_info_s *mmi;
-
-	list_for_each_entry(mmi, head, list) {
-		struct vma_area *vma = mmi_vma(mmi);
-		int ret;
-
-		ret = actor(vma, data);
-		if (ret < 0)
-			break;
-		if (ret)
-			return vma;
-	}
-	return NULL;
-}
-
-struct address_hole {
-	uint64_t	hint;
-	size_t		size;
-};
-
-static int find_hole(const struct vma_area *vma, const void *data)
-{
-	const struct address_hole *hole = data;
-	struct mmap_info_s *next_mmi;
-	const struct vma_area *next_vma;
-
-	next_mmi = list_entry(vma->mmi.list.next, typeof(*next_mmi), list);
-	next_vma = mmi_vma(next_mmi);
-
-	if (vma_start(next_vma) < hole->hint)
-		return 0;
-
-	return vma_start(next_vma) - max(hole->hint, vma_end(vma)) > hole->size;
-}
-
-int64_t find_vma_hole(const struct list_head *vmas,
-		      uint64_t hint, size_t size)
-{
-	const struct vma_area *vma;
-	struct address_hole hole = {
-		.hint = hint,
-		.size = size,
-	};
-
-	vma = find_vma(vmas, &hole, find_hole);
-
-	return vma ? max(hole.hint, vma_end(vma)) : -ENOENT;
-}
-
 int iterate_vmas(const struct list_head *head, void *data,
 		 int (*actor)(struct vma_area *vma, void *data))
 {

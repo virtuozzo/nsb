@@ -855,3 +855,36 @@ int process_find_patch(struct process_ctx_s *ctx)
 	}
 	return 0;
 }
+
+struct address_hole {
+	uint64_t		hint;
+	size_t			size;
+	uint64_t		address;
+};
+
+static int find_hole(struct vma_area *vma, void *data)
+{
+	struct address_hole *hole = data;
+
+	if (vma_start(next_vma(vma)) < hole->hint)
+		return 0;
+
+	hole->address = max(hole->hint, vma_end(vma));
+
+	return (vma_start(next_vma(vma)) - hole->address) >= hole->size;
+}
+
+int64_t process_find_place_for_elf(struct process_ctx_s *ctx,
+				   uint64_t hint, size_t size)
+{
+	struct address_hole hole = {
+		.hint = hint,
+		.size = size,
+	};
+	int ret;
+
+	ret = iterate_vmas(&ctx->vmas, &hole, find_hole);
+	if (ret <= 0)
+		return ret ? ret : -ENOENT;
+	return hole.address;
+}
