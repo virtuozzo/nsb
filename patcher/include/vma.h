@@ -18,7 +18,6 @@ struct vma_area {
 	struct mmap_info_s	mmi;
 	char			*path;
 	char			*map_file;
-	struct elf_info_s	*ei;
 	struct list_head        dl;
 	const void		*dlm;
 };

@@ -91,20 +91,12 @@ static int create_vma(pid_t pid, const struct vma_area *template,
 			pr_err("failed to fuplicate string\n");
 			goto free_vma_path;
 		}
-
-		if (is_elf_file(vma->map_file)) {
-			ret = elf_create_info(vma->map_file, &vma->ei);
-			if (ret)
-				goto free_map_file;
-		}
 	}
 
 	*vma_area = vma;
 
 	return 0;
 
-free_map_file:
-	free(vma->map_file);
 free_vma_path:
 	free(vma->path);
 free_vma:
