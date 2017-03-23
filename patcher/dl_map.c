@@ -37,6 +37,13 @@ uint64_t dl_map_end(const struct dl_map *dlm)
 	return vma_end(last_dl_vma(dlm));
 }
 
+uint64_t dlm_load_base(const struct dl_map *dlm)
+{
+        if (elf_type_dyn(dlm->ei))
+		return dl_map_start(dlm);
+	return 0;
+}
+
 struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 {
 	struct dl_map *dlm;

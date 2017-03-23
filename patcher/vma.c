@@ -11,13 +11,6 @@
 #include "include/xmalloc.h"
 #include "include/elf.h"
 
-uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr)
-{
-        if (elf_type_dyn(vma->ei))
-		addr += vma_start(vma);
-	return addr;
-}
-
 static int parse_vma(char *line, struct vma_area *vma)
 {
 	char r, w, x, s;

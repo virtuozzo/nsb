@@ -194,13 +194,12 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 	int err;
 	uint64_t plt_addr;
 	uint64_t func_addr;
+	const struct dl_map *dlm;
 
-	plt_addr = dl_map_start(PDLM(ctx)) + es_r_offset(es);
+	dlm = es->dlm ? es->dlm : PDLM(ctx);
 
-	if (es->dlm)
-		func_addr = vma_func_addr(first_dl_vma(es->dlm), es->address);
-	else
-		func_addr = dl_map_start(PDLM(ctx)) + es->address;
+	plt_addr = dlm_load_base(PDLM(ctx)) + es_r_offset(es);
+	func_addr = dlm_load_base(dlm) + es->address;
 
 	pr_debug("    %4d:  %#012lx  %#012lx %s:  %s + %#lx\n",
 			es_r_sym(es), plt_addr, func_addr, es->name,

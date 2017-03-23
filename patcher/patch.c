@@ -96,9 +96,8 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	fj->func_addr = vma_func_addr(first_dl_vma(TDLM(ctx)), fj->func_value);
-
-	patch_addr = dl_map_start(PDLM(ctx)) + fj->patch_value;
+	fj->func_addr = dlm_load_base(TDLM(ctx)) + fj->func_value;
+	patch_addr = dlm_load_base(PDLM(ctx)) + fj->patch_value;
 
 	pr_info("      original address: %#lx\n", fj->func_addr);
 	pr_info("      patch address   : %#lx\n", patch_addr);
