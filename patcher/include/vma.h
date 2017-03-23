@@ -71,5 +71,6 @@ uint64_t vma_func_addr(const struct vma_area *vma, uint64_t addr);
 
 const struct vma_area *first_vma(const struct list_head *vmas);
 const struct vma_area *last_vma(const struct list_head *vmas);
+const struct vma_area *next_vma(const struct vma_area *vma);
 
 #endif /* __PATCHER_VMA_H__ */

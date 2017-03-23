@@ -368,3 +368,8 @@ const struct vma_area *last_vma(const struct list_head *vmas)
 
 	return mmi_vma(list_entry(vmas->prev, typeof(struct mmap_info_s), list));
 }
+
+const struct vma_area *next_vma(const struct vma_area *vma)
+{
+	return mmi_vma(list_entry(vma->mmi.list.next, typeof(struct mmap_info_s), list));
+}
