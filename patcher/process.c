@@ -869,6 +869,9 @@ static int find_hole(struct vma_area *vma, void *data)
 	if (vma_start(next_vma(vma)) < hole->hint)
 		return 0;
 
+	if (vma->dlm && (vma != last_dl_vma(vma->dlm)))
+		return 0;
+
 	hole->address = max(hole->hint, vma_end(vma));
 
 	return (vma_start(next_vma(vma)) - hole->address) >= hole->size;
