@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include <sys/mman.h>
 #include <sys/user.h>
 #include <sys/types.h>
@@ -513,28 +514,89 @@ static int process_check_stack(const struct process_ctx_s *ctx,
 	return 0;
 }
 
+struct target_info {
+	const char		*bid;
+	struct elf_info_s	*ei;
+	uint64_t		addr;
+};
+
+static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
+{
+	struct target_info *ti = data;
+	const char *bid = ti->bid;
+	struct elf_info_s *ei;
+	char map_file[PATH_MAX];
+	int err;
+
+	if (!vma->path)
+		return 0;
+
+	snprintf(map_file, sizeof(map_file), "/proc/%d/map_files/%lx-%lx",
+			pid, vma_start(vma), vma_end(vma));
+
+	if (access(map_file, F_OK))
+		return 0;
+
+	if (!is_elf_file(map_file))
+		return 0;
+
+	err = elf_create_info(map_file, &ei);
+	if (err)
+		return err;
+
+        if (!elf_bid(ei))
+		goto destroy_ei;
+
+	if (strcmp(elf_bid(ei), bid))
+		goto destroy_ei;
+
+	ti->ei = ei;
+	ti->addr = vma_start(vma);
+	return 1;
+
+destroy_ei:
+	elf_destroy_info(ei);
+	return 0;
+}
+
+int process_get_target_info(pid_t pid, struct target_info *ti)
+{
+	int ret;
+
+	ret = iter_map_files(pid, compare_target_bid, ti);
+	if (ret < 0) {
+		errno = -ret;
+		pr_perror("failed to open target ELF with Build ID %s in process %d",
+				ti->bid, pid);
+		return ret;
+	}
+	if (ret == 0) {
+		pr_err("failed to find target ELF with Build ID %s in process %d\n",
+				ti->bid, pid);
+		return -ENOENT;
+	}
+	return 0;
+}
+
 static int process_catch(struct process_ctx_s *ctx)
 {
 	int ret, err;
-	struct vma_area *vma;
-	uint64_t target_base;
+	struct target_info ti = {
+		.bid = PI(ctx)->old_bid,
+	};
 
 	err = process_infect(ctx);
 	if (err)
 		return err;
 
-	ret = create_vma_by_bid(ctx->pid, PI(ctx)->old_bid, &vma);
-	if (ret) {
-		errno = -ret;
-		pr_perror("failed to create target vma with Build ID %s in process %d",
-				PI(ctx)->old_bid, ctx->pid);
+	ret = process_get_target_info(ctx->pid, &ti);
+	if (ret)
 		goto cure;
-	}
 
-	target_base = elf_type_dyn(vma->ei) ? vma_start(vma) : 0;
+	ret = process_check_stack(ctx, elf_type_dyn(ti.ei) ? ti.addr : 0);
 
-	ret = process_check_stack(ctx, target_base);
-	free_vma(vma);
+	elf_destroy_info(ti.ei);
+
 	if (ret)
 		goto cure;
 
