@@ -51,18 +51,47 @@ struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 	return dlm;
 }
 
+static int create_dl_map_by_vma(const struct vma_area *vma, struct dl_map **dl_map)
+{
+	struct elf_info_s *ei;
+	struct dl_map *dlm;
+	int err;
+
+	err = elf_create_info(vma->map_file, &ei);
+	if (err)
+		return err;
+
+	err = -ENOMEM;
+	dlm = alloc_dl_map(ei, vma->path);
+	if (!dlm)
+		goto destroy_ei;
+
+	*dl_map = dlm;
+	return 0;
+
+destroy_ei:
+	elf_destroy_info(ei);
+	return err;
+}
+
 static int collect_dl_map_vma(struct vma_area *vma, void *data)
 {
 	struct dl_info *dl_info = data;
 	struct dl_map *dlm = dl_info->dlm;
 
-	if (!vma->ei)
+	if (!vma->map_file)
+		return 0;
+
+	if (!is_elf_file(vma->map_file))
 		return 0;
 
 	if (!dlm || strcmp(dlm->path, vma->path)) {
-		dlm = alloc_dl_map(vma->ei, vma->path);
-		if (!dlm)
-			return -ENOMEM;
+		int err;
+
+		err = create_dl_map_by_vma(vma, &dlm);
+		if (err)
+			return err;
+
 		dl_info->dlm = dlm;
 
 		if (dl_info->head)
