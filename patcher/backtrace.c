@@ -5,11 +5,9 @@
 #include <libunwind-ptrace.h>
 
 #include "include/log.h"
-#include "include/list.h"
 #include "include/xmalloc.h"
 #include "include/backtrace.h"
 #include "include/context.h"
-#include "include/vma.h"
 
 #define MAX_DEPTH	64
 
@@ -229,15 +227,12 @@ int backtrace_check_func(const struct func_jump_s *fj,
 	return -EAGAIN;
 }
 
-int backtrace_check_vma(const struct backtrace_s *bt,
-			const struct vma_area *vma)
+int backtrace_check_range(const struct backtrace_s *bt,
+			  uint64_t start, uint64_t end)
 {
 	const struct backtrace_frame_s *bf;
 
-	if (bt->depth == 1)
-		return -EAGAIN;
-
-	bf = bt_check_range(bt, vma_start(vma), vma_end(vma));
+	bf = bt_check_range(bt, start, end);
 	if (!bf)
 		return 0;
 
@@ -245,8 +240,7 @@ int backtrace_check_vma(const struct backtrace_s *bt,
 		pr_debug("    Found call \"%s\" within signal frame\n",
 			 bf->name);
 	else
-		pr_debug("    Found call in stack within VMA %s range (%#lx-%lx): "
-			 "%#lx \n", vma->path, vma_start(vma), vma_end(vma),
-			 bf->ip);
+		pr_debug("    Found call in stack within range (%#lx-%lx): "
+			 "%#lx \n", start, end, bf->ip);
 	return -EAGAIN;
 }
