@@ -139,23 +139,12 @@ static int unload_patch(struct process_ctx_s *ctx)
 
 static int64_t load_patch(struct process_ctx_s *ctx)
 {
-	uint64_t hint;
 	const struct vma_area *vma;
 	int err;
 
 	pr_info("= Loading %s:\n", elf_path(P(ctx)->ei));
 
-	if (elf_type_dyn(TDLM(ctx)->ei))
-		/*
-		 * TODO: there should be bigger offset. 2 or maybe even 4 GB.
-		 * But jmpq command construction fails, if map lays ouside 2g offset.
-		 * This might be a bug in jmps construction
-		 */
-		hint = dl_map_start(TDLM(ctx)) & 0xfffffffff0000000;
-	else
-		hint = 0x1000000;
-
-	err = load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, hint);
+	err = load_elf(ctx, &P(ctx)->segments, P(ctx)->ei, dl_map_end(TDLM(ctx)));
 	if (err)
 		return err;
 
