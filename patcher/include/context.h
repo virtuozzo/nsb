@@ -7,6 +7,7 @@
 
 #include "list.h"
 #include "service.h"
+#include "vma.h"
 
 struct static_sym_s {
 	int32_t			idx;
@@ -58,8 +59,7 @@ struct process_ctx_s {
 	struct service		service;
 	struct list_head	vmas;
 	struct list_head	dl_maps;
-	int64_t			remote_map;
-	size_t			remote_map_size;
+	struct vma_area		remote_vma;
 	struct list_head	objdeps;
 	struct list_head	threads;
 	struct patch_s		p;

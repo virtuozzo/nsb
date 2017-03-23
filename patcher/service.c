@@ -188,7 +188,7 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 {
 	const char *symbol = "nsb_service_accept";
 	int64_t address;
-	uint64_t code_addr = ctx->remote_map;
+	uint64_t code_addr = vma_start(&ctx->remote_vma);
 	ssize_t size;
 	void *code;
 
@@ -208,7 +208,7 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 static int service_run(struct process_ctx_s *ctx, const struct service *service,
 		       bool once)
 {
-	uint64_t code_addr = ctx->remote_map;
+	uint64_t code_addr = vma_start(&ctx->remote_vma);
 	ssize_t size;
 	void *code;
 

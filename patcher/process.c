@@ -126,37 +126,28 @@ static long process_syscall(struct process_ctx_s *ctx, int nr,
 	return sret;
 }
 
-int64_t process_map(struct process_ctx_s *ctx, int fd, off_t offset,
-		    unsigned long addr, size_t length, int flags, int prot)
+int64_t process_map_vma(struct process_ctx_s *ctx, int fd,
+			const struct vma_area *vma)
 {
-	long maddr;
+	int64_t addr;
 
 	if (ctx->service.loaded) {
 		pr_err("service is loaded\n");
 		return -EBUSY;
 	}
 
-	maddr = process_syscall(ctx, __NR(mmap, false),
-				addr, length, prot, flags, fd, offset);
-	if (maddr < 0) {
-		pr_err("failed to create new mapping %#lx-%#lx "
-				"in process %d with flags %#x, prot %#x, offset %#lx\n",
-				addr, addr + length, ctx->pid,
-				prot, flags, offset);
+	addr = process_syscall(ctx, __NR(mmap, false),
+			       vma_start(vma), vma_length(vma), vma_prot(vma),
+			       vma_flags(vma), fd, vma_offset(vma));
+	if (addr < 0) {
+		pr_perror("failed to create new mapping %#lx-%#lx "
+			  "in process %d with flags %#x, prot %#x, offset %#lx",
+				vma_start(vma), vma_start(vma) + vma_length(vma),
+				ctx->pid, vma_prot(vma), vma_flags(vma),
+				vma_offset(vma));
 		return -errno;
 	}
-	return maddr;
-}
-
-static int process_mmap_fd(struct process_ctx_s *ctx, int fd,
-			   const struct vma_area *vma)
-{
-	int64_t addr;
-
-	addr = process_map(ctx, fd, vma->offset, vma->addr,
-			vma->length, vma->flags, vma->prot);
-
-	return addr < 0 ? addr : 0;
+	return addr;
 }
 
 static int print_dl_munmap(struct vma_area *vma, void *data)
@@ -176,7 +167,7 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 		return service_munmap_dlm(ctx, &ctx->service, dlm);
 
 	list_for_each_entry_safe(vma, tmp, &dlm->vmas, dl) {
-		err = process_unmap(ctx, vma->addr, vma->length);
+		err = process_unmap_vma(ctx, vma);
 		if (err)
 			return err;
 	}
@@ -210,7 +201,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 		return fd;
 
 	list_for_each_entry(vma, &dlm->vmas, dl) {
-		err = process_mmap_fd(ctx, fd, vma);
+		err = process_map_vma(ctx, fd, vma);
 		if (err)
 			goto unmap;
 	}
@@ -221,7 +212,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 
 unmap:
 	list_for_each_entry_reverse(vma, &dlm->vmas, dl)
-		(void)process_unmap(ctx, vma->addr, vma->length);
+		(void)process_unmap_vma(ctx, vma);
 	return err;
 }
 
@@ -243,13 +234,14 @@ static int process_do_open_file(struct process_ctx_s *ctx,
 {
 	int err, fd;
 
-	err = process_write_data(ctx, ctx->remote_map, path,
-				 round_up(strlen(path) + 1, 8));
+	err = process_write_data(ctx, vma_start(&ctx->remote_vma),
+				 path, round_up(strlen(path) + 1, 8));
 	if (err)
 		return err;
 
 	fd = process_syscall(ctx, __NR(open, false),
-			     ctx->remote_map, flags, mode, 0, 0, 0);
+			     vma_start(&ctx->remote_vma),
+			     flags, mode, 0, 0, 0);
 	if (fd < 0) {
 		pr_perror("Failed to open %s", path);
 		return -errno;
@@ -310,7 +302,7 @@ int process_unlink(struct process_ctx_s *ctx)
 
 	pr_debug("= Cleanup %d\n", ctx->pid);
 
-	err = process_unmap(ctx, ctx->remote_map, ctx->remote_map_size);
+	err = process_unmap_vma(ctx, &ctx->remote_vma);
 	if (err)
 		return err;
 
@@ -328,6 +320,8 @@ int process_cure(struct process_ctx_s *ctx)
 
 int process_link(struct process_ctx_s *ctx)
 {
+	int64_t addr;
+
 	pr_debug("= Prepare %d\n", ctx->pid);
 
 	ctx->ctl = compel_prepare(ctx->pid);
@@ -336,15 +330,13 @@ int process_link(struct process_ctx_s *ctx)
 		return -1;
 	}
 
-	ctx->remote_map_size = PAGE_SIZE;
-
-	ctx->remote_map = process_map(ctx, -1, 0, 0, ctx->remote_map_size,
-			MAP_ANONYMOUS | MAP_PRIVATE,
-			PROT_READ | PROT_WRITE | PROT_EXEC);
-	if ((void *)ctx->remote_map == MAP_FAILED) {
+	addr = process_map_vma(ctx, -1, &ctx->remote_vma);
+	if ((void *)addr == MAP_FAILED) {
 		pr_err("failed to create service memory region in process %d\n", ctx->pid);
 		goto cure;
 	}
+
+	ctx->remote_vma.addr = addr;
 
 	return 0;
 
@@ -464,18 +456,19 @@ err:
 	return err;
 }
 
-int process_unmap(struct process_ctx_s *ctx, off_t addr, size_t size)
+int process_unmap_vma(struct process_ctx_s *ctx, const struct vma_area *vma)
 {
 	int err;
 
 	err = process_syscall(ctx, __NR(munmap, false),
-			      addr, size, 0, 0, 0, 0);
+			      vma_start(vma), vma_length(vma), 0, 0, 0, 0);
 	if (err < 0) {
-		pr_perror("Failed to unmap %#lx-%#lx", addr, addr + size);
+		pr_perror("Failed to unmap %#lx-%#lx",
+				vma_start(vma), vma_end(vma));
 		return -errno;
 	}
 
-	pr_info("  - munmap: %#lx-%#lx\n", addr, addr + size);
+	pr_info("  - munmap: %#lx-%#lx\n", vma_start(vma), vma_end(vma));
 	return 0;
 }
 
@@ -732,7 +725,7 @@ static int64_t process_call_dlopen(struct process_ctx_s *ctx,
 {
 	void *dlopen_code;
 	ssize_t size;
-	uint64_t code_addr = ctx->remote_map;
+	uint64_t code_addr = vma_start(&ctx->remote_vma);
 	uint64_t name_addr = round_up(code_addr + X86_64_CALL_MAX_SIZE, 8);
 	int err;
 
@@ -788,7 +781,7 @@ static int64_t process_call_dlclose(struct process_ctx_s *ctx,
 {
 	void *dlclose_code;
 	ssize_t size;
-	uint64_t code_addr = ctx->remote_map;
+	uint64_t code_addr = vma_start(&ctx->remote_vma);
 
 	size = x86_64_dlclose(dlclose_addr, handle,
 			      code_addr,

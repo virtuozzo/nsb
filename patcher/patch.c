@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <linux/limits.h>
+#include <sys/mman.h>
 
 #include "include/patch.h"
 #include "include/log.h"
@@ -37,6 +38,12 @@ struct process_ctx_s process_context = {
 	.dl_maps = LIST_HEAD_INIT(process_context.dl_maps),
 	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
 	.threads = LIST_HEAD_INIT(process_context.threads),
+	.remote_vma = {
+		.list = LIST_HEAD_INIT(process_context.remote_vma.list),
+		.length = 4096,
+		.flags = MAP_ANONYMOUS | MAP_PRIVATE,
+		.prot = PROT_READ | PROT_WRITE | PROT_EXEC,
+	},
 };
 
 static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
