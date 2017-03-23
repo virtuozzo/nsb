@@ -37,7 +37,7 @@ uint64_t dl_map_end(const struct dl_map *dlm)
 	return vma_end(last_dl_vma(dlm));
 }
 
-static struct dl_map *create_dl_map(struct elf_info_s *ei, const char *path)
+static struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 {
 	struct dl_map *dlm;
 
@@ -60,7 +60,7 @@ static int collect_dl_map_vma(struct vma_area *vma, void *data)
 		return 0;
 
 	if (!dlm || strcmp(dlm->path, vma->path)) {
-		dlm = create_dl_map(vma->ei, vma->path);
+		dlm = alloc_dl_map(vma->ei, vma->path);
 		if (!dlm)
 			return -ENOMEM;
 
