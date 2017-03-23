@@ -130,7 +130,7 @@ const struct dl_map *find_dl_map_by_addr(const struct list_head *dl_maps,
 }
 
 static int iterate_dl_maps(const struct list_head *head, void *data,
-			   int (*actor)(struct dl_map *dlm, void *data))
+			   int (*actor)(const struct dl_map *dlm, void *data))
 {
 	int ret;
 	struct dl_map *dlm;
@@ -148,7 +148,7 @@ struct sym_info {
 	uint64_t	value;
 };
 
-static int dlm_find_sym(struct dl_map *dlm, void *data)
+static int dlm_find_sym(const struct dl_map *dlm, void *data)
 {
 	struct sym_info *si = data;
 	int64_t value;
