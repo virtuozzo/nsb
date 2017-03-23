@@ -374,41 +374,51 @@ int service_start(struct process_ctx_s *ctx, struct service *service)
 	return 0;
 }
 
+static int service_set_map_info(struct vma_area *vma, void *data)
+{
+	struct nsb_service_mmap_request *mrq = data;
+	struct nsb_service_mmap_info *mi;
+	size_t max_mmaps;
+
+	max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
+
+	if (mrq->nr_mmaps == max_mmaps) {
+		pr_err("to many map requests (max: %ld)\n", max_mmaps);
+		return -E2BIG;
+	}
+
+	mi = &mrq->mmap[mrq->nr_mmaps];
+
+	mi->info.addr = vma_start(vma);
+	mi->info.length = vma_length(vma);
+	mi->prot = vma_prot(vma);
+	mi->flags = vma_flags(vma);
+	mi->offset = vma_offset(vma);
+
+	mrq->nr_mmaps++;
+
+	return 0;
+}
+
 int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
-		      const char *path, const struct list_head *mmaps)
+		      const char *path, const struct list_head *vmas)
 {
 	struct nsb_service_request rq = {
 		.cmd = NSB_SERVICE_CMD_MMAP,
 	};
-	struct mmap_info_s *mmi;
-	struct nsb_service_mmap_request *mrq;
-	struct nsb_service_mmap_info *mi;
-	size_t max_mmaps;
+	struct nsb_service_mmap_request *mrq = (void *)rq.data;
 	struct nsb_service_response rs;
 	size_t rqlen, size;
 	int err;
 
-	max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
+	err = iterate_vmas(vmas, mrq, service_set_map_info);
+	if (err)
+		return err;
 
-	mrq = (void *)rq.data;
-	mi = mrq->mmap;
-
-	list_for_each_entry(mmi, mmaps, list) {
-		if (mrq->nr_mmaps == max_mmaps) {
-			pr_err("to many map request (max: %ld)\n", max_mmaps);
-			return -E2BIG;
-		}
-		mi->info.addr = mmi->addr;
-		mi->info.length = mmi->length;
-		mi->prot = mmi->prot;
-		mi->flags = mmi->flags;
-		mi->offset = mmi->offset;
-		mi++;
-		mrq->nr_mmaps++;
-	}
 	strcpy(mrq->path, path);
 
-	rqlen = sizeof(rq.cmd) + sizeof(*mrq) + sizeof(*mi) * mrq->nr_mmaps;
+	rqlen = sizeof(rq.cmd) + sizeof(*mrq) +
+		sizeof(struct nsb_service_mmap_info) * mrq->nr_mmaps;
 
 	err = nsb_service_send_request(service, &rq, rqlen);
 	if (err)
@@ -430,36 +440,46 @@ int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
 	return 0;
 }
 
+static int service_set_map_addr_info(struct vma_area *vma, void *data)
+{
+	struct nsb_service_munmap_request *mrq = data;
+	struct nsb_service_map_addr_info *mai;
+	size_t max_munmaps;
+
+	max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
+
+	if (mrq->nr_munmaps == max_munmaps) {
+		pr_err("to many unmap requests (max: %ld)\n", max_munmaps);
+		return -E2BIG;
+	}
+
+	mai = &mrq->munmap[mrq->nr_munmaps];
+
+	mai->addr = vma_start(vma);
+	mai->length = vma_length(vma);
+
+	mrq->nr_munmaps++;
+
+	return 0;
+}
+
 int service_munmap(struct process_ctx_s *ctx, const struct service *service,
-		   const struct list_head *mmaps)
+		   const struct list_head *vmas)
 {
 	struct nsb_service_request rq = {
 		.cmd = NSB_SERVICE_CMD_MUNMAP,
 	};
-	struct mmap_info_s *mmi;
-	struct nsb_service_munmap_request *mrq;
-	struct nsb_service_map_addr_info *mai;
-	size_t max_munmaps;
+	struct nsb_service_munmap_request *mrq = (void *)rq.data;
 	struct nsb_service_response rs;
 	size_t rqlen, size;
 	int err;
 
-	max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
+	err = iterate_vmas(vmas, mrq, service_set_map_addr_info);
+	if (err)
+		return err;
 
-	mrq = (void *)rq.data;
-	mai = mrq->munmap;
-
-	list_for_each_entry(mmi, mmaps, list) {
-		if (mrq->nr_munmaps == max_munmaps) {
-			pr_err("to many unmap request (max: %ld)\n", max_munmaps);
-			return -E2BIG;
-		}
-		mai->addr = mmi->addr;
-		mai->length = mmi->length;
-		mrq->nr_munmaps++;
-	}
-
-	rqlen = sizeof(rq.cmd) + sizeof(*mrq) + sizeof(*mai) * mrq->nr_munmaps;
+	rqlen = sizeof(rq.cmd) + sizeof(*mrq) +
+		sizeof(struct nsb_service_map_addr_info) * mrq->nr_munmaps;
 
 	err = nsb_service_send_request(service, &rq, rqlen);
 	if (err)

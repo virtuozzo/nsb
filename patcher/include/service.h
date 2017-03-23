@@ -24,9 +24,9 @@ int service_stop(struct process_ctx_s *ctx, struct service *plugin);
 
 struct list_head;
 int service_mmap_file(struct process_ctx_s *ctx, const struct service *service,
-		      const char *path, const struct list_head *mmaps);
+		      const char *path, const struct list_head *vmas);
 int service_munmap(struct process_ctx_s *ctx, const struct service *service,
-		   const struct list_head *mmaps);
+		   const struct list_head *vmas);
 
 ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *service,
 			     uint64_t **needed_array);
