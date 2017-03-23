@@ -136,7 +136,7 @@ static int unload_patch(struct process_ctx_s *ctx)
 	return unload_elf(ctx, PDLM(ctx));
 }
 
-static int64_t load_patch(struct process_ctx_s *ctx)
+static int load_patch(struct process_ctx_s *ctx)
 {
 	pr_info("= Loading %s:\n", PDLM(ctx)->path);
 
