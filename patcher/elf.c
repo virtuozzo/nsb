@@ -459,12 +459,7 @@ static int scn_compare_name(struct elf_info_s *ei, Elf_Scn *scn,
 
 static Elf_Scn *elf_get_section_by_name(struct elf_info_s *ei, const char *name)
 {
-	Elf_Scn *scn;
-
-	scn = find_section(ei, scn_compare_name, name);
-	if (!scn)
-		pr_warn("failed to find \"%s\" section in %s\n", name, ei->path);
-	return scn;
+	return find_section(ei, scn_compare_name, name);
 }
 
 static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
@@ -603,8 +598,10 @@ static int elf_create_scn(struct elf_info_s *ei,
 	int nr_ent;
 
 	scn = elf_get_section_by_name(ei, sname);
-	if (!scn)
+	if (!scn) {
+		pr_err("failed to find \"%s\" section\n", sname);
 		return -ENOENT;
+	}
 
 	data = elf_getdata(scn, NULL);
 	if (!data) {
@@ -1279,8 +1276,10 @@ int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 	err = -EINVAL;
 
 	scn = elf_get_section_by_name(ei, sname);
-	if (!scn)
+	if (!scn) {
+		pr_err("failed to find \"%s\" section\n", sname);
 		goto destroy_elf_info;
+	}
 
 	if (gelf_getshdr(scn, &shdr) != &shdr) {
 		pr_err("failed to get %s section header\n", sname);
