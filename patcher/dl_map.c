@@ -41,7 +41,7 @@ uint64_t dl_map_end(const struct dl_map *dlm)
 uint64_t dlm_load_base(const struct dl_map *dlm)
 {
         if (elf_type_dyn(dlm->ei))
-		return dl_map_start(dlm);
+		return vma_start(dlm->exec_vma);
 	return 0;
 }
 
