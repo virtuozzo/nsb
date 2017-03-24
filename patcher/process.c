@@ -862,6 +862,13 @@ int process_collect_needed(struct process_ctx_s *ctx)
 			goto free_array;
 		}
 
+		if (!dlm->exec_vma) {
+			pr_err("%s dl_map object doesn't have executable VMA\n",
+					dlm->path);
+			err = -EFAULT;
+			goto free_array;
+		}
+
 		err = collect_needed(ctx, &ctx->objdeps, dlm);
 		if (err)
 			goto free_array;
