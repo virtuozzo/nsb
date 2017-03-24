@@ -107,8 +107,9 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 		ret = unw_step(c);
 		if (ret < 0) {
 			unw_get_reg(c, UNW_REG_IP, &ip);
-			pr_err ("unw_step failed: %d (ip=%lx, start ip=%lx)\n",
+			pr_warn ("unw_step failed: %d (ip=%lx, start ip=%lx)\n",
 					ret, ip, list_first_entry(&bt->calls, typeof(*bf), list)->ip);
+			ret = -EAGAIN;
 			goto free_backtrace;
 		}
 
@@ -118,8 +119,9 @@ static int do_backtrace(unw_cursor_t *c, struct backtrace_s *bt)
 
 		if (bt->depth > MAX_DEPTH) {
 			/* guard against bad unwind info in old libraries... */
-			pr_err ("too deeply nested ---assuming bogus unwind (start ip=%#lx)\n",
+			pr_warn ("too deeply nested ---assuming bogus unwind (start ip=%#lx)\n",
 				list_first_entry(&bt->calls, typeof(*bf), list)->ip);
+			ret = -EAGAIN;
 			goto free_backtrace;
 		}
 

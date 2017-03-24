@@ -482,7 +482,11 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 
 	err = pid_backtrace(t->pid, &bt);
 	if (err) {
-		pr_err("failed to unwind process %d stack\n", t->pid);
+		if (err != -EAGAIN)
+			pr_err("failed to unwind task %d stack\n", t->pid);
+		else
+			pr_warn("temporary failed to unwind task %d stack\n",
+					t->pid);
 		return err;
 	}
 
