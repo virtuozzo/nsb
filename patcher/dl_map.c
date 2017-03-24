@@ -135,8 +135,8 @@ static int collect_dl_map_vma(struct vma_area *vma, void *data)
 	}
 
 	vma->dlm = dlm;
-	list_add_tail(&vma->dl, &dlm->vmas);
-	return 0;
+
+	return add_dl_vma_sorted(dlm, vma);
 }
 
 int collect_dl_maps(const struct list_head *vmas, struct list_head *head)
