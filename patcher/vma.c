@@ -127,6 +127,21 @@ int add_vma_sorted(struct list_head *head, struct vma_area *vma)
 	return ret < 0 ? ret : -EFAULT;
 }
 
+int splice_vma_lists_sorted(struct list_head *from, struct list_head *to)
+{
+	struct vma_area *vma, *tmp;
+	int err = 0;
+
+	list_for_each_entry_safe(vma, tmp, from, list) {
+		list_del(&vma->list);
+
+		err = add_vma_sorted(to, vma);
+		if (err)
+			break;
+	}
+	return err;
+}
+
 static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
 {
 	struct vma_area *vma;
