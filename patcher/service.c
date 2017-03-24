@@ -122,9 +122,7 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 	if (err)
 		return err;
 
-	list_splice_tail(&service_vmas, &ctx->vmas);
-
-	return 0;
+	return splice_vma_lists_sorted(&service_vmas, &ctx->vmas);
 }
 
 static int service_disconnect(struct process_ctx_s *ctx, struct service *service)
