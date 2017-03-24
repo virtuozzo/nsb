@@ -136,8 +136,7 @@ static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area 
 	if (err)
 		return err;
 
-	list_add_tail(&vma->list, head);
-	return 0;
+	return add_vma_sorted(head, vma);
 }
 
 int iter_map_files(pid_t pid,
