@@ -81,6 +81,35 @@ destroy_ei:
 	return err;
 }
 
+static int add_dl_vma(struct vma_area *vma, void *data)
+{
+	struct vma_area *new_vma = data;
+
+	if (vma_start(vma) < vma_start(new_vma))
+		return 0;
+
+	list_add(&new_vma->dl, vma->dl.prev);
+	return 1;
+}
+
+static int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma)
+{
+	const struct vma_area *lvma;
+	int ret;
+
+	lvma = last_dl_vma(dlm);
+	if (!lvma || (vma_start(lvma) < vma_start(vma))) {
+		list_add_tail(&vma->dl, &dlm->vmas);
+		return 0;
+	}
+
+	ret = iterate_dl_vmas(dlm, vma, add_dl_vma);
+	if (ret == 1)
+		return 0;
+
+	return ret < 0 ? ret : -EFAULT;
+}
+
 static int collect_dl_map_vma(struct vma_area *vma, void *data)
 {
 	struct dl_info *dl_info = data;
