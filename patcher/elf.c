@@ -37,6 +37,7 @@ typedef struct elf_scn_s {
 struct elf_info_s {
 	char			*path;
 	Elf			*e;
+	int			fd;
 	size_t			shstrndx;
 	GElf_Ehdr		hdr;
 	Elf_Scn			*strtab;
@@ -285,7 +286,7 @@ end_elf:
 	return NULL;
 }
 
-static int elf_open(const char *path, Elf **elf)
+static int elf_open(const char *path, Elf **elf, int *desc)
 {
 	int fd;
 	Elf *e;
@@ -300,6 +301,7 @@ static int elf_open(const char *path, Elf **elf)
 	if (!e)
 		goto close_fd;
 
+	*desc = fd;
 	*elf = e;
 	return 0;
 
@@ -313,7 +315,7 @@ int elf_type_dyn(const struct elf_info_s *ei)
 	return ei->hdr.e_type == ET_DYN;
 }
 
-static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
+static struct elf_info_s *elf_alloc_info(Elf *e, const char *path, int fd)
 {
 	struct elf_info_s *ei;
 
@@ -328,6 +330,7 @@ static struct elf_info_s *elf_alloc_info(Elf *e, const char *path)
 	INIT_LIST_HEAD(&ei->needed);
 
 	ei->e = e;
+	ei->fd = fd;
 
 	return ei;
 
@@ -340,20 +343,23 @@ void elf_destroy_info(struct elf_info_s *ei)
 {
 	free(ei->soname);
 	(void)elf_end(ei->e);
+	close(ei->fd);
 	free(ei);
 }
 
 int is_elf_file(const char *path)
 {
-	int err;
+	int err, fd;
 	Elf *e;
 
 	if (!check_file_type(path, S_IFREG))
 		return 0;
 
-	err = elf_open(path, &e);
-	if (!err)
+	err = elf_open(path, &e, &fd);
+	if (!err) {
+		close(fd);
 		(void)elf_end(e);
+	}
 
 	return !err;
 }
@@ -362,16 +368,16 @@ int elf_create_info(const char *path, struct elf_info_s **elf_info)
 {
 	Elf *e = NULL;
 	struct elf_info_s *ei;
-	int err;
+	int err, fd;
 
-	err = elf_open(path, &e);
+	err = elf_open(path, &e, &fd);
 	if (err) {
 		pr_err("failed to open ELF %s\n", path);
 		return err;
 	}
 
 	err = -ENOMEM;
-	ei = elf_alloc_info(e, path);
+	ei = elf_alloc_info(e, path, fd);
 	if (!ei)
 		goto end_elf;
 
