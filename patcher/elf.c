@@ -198,7 +198,9 @@ static int create_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm)
 		if (!vma)
 			goto err;
 
-		list_add_tail(&vma->dl, &dlm->vmas);
+		err = add_dl_vma_sorted(dlm, vma);
+		if (err)
+			goto err;
 	}
 
 	if (list_empty(&dlm->vmas)) {
