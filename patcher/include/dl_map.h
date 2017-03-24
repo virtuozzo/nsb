@@ -11,6 +11,7 @@ struct dl_map {
 	const char		*path;
 	struct list_head	vmas;
 	struct elf_info_s	*ei;
+	const struct vma_area	*exec_vma;
 };
 
 const struct vma_area *first_dl_vma(const struct dl_map *dlm);

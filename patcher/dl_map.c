@@ -1,4 +1,5 @@
 #include <string.h>
+#include <sys/mman.h>
 
 #include "include/dl_map.h"
 #include "include/vma.h"
@@ -54,6 +55,7 @@ struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 
 	dlm->path = path;
 	dlm->ei = ei;
+	dlm->exec_vma = NULL;
 	INIT_LIST_HEAD(&dlm->vmas);
 	return dlm;
 }
@@ -96,6 +98,17 @@ static int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma)
 {
 	const struct vma_area *lvma;
 	int ret;
+
+	if (vma_prot(vma) & PROT_EXEC) {
+		if (dlm->exec_vma) {
+			pr_err("%s ELF has at least two executable mappings:\n",
+				dlm->path);
+			print_vma(dlm->exec_vma);
+			print_vma(vma);
+			return -EINVAL;
+		}
+		dlm->exec_vma = vma;
+	}
 
 	lvma = last_dl_vma(dlm);
 	if (!lvma || (vma_start(lvma) < vma_start(vma))) {
