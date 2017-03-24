@@ -60,7 +60,7 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	uint64_t patch_addr;
 	int err;
 
-	patch_addr = dl_map_start(PDLM(ctx)) + fj->patch_value;
+	patch_addr = dlm_load_base(PDLM(ctx)) + fj->patch_value;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
