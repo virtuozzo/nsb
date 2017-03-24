@@ -10,6 +10,15 @@ set_const_str(enums.ENUM_DW_AT)
 set_const_str(enums.ENUM_DW_FORM)
 set_const_str(dwarf_expr.DW_OP_name2opcode)
 
+def format_di_key(di_key):
+	suffix_map = {
+		STR.DW_TAG_compile_unit:	'::',
+		STR.DW_TAG_subprogram:		'()::',
+		STR.DW_TAG_variable:		'',
+	}
+	get_suffix = lambda tag: suffix_map.get(tag, '??')
+	return ''.join(name + get_suffix(tag) for name, tag in di_key)
+
 class ExprVisitor(dwarf_expr.GenericExprVisitor):
 	def __init__(self, structs):
 		super(ExprVisitor, self).__init__(structs)
