@@ -55,6 +55,7 @@ void free_vma(struct vma_area *vma);
 void free_vmas(struct list_head *head);
 int collect_vmas(pid_t pid, struct list_head *head);
 int collect_vmas_by_path(pid_t pid, struct list_head *head, const char *path);
+int add_vma_sorted(struct list_head *head, struct vma_area *vma);
 
 int iterate_vmas(const struct list_head *head, void *data,
 		 int (*actor)(struct vma_area *vma, void *data));

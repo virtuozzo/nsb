@@ -98,6 +98,35 @@ free_vma:
 	return ret;
 }
 
+static int add_vma(struct vma_area *vma, void *data)
+{
+	struct vma_area *new_vma = data;
+
+	if (vma_start(vma) < vma_start(new_vma))
+		return 0;
+
+	list_add(&new_vma->list, vma->list.prev);
+	return 1;
+}
+
+int add_vma_sorted(struct list_head *head, struct vma_area *vma)
+{
+	const struct vma_area *lvma;
+	int ret;
+
+	lvma = last_vma(head);
+	if (!lvma || (vma_start(lvma) < vma_start(vma))) {
+		list_add_tail(&vma->list, head);
+		return 0;
+	}
+
+	ret = iterate_vmas(head, vma, add_vma);
+	if (ret == 1)
+		return 0;
+
+	return ret < 0 ? ret : -EFAULT;
+}
+
 static int collect_vma(pid_t pid, struct list_head *head, const struct vma_area *template)
 {
 	struct vma_area *vma;
