@@ -207,10 +207,8 @@ static int __collect_vmas(pid_t pid, struct list_head *head,
 	return iter_map_files(pid, actor, &vmc);
 }
 
-static int collect_one_vma(pid_t pid, const struct vma_area *vma, void *data)
+void print_vma(const struct vma_area *vma)
 {
-	struct vma_collect *vmc = data;
-
 	pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
 			vma_start(vma), vma_end(vma),
 			(vma_prot(vma) & PROT_READ) ? 'r' : '-',
@@ -219,6 +217,13 @@ static int collect_one_vma(pid_t pid, const struct vma_area *vma, void *data)
 			(vma_flags(vma) == MAP_SHARED) ? 's' : 'p',
 			vma_offset(vma),
 			(vma->path) ? vma->path : "");
+}
+
+static int collect_one_vma(pid_t pid, const struct vma_area *vma, void *data)
+{
+	struct vma_collect *vmc = data;
+
+	print_vma(vma);
 
 	return collect_vma(pid, vmc->head, vma);
 }

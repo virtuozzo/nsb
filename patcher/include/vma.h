@@ -73,4 +73,6 @@ int iter_map_files(pid_t pid,
 
 int splice_vma_lists_sorted(struct list_head *from, struct list_head *to);
 
+void print_vma(const struct vma_area *vma);
+
 #endif /* __PATCHER_VMA_H__ */
