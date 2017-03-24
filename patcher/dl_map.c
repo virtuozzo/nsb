@@ -94,7 +94,7 @@ static int add_dl_vma(struct vma_area *vma, void *data)
 	return 1;
 }
 
-static int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma)
+int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma)
 {
 	const struct vma_area *lvma;
 	int ret;

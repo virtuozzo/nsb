@@ -38,4 +38,6 @@ struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path);
 int iterate_dl_vmas(const struct dl_map *dlm, void *data,
 		    int (*actor)(struct vma_area *vma, void *data));
 
+int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma);
+
 #endif /* __PATCHER_DL_MAP_H__ */
