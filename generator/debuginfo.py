@@ -31,10 +31,10 @@ def get_die_name(die):
 	assert attr.form in [STR.DW_FORM_string, STR.DW_FORM_strp], attr.form
 	return attr.value
 
-def get_die_key(die, demangler):
+def get_die_key(die):
 	result = []
 	while die:
-		sym_name = demangler(get_die_name(die))
+		sym_name = get_die_name(die)
 		result.append((sym_name, die.tag))
 		die = die.get_parent()
 
@@ -100,8 +100,7 @@ class DebugInfo(object):
 		die = self._die_pos[idx][1]
 		return die if die and die.offset <= pos < die.offset + die.size else None
 
-def read(elf, sym_names=None,
-		demangler = lambda s: s):
+def read(elf):
 	if not elf.has_dwarf_info():
 		return None
 	dwarf_info = elf.get_dwarf_info()
@@ -119,15 +118,11 @@ def read(elf, sym_names=None,
 		if STR.DW_AT_declaration in die.attributes:
 			return False
 
-		if sym_names is None:
-			return True
-
-		name = get_die_name(die)
-		return demangler(name) in sym_names
+		return True
 
 	def walk(die):
 		if should_process(die):
-			die_key = get_die_key(die, demangler)
+			die_key = get_die_key(die)
 			assert die_key not in result
 
 			sym_addr = get_addr(die, cu.structs)
