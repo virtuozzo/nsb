@@ -226,28 +226,23 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	return unload_patch(ctx);
 }
 
-static int create_patch(const char *patchfile, struct patch_s **patch)
+static int create_patch(struct elf_info_s *ei, struct patch_s **patch)
 {
 	int err;
-	struct elf_info_s *ei;
 	struct patch_s *p;
 
 	p = xmalloc(sizeof(*p));
 	if (!p)
 		return -ENOMEM;
 
-	err = parse_elf_binpatch(&p->pi, patchfile);
-	if (err)
-		goto free_patch;
-
-	err = elf_create_info(p->pi.path, &ei);
+	err = elf_info_binpatch(&p->pi, ei);
 	if (err)
 		goto free_patch;
 
 	err = -ENOMEM;
 	p->patch_dlm = alloc_dl_map(ei, p->pi.path);
 	if (!p->patch_dlm)
-		goto destroy_elf;
+		goto free_patch;
 
 	INIT_LIST_HEAD(&p->rela_plt);
 	INIT_LIST_HEAD(&p->rela_dyn);
@@ -256,8 +251,6 @@ static int create_patch(const char *patchfile, struct patch_s **patch)
 
 	return 0;
 
-destroy_elf:
-	elf_destroy_info(ei);
 free_patch:
 	free(p);
 	return err;
@@ -266,12 +259,21 @@ free_patch:
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;
+	struct elf_info_s *ei;
 
-	err = create_patch(ctx->patchfile, &ctx->patch);
+	err = elf_create_info(ctx->patchfile, &ei);
 	if (err)
 		return err;
 
+	err = create_patch(ei, &ctx->patch);
+	if (err)
+		goto destroy_elf;
+
 	return 0;
+
+destroy_elf:
+	elf_destroy_info(ei);
+	return err;
 }
 
 int process_resume(struct process_ctx_s *ctx)
