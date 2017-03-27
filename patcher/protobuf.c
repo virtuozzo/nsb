@@ -164,27 +164,11 @@ free_old_bid:
 	goto free_unpacked;
 }
 
-int parse_protobuf_binpatch(struct patch_info_s *patch_info, const char *patchfile)
-{
-	int err = -ENOMEM;
-	void *data;
-	ssize_t size;
-
-	size = read_protobuf_binpatch(patchfile, &data);
-	if (size < 0)
-		return size;
-
-	err = unpack_protobuf_binpatch(patch_info, data, size);
-
-	free(data);
-	return err;
-}
-
 char *protobuf_get_bid(const char *patchfile)
 {
 	char *bid = NULL;
 	BinPatch *bp;
-	void *data;
+	void *data = NULL;
 	ssize_t res;
 
 	res = read_protobuf_binpatch(patchfile, &data);

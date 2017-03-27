@@ -230,28 +230,12 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	return unload_patch(ctx);
 }
 
-static int init_patch_info(struct patch_info_s *pi, const char *patchfile)
-{
-	int is_elf;
-
-	is_elf = is_elf_file(patchfile);
-	if (is_elf < 0) {
-		pr_err("failed to get patch information\n");
-		return is_elf;
-	}
-
-	if (is_elf)
-		return parse_elf_binpatch(pi, patchfile);
-	else
-		return parse_protobuf_binpatch(pi, patchfile);
-}
-
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;
 	struct dl_map *dlm;
 
-	err = init_patch_info(PI(ctx), ctx->patchfile);
+	err = parse_elf_binpatch(PI(ctx), ctx->patchfile);
 	if (err)
 		return err;
 
