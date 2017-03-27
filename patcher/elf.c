@@ -15,6 +15,7 @@
 #include "include/protobuf.h"
 #include "include/util.h"
 #include "include/dl_map.h"
+#include "include/patch.h"
 
 #define ELF_MIN_ALIGN		PAGE_SIZE
 
@@ -24,8 +25,6 @@
 #define ELF_PAGESTART(_v)	((_v) & ~(unsigned long)(ELF_MIN_ALIGN-1))
 #define ELF_PAGEOFFSET(_v)	((_v) & (ELF_MIN_ALIGN-1))
 #define ELF_PAGEALIGN(_v)	(((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
-
-#define VZPATCH_SECTION		"vzpatch"
 
 typedef struct elf_scn_s {
 	Elf_Scn		*scn;

@@ -889,6 +889,39 @@ free_array:
 	return err;
 }
 
+static int check_vzpatch(const struct dl_map *dlm, void *data)
+{
+	struct process_ctx_s *ctx = data;
+	struct patch_s *patch;
+	int err;
+
+	if (!dlm) {
+		pr_err("VMA without dl_map link\n");
+		return -EINVAL;
+	}
+	if (!dlm->ei) {
+		pr_err("Dl map object doesn't have ELF info structure\n");
+		return -EFAULT;
+	}
+
+	if (!elf_has_section(dlm->ei, VZPATCH_SECTION))
+		return 0;
+
+	err = create_patch_by_dlm(ctx, dlm, &patch);
+	if (err)
+		return err;
+
+	list_add_tail(&patch->list, &ctx->applied_patches);
+	return 0;
+}
+
+static int collect_patches(struct process_ctx_s *ctx)
+{
+	pr_info("= Collecting applied patches:\n");
+
+	return iterate_dl_maps(&ctx->dl_maps, ctx, check_vzpatch);
+}
+
 int process_collect_vmas(struct process_ctx_s *ctx)
 {
 	int err;
@@ -900,6 +933,10 @@ int process_collect_vmas(struct process_ctx_s *ctx)
 	}
 
 	err = collect_dl_maps(&ctx->vmas, &ctx->dl_maps);
+	if (err)
+		return err;
+
+	err = collect_patches(ctx);
 	if (err)
 		return err;
 

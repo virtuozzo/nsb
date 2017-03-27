@@ -33,6 +33,7 @@ struct process_ctx_s process_context = {
 	.dl_maps = LIST_HEAD_INIT(process_context.dl_maps),
 	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
 	.threads = LIST_HEAD_INIT(process_context.threads),
+	.applied_patches = LIST_HEAD_INIT(process_context.applied_patches),
 	.remote_vma = {
 		.list = LIST_HEAD_INIT(process_context.remote_vma.list),
 		.length = 4096,
@@ -239,6 +240,56 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 	return unload_patch(ctx);
+}
+
+int patch_set_target_dlm(struct process_ctx_s *ctx, struct patch_s *p)
+{
+	const struct dl_map *dlm;
+	const char *bid = p->pi.old_bid;
+
+	dlm = find_dl_map_by_bid(&ctx->dl_maps, bid);
+	if (!dlm) {
+		pr_err("failed to find vma with Build ID %s in process %d\n",
+				bid, ctx->pid);
+		return -ENOENT;
+	}
+
+	p->target_dlm = dlm;
+	return 0;
+}
+
+int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
+			struct patch_s **patch)
+{
+	struct patch_s *p;
+	int err;
+
+	pr_info("  %s: %s\n", dlm->path, elf_bid(dlm->ei));
+
+	p = xmalloc(sizeof(*p));
+	if (!p)
+		return -ENOMEM;
+
+	err = elf_info_binpatch(&p->pi, dlm->ei);
+	if (err)
+		goto free_patch;
+
+	err = patch_set_target_dlm(ctx, p);
+	if (err)
+		goto free_patch;
+
+	INIT_LIST_HEAD(&p->rela_plt);
+	INIT_LIST_HEAD(&p->rela_dyn);
+	p->patch_dlm = dlm;
+
+	print_dl_vmas(p->patch_dlm);
+
+	*patch = p;
+	return 0;
+
+free_patch:
+	free(p);
+	return err;
 }
 
 static int create_patch(struct elf_info_s *ei, struct patch_s **patch)

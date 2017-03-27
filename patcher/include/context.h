@@ -43,6 +43,7 @@ struct patch_s {
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
 	const struct dl_map	*patch_dlm;
+	struct list_head	list;
 };
 
 struct ctx_dep {
@@ -60,6 +61,7 @@ struct process_ctx_s {
 	struct service		service;
 	struct list_head	vmas;
 	struct list_head	dl_maps;
+	struct list_head	applied_patches;
 	struct vma_area		remote_vma;
 	struct list_head	objdeps;
 	struct list_head	threads;
