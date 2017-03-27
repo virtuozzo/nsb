@@ -8,8 +8,6 @@
 
 int elf_library_status(void);
 int is_elf_file(const char *path);
-struct patch_info_s;
-int parse_elf_binpatch(struct patch_info_s *pi, const char *patchfile);
 
 struct process_ctx_s;
 struct dl_map;
@@ -19,6 +17,7 @@ int unload_elf(struct process_ctx_s *ctx, const struct dl_map *dlm);
 struct elf_info_s;
 int elf_create_info(const char *path, struct elf_info_s **elf_info);
 void elf_destroy_info(struct elf_info_s *ei);
+struct patch_info_s;
 int elf_info_binpatch(struct patch_info_s *pi, struct elf_info_s *ei);
 
 char *elf_build_id(const char *path);

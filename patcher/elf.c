@@ -1313,27 +1313,3 @@ free_data:
 	free(data);
 	return err;
 }
-
-int parse_elf_binpatch(struct patch_info_s *pi, const char *patchfile)
-{
-	struct elf_info_s *ei;
-	int err;
-
-	err = elf_create_info(patchfile, &ei);
-	if (err)
-		return err;
-
-	err = elf_info_binpatch(pi, ei);
-	if (err)
-		goto destroy_elf;
-
-	if (strcmp(elf_bid(ei), pi->new_bid)) {
-		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				patchfile, elf_bid(ei), pi->new_bid);
-		err = -EINVAL;
-	}
-
-destroy_elf:
-	elf_destroy_info(ei);
-	return err;
-}
