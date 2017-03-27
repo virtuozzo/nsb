@@ -53,6 +53,7 @@ struct ctx_dep {
 struct process_ctx_s {
 	pid_t			pid;
 	const char		*patchfile;
+	int			dry_run;
 	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
 	struct service		service;

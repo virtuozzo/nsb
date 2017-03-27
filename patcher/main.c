@@ -53,7 +53,7 @@ static int cmd_patch_process(const struct options *o)
 		pr_msg("Error: patch file has to be provided\n");
 		return 1;
 	}
-	return patch_process(o->pid, o->patch_path);
+	return patch_process(o->pid, o->patch_path, o->dry_run);
 }
 
 static int cmd_check_process(const struct options *o)

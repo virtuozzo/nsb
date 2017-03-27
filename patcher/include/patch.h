@@ -13,7 +13,7 @@ struct patch_ops_s {
 	int (*revert_patch)(struct process_ctx_s *ctx);
 };
 
-int patch_process(pid_t pid, const char *patchfile);
+int patch_process(pid_t pid, const char *patchfile, int dry_run);
 int check_process(pid_t pid, const char *patchfile);
 
 #endif /* __PATCHER_PATCH_H__ */

@@ -315,7 +315,7 @@ struct patch_ops_s patch_jump_ops = {
 };
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
-			const char *patchfile)
+			const char *patchfile, int dry_run)
 {
 	if (elf_library_status())
 		return -1;
@@ -325,6 +325,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	ctx->pid = pid;
 	ctx->patchfile = patchfile;
+	ctx->dry_run = dry_run;
 
 	if (init_patch(ctx))
 		return 1;
@@ -337,12 +338,12 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	return 0;
 }
 
-int patch_process(pid_t pid, const char *patchfile)
+int patch_process(pid_t pid, const char *patchfile, int dry_run)
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;
 
-	err = init_context(ctx, pid, patchfile);
+	err = init_context(ctx, pid, patchfile, dry_run);
 	if (err)
 		return err;
 
