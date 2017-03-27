@@ -1328,6 +1328,12 @@ int parse_elf_binpatch(struct patch_info_s *pi, const char *patchfile)
 	if (err)
 		goto destroy_elf;
 
+	if (strcmp(elf_bid(ei), pi->new_bid)) {
+		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
+				patchfile, elf_bid(ei), pi->new_bid);
+		err = -EINVAL;
+	}
+
 destroy_elf:
 	elf_destroy_info(ei);
 	return err;

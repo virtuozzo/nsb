@@ -271,14 +271,6 @@ static int init_patch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 
-	if (strcmp(elf_bid(PDLM(ctx)->ei), PI(ctx)->new_bid)) {
-		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				PI(ctx)->path, elf_bid(PDLM(ctx)->ei),
-				PI(ctx)->new_bid);
-		return -EINVAL;
-
-	}
-
 	return 0;
 }
 
