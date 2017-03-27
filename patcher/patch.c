@@ -25,10 +25,6 @@
 #include "include/dl_map.h"
 
 struct process_ctx_s process_context = {
-	.p = {
-		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
-		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
-	},
 	.service = {
 		.name = "libnsb_service.so",
 		.sock = -1,
@@ -230,32 +226,58 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	return unload_patch(ctx);
 }
 
+static int create_patch(const char *patchfile, struct patch_s **patch)
+{
+	int err;
+	struct elf_info_s *ei;
+	struct patch_s *p;
+
+	p = xmalloc(sizeof(*p));
+	if (!p)
+		return -ENOMEM;
+
+	err = parse_elf_binpatch(&p->pi, patchfile);
+	if (err)
+		goto free_patch;
+
+	err = elf_create_info(p->pi.path, &ei);
+	if (err)
+		goto free_patch;
+
+	err = -ENOMEM;
+	p->patch_dlm = alloc_dl_map(ei, p->pi.path);
+	if (!p->patch_dlm)
+		goto destroy_elf;
+
+	INIT_LIST_HEAD(&p->rela_plt);
+	INIT_LIST_HEAD(&p->rela_dyn);
+
+	*patch = p;
+
+	return 0;
+
+destroy_elf:
+	elf_destroy_info(ei);
+free_patch:
+	free(p);
+	return err;
+}
+
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;
-	struct dl_map *dlm;
 
-	err = parse_elf_binpatch(PI(ctx), ctx->patchfile);
+	err = create_patch(ctx->patchfile, &ctx->patch);
 	if (err)
 		return err;
 
-	dlm = alloc_dl_map(NULL, PI(ctx)->path);
-	if (!dlm)
-		return -ENOMEM;
-
-	err = elf_create_info(dlm->path, &dlm->ei);
-	if (err)
-		return err;
-
-	if (strcmp(elf_bid(dlm->ei), PI(ctx)->new_bid)) {
+	if (strcmp(elf_bid(PDLM(ctx)->ei), PI(ctx)->new_bid)) {
 		pr_err("BID of %s doesn't match patch BID: %s != %s\n",
-				PI(ctx)->path, elf_bid(dlm->ei),
+				PI(ctx)->path, elf_bid(PDLM(ctx)->ei),
 				PI(ctx)->new_bid);
 		return -EINVAL;
 
 	}
-
-	ctx->p.patch_dlm = dlm;
 
 	return 0;
 }
@@ -398,4 +420,3 @@ int check_process(pid_t pid, const char *patchfile)
 
 	return !find_dl_map_by_bid(&ctx->dl_maps, bid);
 }
-

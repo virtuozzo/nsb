@@ -62,12 +62,12 @@ struct process_ctx_s {
 	struct vma_area		remote_vma;
 	struct list_head	objdeps;
 	struct list_head	threads;
-	struct patch_s		p;
+	struct patch_s		*patch;
 };
 
-#define P(ctx)			(&ctx->p)
-#define PI(ctx)			(&ctx->p.pi)
-#define PDLM(ctx)		(ctx->p.patch_dlm)
-#define TDLM(ctx)		(ctx->p.target_dlm)
+#define P(ctx)			ctx->patch
+#define PI(ctx)			(&P(ctx)->pi)
+#define PDLM(ctx)		P(ctx)->patch_dlm
+#define TDLM(ctx)		P(ctx)->target_dlm
 
 #endif
