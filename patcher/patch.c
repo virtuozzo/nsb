@@ -57,18 +57,17 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 {
 	uint64_t patch_addr;
-	int err;
 
 	patch_addr = dlm_load_base(PDLM(ctx)) + fj->patch_value;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
-
-	err = process_write_data(ctx, fj->func_addr,
-				 fj->func_jump, sizeof(fj->func_jump));
-	if (err)
-		return err;
 	pr_info("      jump: %#lx ---> %#lx\n", fj->func_addr, patch_addr);
-	return 0;
+
+	if (ctx->dry_run)
+		return 0;
+
+	return process_write_data(ctx, fj->func_addr,
+				  fj->func_jump, sizeof(fj->func_jump));
 }
 
 static int apply_func_jumps(struct process_ctx_s *ctx)

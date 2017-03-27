@@ -163,6 +163,9 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 
 	(void)iterate_dl_vmas(dlm, NULL, print_dl_munmap);
 
+	if (ctx->dry_run)
+		return 0;
+
 	if (ctx->service.loaded)
 		return service_munmap_dlm(ctx, &ctx->service, dlm);
 
@@ -192,6 +195,9 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 	struct vma_area *vma;
 
 	(void)iterate_dl_vmas(dlm, NULL, print_dl_mmap);
+
+	if (ctx->dry_run)
+		return 0;
 
 	if (ctx->service.loaded)
 		return service_mmap_dlm(ctx, &ctx->service, dlm);
