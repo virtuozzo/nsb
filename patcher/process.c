@@ -156,11 +156,15 @@ static int print_dl_munmap(struct vma_area *vma, void *data)
 	return 0;
 }
 
+static int unmap_dl_vma(struct vma_area *vma, void *data)
+{
+	struct process_ctx_s *ctx = data;
+
+	return process_unmap_vma(ctx, vma);
+}
+
 int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 {
-	struct vma_area *vma, *tmp;
-	int err;
-
 	(void)iterate_dl_vmas(dlm, NULL, print_dl_munmap);
 
 	if (ctx->dry_run)
@@ -169,12 +173,7 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 	if (ctx->service.loaded)
 		return service_munmap_dlm(ctx, &ctx->service, dlm);
 
-	list_for_each_entry_safe(vma, tmp, &dlm->vmas, dl) {
-		err = process_unmap_vma(ctx, vma);
-		if (err)
-			return err;
-	}
-	return 0;
+	return iterate_dl_vmas(dlm, ctx, unmap_dl_vma);
 }
 
 static int print_dl_mmap(struct vma_area *vma, void *data)
