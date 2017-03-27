@@ -1315,63 +1315,20 @@ free_data:
 	return err;
 }
 
-int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
+int parse_elf_binpatch(struct patch_info_s *pi, const char *patchfile)
 {
 	struct elf_info_s *ei;
-	Elf_Scn *scn;
-	Elf_Data *edata;
-	GElf_Shdr shdr;
 	int err;
-	const char *sname = VZPATCH_SECTION;
-	void *data;
 
 	err = elf_create_info(patchfile, &ei);
 	if (err)
 		return err;
 
-	err = -EINVAL;
-
-	scn = elf_get_section_by_name(ei, sname);
-	if (!scn) {
-		pr_err("failed to find \"%s\" section\n", sname);
-		goto destroy_elf_info;
-	}
-
-	if (gelf_getshdr(scn, &shdr) != &shdr) {
-		pr_err("failed to get %s section header\n", sname);
-		goto destroy_elf_info;
-	}
-
-	if (!shdr.sh_size) {
-		pr_err("section %s has 0 size\n", sname);
-		goto destroy_elf_info;
-	}
-
-	edata = elf_getdata(scn, NULL);
-	if (!edata) {
-		pr_err("%s section doesn't have data\n", sname);
-		err = -ENODATA;
-		goto destroy_elf_info;
-	}
-
-	err = -ENOMEM;
-	data = xzalloc(edata->d_size);
-	if (!data)
-		goto destroy_elf_info;
-
-	err = unpack_protobuf_binpatch(binpatch, edata->d_buf, edata->d_size);
+	err = elf_info_binpatch(pi, ei);
 	if (err)
-		goto free_data;
+		goto destroy_elf;
 
-	if (!binpatch->path) {
-		binpatch->path = strdup(patchfile);
-		if (!binpatch->path)
-			err = -ENOMEM;
-	}
-
-free_data:
-	free(data);
-destroy_elf_info:
+destroy_elf:
 	elf_destroy_info(ei);
 	return err;
 }
