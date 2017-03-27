@@ -22,8 +22,22 @@ void print_usage(void)
 {
 	fprintf(stderr, "\n"
 		"Usage:\n"
-		"  nsb patch -p PID -f patch-file [options]\n"
+		"  nsb COMMAND OPTIONS\n"
 		"\n");
+	fprintf(stderr, "Commands:\n"
+		"  patch   - apply patch to process\n"
+		"  check   - check whether patch is applied to process\n");
+
+	fprintf(stderr, "Options:\n"
+		"  -p, --pid       - Process PID\n"
+		"  -f, --filename  - Patch file path\n"
+		"  -v, --verbosity - Log level verbosity\n"
+		"                      0 - Silent (default)\n"
+		"                      1 - Error messages only\n"
+		"                      2 - Error and warning messages\n"
+		"                      3 - Error, warning and information messages\n"
+		"                      4 - Error, warning, information and debug messages\n"
+	       );
 }
 
 static int cmd_patch_process(const struct options *o)
@@ -69,10 +83,11 @@ void *cmd_handler(char **argv)
 
 static int parse_options(int argc, char **argv, struct options *o)
 {
-	static const char short_opts[] = "p:v:f:";
+	static const char short_opts[] = "hp:v:f:";
 	static struct option long_opts[] = {
+		{ "help",			no_argument,		0, 'h'	},
 		{ "pid",			required_argument,	0, 'p'	},
-		{ "log-level",			required_argument,	0, 'v'	},
+		{ "verbosity",			required_argument,	0, 'v'	},
 		{ "filename",			required_argument,	0, 'f'	},
 		{ },
 	};
@@ -84,6 +99,9 @@ static int parse_options(int argc, char **argv, struct options *o)
 			break;
 
 		switch (opt) {
+		case 'h':
+			print_usage();
+			exit(0);
 		case 'p':
 			o->pid = atoi(optarg);
 			if (o->pid <= 0)
