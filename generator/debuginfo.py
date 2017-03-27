@@ -41,7 +41,9 @@ def get_die_key(die):
 	result.reverse()
 	return tuple(result)
 
-def get_addr(die, structs):
+def get_die_addr(die):
+	structs = die.cu.structs
+
 	if die.tag == STR.DW_TAG_subprogram:
 		if STR.DW_AT_entry_pc in die.attributes:
 			raise Exception("DW_AT_entry_pc is not supported")
@@ -125,7 +127,7 @@ def read(elf):
 			die_key = get_die_key(die)
 			assert die_key not in result
 
-			sym_addr = get_addr(die, cu.structs)
+			sym_addr = get_die_addr(die)
 			if sym_addr is not None:
 				result[die_key] = sym_addr
 
