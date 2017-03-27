@@ -225,8 +225,8 @@ const struct dl_map *find_dl_map_by_addr(const struct list_head *dl_maps,
 	return find_dl_map(dl_maps, &addr, compare_addr);
 }
 
-static int iterate_dl_maps(const struct list_head *head, void *data,
-			   int (*actor)(const struct dl_map *dlm, void *data))
+int iterate_dl_maps(const struct list_head *head, void *data,
+		    int (*actor)(const struct dl_map *dlm, void *data))
 {
 	int ret;
 	struct dl_map *dlm;
