@@ -102,42 +102,33 @@ class DebugInfo(object):
 		die = self._die_pos[idx][1]
 		return die if die and die.offset <= pos < die.offset + die.size else None
 
-def read(elf):
-	if not elf.has_dwarf_info():
-		return None
-	dwarf_info = elf.get_dwarf_info()
+	def get_die_key_addrs(self):
+		sym_tags = [STR.DW_TAG_subprogram, STR.DW_TAG_variable]
+		def should_process(die):
+			if die.tag not in sym_tags:
+				return False
 
-	result = {}
-	sym_tags = [STR.DW_TAG_subprogram, STR.DW_TAG_variable]
+			if STR.DW_AT_abstract_origin in die.attributes:
+				return False
 
-	def should_process(die):
-		if die.tag not in sym_tags:
-			return False
+			if STR.DW_AT_declaration in die.attributes:
+				return False
 
-		if STR.DW_AT_abstract_origin in die.attributes:
-			return False
+			return True
 
-		if STR.DW_AT_declaration in die.attributes:
-			return False
+		result = {}
+		for _, die in self._die_pos:
+			if not (die and should_process(die)):
+				continue
 
-		return True
-
-	def walk(die):
-		if should_process(die):
 			die_key = get_die_key(die)
-			assert die_key not in result
+			if die_key in result:
+				print(die_key)
+				raise Exception("Duplicate DIE key")
 
 			sym_addr = get_die_addr(die)
 			if sym_addr is not None:
 				result[die_key] = sym_addr
 
-		for child_die in die.iter_children():
-			walk(child_die)
-
-	cu_list = dwarf_info.iter_CUs()
-	for cu in cu_list:
-		top_die = cu.get_top_DIE()
-		walk(top_die)
-
-	return result
+		return result
 
