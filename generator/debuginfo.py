@@ -41,6 +41,15 @@ def get_die_name(die):
 	return attr.value
 
 def get_die_key(die):
+	if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
+		return
+
+	if STR.DW_AT_abstract_origin in die.attributes:
+		return
+
+	if STR.DW_AT_declaration in die.attributes:
+		return
+
 	result = []
 	while die:
 		sym_name = get_die_name(die)
@@ -112,25 +121,15 @@ class DebugInfo(object):
 		return die if die and die.offset <= pos < die.offset + die.size else None
 
 	def get_die_key_addrs(self):
-		sym_tags = [STR.DW_TAG_subprogram, STR.DW_TAG_variable]
-		def should_process(die):
-			if die.tag not in sym_tags:
-				return False
-
-			if STR.DW_AT_abstract_origin in die.attributes:
-				return False
-
-			if STR.DW_AT_declaration in die.attributes:
-				return False
-
-			return True
-
 		result = {}
 		for _, die in self._die_pos:
-			if not (die and should_process(die)):
+			if not die:
 				continue
 
 			die_key = get_die_key(die)
+			if not die_key:
+				continue
+
 			if die_key in result:
 				print(die_key)
 				raise Exception("Duplicate DIE key")
