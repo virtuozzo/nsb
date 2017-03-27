@@ -42,7 +42,6 @@ struct patch_s {
 	const struct dl_map	*target_dlm;
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
-	struct list_head	objdeps;
 	struct dl_map		*patch_dlm;
 };
 

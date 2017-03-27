@@ -110,7 +110,7 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 	if (value != -ENOENT)
 		return value;
 
-	return __find_dym_sym(&P(ctx)->objdeps, NULL, es, es_s_value(es));
+	return __find_dym_sym(&ctx->objdeps, NULL, es, es_s_value(es));
 }
 
 static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol *es)

@@ -28,7 +28,6 @@ struct process_ctx_s process_context = {
 	.p = {
 		.rela_plt = LIST_HEAD_INIT(process_context.p.rela_plt),
 		.rela_dyn = LIST_HEAD_INIT(process_context.p.rela_dyn),
-		.objdeps = LIST_HEAD_INIT(process_context.p.objdeps),
 	},
 	.service = {
 		.name = "libnsb_service.so",
