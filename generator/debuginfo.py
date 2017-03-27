@@ -52,6 +52,8 @@ def get_die_key(die):
 
 	result = []
 	while die:
+		if die.tag == STR.DW_TAG_lexical_block:
+			return
 		sym_name = get_die_name(die)
 		result.append((sym_name, die.tag))
 		die = die.get_parent()
