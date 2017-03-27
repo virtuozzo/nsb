@@ -172,9 +172,6 @@ static int nsb_service_cmd_do_mmap(int fd,
 				mi->prot, mi->flags, mi->offset);
 		return -errno;
 	}
-	printf("  - mmap: %#lx-%#lx, off: %#lx, prot: %x, flags: %x\n",
-			mai->addr, mai->addr + mai->length,
-			mi->offset, mi->prot, mi->flags);
 	return 0;
 }
 
