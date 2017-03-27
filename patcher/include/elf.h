@@ -9,6 +9,7 @@
 int elf_library_status(void);
 int is_elf_file(const char *path);
 struct patch_info_s;
+int elf_info_binpatch(struct patch_info_s *pi, struct elf_info_s *ei);
 int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile);
 
 struct process_ctx_s;

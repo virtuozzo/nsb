@@ -1265,6 +1265,56 @@ int elf_reloc_sym(struct extern_symbol *es, uint64_t address)
 	return -ENOTSUP;
 }
 
+int elf_info_binpatch(struct patch_info_s *pi, struct elf_info_s *ei)
+{
+	Elf_Scn *scn;
+	Elf_Data *edata;
+	GElf_Shdr shdr;
+	int err = -EINVAL;
+	const char *sname = VZPATCH_SECTION;
+	void *data;
+
+	scn = elf_get_section_by_name(ei, sname);
+	if (!scn) {
+		pr_err("failed to find \"%s\" section\n", sname);
+		return err;
+	}
+
+	if (gelf_getshdr(scn, &shdr) != &shdr) {
+		pr_err("failed to get %s section header\n", sname);
+		return err;
+	}
+
+	if (!shdr.sh_size) {
+		pr_err("section %s has 0 size\n", sname);
+		return err;
+	}
+
+	edata = elf_getdata(scn, NULL);
+	if (!edata) {
+		pr_err("%s section doesn't have data\n", sname);
+		return -ENODATA;
+	}
+
+	data = xzalloc(edata->d_size);
+	if (!data)
+		return -ENOMEM;
+
+	err = unpack_protobuf_binpatch(pi, edata->d_buf, edata->d_size);
+	if (err)
+		goto free_data;
+
+	if (!pi->path) {
+		pi->path = strdup(ei->path);
+		if (!pi->path)
+			err = -ENOMEM;
+	}
+
+free_data:
+	free(data);
+	return err;
+}
+
 int parse_elf_binpatch(struct patch_info_s *binpatch, const char *patchfile)
 {
 	struct elf_info_s *ei;
