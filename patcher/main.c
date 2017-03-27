@@ -16,6 +16,7 @@ struct options {
 	const char	*patch_path;
 	int		verbosity;
 	int		(*handler)(const struct options *o);
+	int		dry_run;
 };
 
 void print_usage(void)
@@ -31,6 +32,7 @@ void print_usage(void)
 	fprintf(stderr, "Options:\n"
 		"  -p, --pid       - Process PID\n"
 		"  -f, --filename  - Patch file path\n"
+		"      --dry-run   - Do not perform any actual changes to process\n"
 		"  -v, --verbosity - Log level verbosity\n"
 		"                      0 - Silent (default)\n"
 		"                      1 - Error messages only\n"
@@ -85,10 +87,11 @@ static int parse_options(int argc, char **argv, struct options *o)
 {
 	static const char short_opts[] = "hp:v:f:";
 	static struct option long_opts[] = {
-		{ "help",			no_argument,		0, 'h'	},
-		{ "pid",			required_argument,	0, 'p'	},
-		{ "verbosity",			required_argument,	0, 'v'	},
-		{ "filename",			required_argument,	0, 'f'	},
+		{ "help",		no_argument,		0, 'h'	},
+		{ "pid",		required_argument,	0, 'p'	},
+		{ "verbosity",		required_argument,	0, 'v'	},
+		{ "filename",		required_argument,	0, 'f'	},
+		{ "dry-run",		no_argument,		0, 1000	},
 		{ },
 	};
 	int opt, idx = -1;
@@ -114,6 +117,9 @@ static int parse_options(int argc, char **argv, struct options *o)
 			break;
 		case 'f':
 			o->patch_path = optarg;
+			break;
+		case 1000:
+			o->dry_run = 1;
 			break;
 		case '?':
 		default:
