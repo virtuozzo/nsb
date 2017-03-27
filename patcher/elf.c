@@ -14,7 +14,6 @@
 #include "include/xmalloc.h"
 #include "include/protobuf.h"
 #include "include/util.h"
-#include "include/vma.h"
 #include "include/dl_map.h"
 
 #define ELF_MIN_ALIGN		PAGE_SIZE
@@ -263,7 +262,7 @@ int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
 	return process_mmap_dl_map(ctx, dlm);
 }
 
-int unload_elf(struct process_ctx_s *ctx, struct dl_map *dlm)
+int unload_elf(struct process_ctx_s *ctx, const struct dl_map *dlm)
 {
 	return process_munmap_dl_map(ctx, dlm);
 }

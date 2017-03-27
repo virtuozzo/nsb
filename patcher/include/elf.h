@@ -14,7 +14,7 @@ int parse_elf_binpatch(struct patch_info_s *pi, const char *patchfile);
 struct process_ctx_s;
 struct dl_map;
 int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint);
-int unload_elf(struct process_ctx_s *ctx, struct dl_map *dlm);
+int unload_elf(struct process_ctx_s *ctx, const struct dl_map *dlm);
 
 struct elf_info_s;
 int elf_create_info(const char *path, struct elf_info_s **elf_info);
