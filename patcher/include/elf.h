@@ -29,6 +29,8 @@ char *elf_get_soname(struct elf_info_s *ei);
 int elf_soname_needed(struct elf_info_s *ei, const char *soname);
 const struct list_head *elf_needed_list(struct elf_info_s *ei);
 
+int elf_has_section(struct elf_info_s *ei, const char *name);
+
 struct elf_needed {
 	struct list_head        list;
 	char                    *needed;

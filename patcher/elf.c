@@ -467,6 +467,11 @@ static Elf_Scn *elf_get_section_by_name(struct elf_info_s *ei, const char *name)
 	return find_section(ei, scn_compare_name, name);
 }
 
+int elf_has_section(struct elf_info_s *ei, const char *name)
+{
+	return !!elf_get_section_by_name(ei, name);
+}
+
 static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
 {
 	GElf_Shdr shdr;
