@@ -964,7 +964,7 @@ int process_find_target_dlm(struct process_ctx_s *ctx)
 
 int process_find_patch(struct process_ctx_s *ctx)
 {
-	const char *bid = PI(ctx)->new_bid;
+	const char *bid = PI(ctx)->patch_bid;
 
 	pr_info("= Cheking for patch is applied...\n");
 

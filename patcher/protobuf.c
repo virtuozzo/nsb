@@ -130,14 +130,14 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	if (!patch_info->old_bid)
 		goto free_unpacked;
 
-	patch_info->new_bid = strdup(bp->new_bid);
-	if (!patch_info->new_bid)
+	patch_info->patch_bid = strdup(bp->new_bid);
+	if (!patch_info->patch_bid)
 		goto free_old_bid;
 
 	if (bp->new_path) {
 		patch_info->path = strdup(bp->new_path);
 		if (!patch_info->path)
-			goto free_new_bid;
+			goto free_patch_bid;
 	}
 
 	if (set_patch_func_jumps(patch_info, bp))
@@ -157,8 +157,8 @@ free_func_jumps:
 free_new_path:
 	if (bp->new_path)
 		free(patch_info->path);
-free_new_bid:
-	free(patch_info->new_bid);
+free_patch_bid:
+	free(patch_info->patch_bid);
 free_old_bid:
 	free(patch_info->old_bid);
 	goto free_unpacked;

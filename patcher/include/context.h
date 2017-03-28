@@ -27,7 +27,7 @@ struct func_jump_s {
 
 struct patch_info_s {
 	char			*old_bid;
-	char			*new_bid;
+	char			*patch_bid;
 	char			*path;
 
 	size_t			n_func_jumps;
