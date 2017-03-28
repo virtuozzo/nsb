@@ -317,6 +317,17 @@ free_patch:
 	return err;
 }
 
+struct patch_s *find_patch_by_bid(struct process_ctx_s *ctx, const char *bid)
+{
+	struct patch_s *p;
+
+	list_for_each_entry(p, &ctx->applied_patches, list) {
+		if (!strcmp(p->pi.new_bid, bid))
+			return p;
+	}
+	return NULL;
+}
+
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;

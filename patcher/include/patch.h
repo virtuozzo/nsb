@@ -23,4 +23,6 @@ struct patch_s;
 int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
 			struct patch_s **patch);
 
+struct patch_s *find_patch_by_bid(struct process_ctx_s *ctx, const char *bid);
+
 #endif /* __PATCHER_PATCH_H__ */
