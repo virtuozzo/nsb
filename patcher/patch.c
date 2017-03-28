@@ -485,5 +485,5 @@ int check_process(pid_t pid, const char *patchfile)
 	if (!bid)
 		return -1;
 
-	return !find_dl_map_by_bid(&ctx->dl_maps, bid);
+	return !find_patch_by_bid(ctx, bid);
 }

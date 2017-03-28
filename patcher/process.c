@@ -968,7 +968,7 @@ int process_find_patch(struct process_ctx_s *ctx)
 
 	pr_info("= Cheking for patch is applied...\n");
 
-	if (find_dl_map_by_bid(&ctx->dl_maps, bid)) {
+	if (find_patch_by_bid(ctx, bid)) {
 		pr_err("Patch with Build ID %s is already applied\n", bid);
 		return -EEXIST;
 	}
