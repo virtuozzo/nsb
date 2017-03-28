@@ -138,9 +138,24 @@ static int unload_patch(struct process_ctx_s *ctx)
 
 static int load_patch(struct process_ctx_s *ctx)
 {
-	pr_info("= Loading %s:\n", PDLM(ctx)->path);
+	int err;
+	struct dl_map *dlm;
 
-	return load_elf(ctx, PDLM(ctx), dl_map_end(TDLM(ctx)));
+	pr_info("= Loading %s:\n", PI(ctx)->path);
+
+	dlm = alloc_dl_map(ctx->patch_ei, ctx->patchfile);
+	if (!dlm)
+		return -ENOMEM;
+
+	err = load_elf(ctx, dlm, dl_map_end(TDLM(ctx)));
+	if (err)
+		goto destroy_dlm;
+
+	P(ctx)->patch_dlm = dlm;
+	return 0;
+
+destroy_dlm:
+	return err;
 }
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
@@ -239,11 +254,6 @@ static int create_patch(struct elf_info_s *ei, struct patch_s **patch)
 	if (err)
 		goto free_patch;
 
-	err = -ENOMEM;
-	p->patch_dlm = alloc_dl_map(ei, p->pi.path);
-	if (!p->patch_dlm)
-		goto free_patch;
-
 	INIT_LIST_HEAD(&p->rela_plt);
 	INIT_LIST_HEAD(&p->rela_dyn);
 
@@ -269,6 +279,7 @@ static int init_patch(struct process_ctx_s *ctx)
 	if (err)
 		goto destroy_elf;
 
+	ctx->patch_ei = ei;
 	return 0;
 
 destroy_elf:

@@ -42,7 +42,7 @@ struct patch_s {
 	const struct dl_map	*target_dlm;
 	struct list_head	rela_plt;
 	struct list_head	rela_dyn;
-	struct dl_map		*patch_dlm;
+	const struct dl_map	*patch_dlm;
 };
 
 struct ctx_dep {
@@ -53,6 +53,7 @@ struct ctx_dep {
 struct process_ctx_s {
 	pid_t			pid;
 	const char		*patchfile;
+	struct elf_info_s	*patch_ei;
 	int			dry_run;
 	const struct patch_ops_s *ops;
 	struct parasite_ctl	*ctl;
