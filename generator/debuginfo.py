@@ -1,7 +1,9 @@
 from __future__ import print_function
 
+import array
 import bisect
 from elftools.dwarf import enums, dwarf_expr
+from elftools.dwarf.die import DIE
 
 from consts import *
 
@@ -86,10 +88,11 @@ def get_die_addr(die):
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
-		self._die_pos = die_pos = []
+		self._cu_pos  = cu_pos  = []
 
 		def walk(die):
-			die_pos.append((-die.offset, die))
+			assert die_pos[-1] < die.offset
+			die_pos.append(die.offset)
 
 			for child_die in die.iter_children():
 				walk(child_die)
@@ -99,28 +102,49 @@ class DebugInfo(object):
 		dwi = self.elf.get_dwarf_info()
 
 		for cu in dwi.iter_CUs():
+			die_pos = array.array('l', [-1])
+			cu_pos.append((-cu.cu_offset, cu, die_pos))
 			walk(cu.get_top_DIE())
-		die_pos.append((1, None))
-		die_pos.sort()
+
+		cu_pos.append((1, None, None))
+		cu_pos.sort()
 
 	def lookup_die(self, pos):
 		assert pos >= 0
-		# Consider sorted array
-		# ...,X,Y,... where X < Y, and some element A
-		# If X < A < Y then bisect_left(A) == bisect_right(A) == index(Y)
+		# Consider sorted array A  having no duplicate elements
+		# [..., X, Y, ...], where X < Y, and some element P
+		# If X < P < Y then bisect_left(P) == bisect_right(P) == index(Y)
 		# as described at https://docs.python.org/2/library/bisect.html
-		# IOW, bisection selects right end of the range. However, if X & Y
-		# represent DIE offsets, we want to select left end. By using negated
-		# offsets, selecting right end becomes right thing to do. Finally, in
-		# the case when A is some as Y, bisect_left() & bisect_right() return
-		# different results.  However, we completely avoid this case by using
-		# single element tuple as lookup key.  It is never equal to two-tuples
-		# in the array. Also, one-tuple (-offset,) is less than (-offset, die)
-		# tuple from the array, so bisect will point at the latter.
-		key = (-pos,)
-		idx = bisect.bisect(self._die_pos, key)
-		die = self._die_pos[idx][1]
-		return die if die and die.offset <= pos < die.offset + die.size else None
+		# IOW, bisection selects right end of the range. Finally, when
+		# P is same as Y, these functions return different results:
+		# bisect_left(P)  == index(Y)
+		# bisect_right(P) == index(Y) + 1
+		# So we use A[bisect_right(pos) - 1] to lookup DIEs.
+		# When looking up CUs, situation is a bit different, since we store
+		# 3-tuples in the array. To make comparisons possible, we should use 1-tuple as a key.
+		# When position to look up matches CU offset, key tuple will be less than element tuple.
+		# So subtracting one will give wrong result. To overcome this, we use negated offsets.
+		# In such case, we want to select the right end, so to lookup CUs we use
+		# A[bisect_right(key)]
+		# bisect_right() is the same as bisect()
+		cu_key =(-pos,)
+		cu_idx = bisect.bisect(self._cu_pos, cu_key)
+		_, cu, die_pos = self._cu_pos[cu_idx]
+		if not cu:
+			return
+
+		die_idx = bisect.bisect(die_pos, pos)
+		assert die_idx > 0
+		die_offset = die_pos[die_idx - 1]
+		if die_offset < 0:
+			return
+
+		# See CompileUnit._parse_DIEs()
+		die = DIE(
+			cu=cu,
+			stream=cu.dwarfinfo.debug_info_sec.stream,
+			offset=die_offset)
+		return die if die.offset <= pos < die.offset + die.size else None
 
 	def get_die_key_addrs(self):
 		result = {}
