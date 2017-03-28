@@ -142,7 +142,7 @@ static int load_patch(struct process_ctx_s *ctx)
 	int err;
 	struct dl_map *dlm;
 
-	pr_info("= Loading %s:\n", PI(ctx)->path);
+	pr_info("= Loading %s:\n", ctx->patchfile);
 
 	dlm = alloc_dl_map(ctx->patch_ei, ctx->patchfile);
 	if (!dlm)
@@ -404,8 +404,8 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	ctx->ops = &patch_jump_ops;
 
+	pr_info("  Patch path    : %s\n", ctx->patchfile);
 	pr_info("  Target BuildId: %s\n", PI(ctx)->target_bid);
-	pr_info("  Patch path    : %s\n", PI(ctx)->path);
 
 	return 0;
 }

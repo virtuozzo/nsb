@@ -1307,12 +1307,6 @@ int elf_info_binpatch(struct patch_info_s *pi, struct elf_info_s *ei)
 	if (err)
 		goto free_data;
 
-	if (!pi->path) {
-		pi->path = strdup(ei->path);
-		if (!pi->path)
-			err = -ENOMEM;
-	}
-
 free_data:
 	free(data);
 	return err;

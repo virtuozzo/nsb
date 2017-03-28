@@ -28,7 +28,6 @@ struct func_jump_s {
 struct patch_info_s {
 	char			*target_bid;
 	char			*patch_bid;
-	char			*path;
 
 	size_t			n_func_jumps;
 	struct func_jump_s	**func_jumps;
