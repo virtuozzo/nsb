@@ -878,7 +878,7 @@ int process_collect_needed(struct process_ctx_s *ctx)
 			goto free_array;
 		}
 
-		err = collect_needed(ctx, &ctx->objdeps, dlm);
+		err = collect_needed(ctx, &ctx->needed_list, dlm);
 		if (err)
 			goto free_array;
 

@@ -62,7 +62,7 @@ struct process_ctx_s {
 	struct list_head	dl_maps;
 	struct list_head	applied_patches;
 	struct vma_area		remote_vma;
-	struct list_head	objdeps;
+	struct list_head	needed_list;
 	struct list_head	threads;
 	struct patch_s		*patch;
 };

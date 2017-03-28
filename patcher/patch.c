@@ -31,7 +31,7 @@ struct process_ctx_s process_context = {
 	},
 	.vmas = LIST_HEAD_INIT(process_context.vmas),
 	.dl_maps = LIST_HEAD_INIT(process_context.dl_maps),
-	.objdeps = LIST_HEAD_INIT(process_context.objdeps),
+	.needed_list = LIST_HEAD_INIT(process_context.needed_list),
 	.threads = LIST_HEAD_INIT(process_context.threads),
 	.applied_patches = LIST_HEAD_INIT(process_context.applied_patches),
 	.remote_vma = {
