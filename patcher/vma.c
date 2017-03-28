@@ -209,7 +209,7 @@ static int __collect_vmas(pid_t pid, struct list_head *head,
 
 void print_vma(const struct vma_area *vma)
 {
-	pr_debug("  VMA: %lx-%lx %c%c%c%c %8lx %s\n",
+	pr_debug("    VMA: %lx-%lx %c%c%c%c %8lx %s\n",
 			vma_start(vma), vma_end(vma),
 			(vma_prot(vma) & PROT_READ) ? 'r' : '-',
 			(vma_prot(vma) & PROT_WRITE) ? 'w' : '-',
