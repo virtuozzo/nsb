@@ -44,10 +44,12 @@ def get_die_key(die):
 	if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
 		return
 
-	if STR.DW_AT_abstract_origin in die.attributes:
-		return
-
-	if STR.DW_AT_declaration in die.attributes:
+	skip_attrs = [
+		STR.DW_AT_abstract_origin,
+		STR.DW_AT_declaration,
+		STR.DW_AT_artificial,
+	]
+	if set(die.attributes).intersection(skip_attrs):
 		return
 
 	result = []
