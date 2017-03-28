@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 	log_set_loglevel(o.verbosity);
 	log_init(NULL);
 
-	compel_log_init(__print_on_level, o.verbosity);
+	compel_log_init(__print_on_level, LOG_ERROR);
 
 	return o.handler(&o);
 }
