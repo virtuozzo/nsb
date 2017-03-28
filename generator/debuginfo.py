@@ -23,17 +23,16 @@ class ExprVisitor(dwarf_expr.GenericExprVisitor):
 	def __init__(self, structs):
 		super(ExprVisitor, self).__init__(structs)
 		self.__value = None
-		self.__supported = True
 
 	def _after_visit(self, opcode, opcode_name, args):
 		if opcode_name != STR.DW_OP_addr:
-			print("Can't interpret {0}".format(opcode_name))
-			self.__supported = False
+			raise Exception("Unsupported opcode {0}".format(opcode_name))
 
 		self.__value = args[0]
 
-	def get_value(self):
-		return self.__value if self.__supported else None
+	def get_addr(self, expr):
+		self.process_expr(expr)
+		return self.__value
 
 def get_die_name(die):
 	attr = die.attributes[STR.DW_AT_name]
@@ -79,8 +78,7 @@ def get_die_addr(die):
 		assert attr.form == STR.DW_FORM_exprloc, attr.form
 
 		expr_visitor = ExprVisitor(structs)
-		expr_visitor.process_expr(attr.value)
-		return expr_visitor.get_value()
+		return expr_visitor.get_addr(attr.value)
 
 	else:
 		assert 0
