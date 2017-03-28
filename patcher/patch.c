@@ -245,7 +245,7 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 int patch_set_target_dlm(struct process_ctx_s *ctx, struct patch_s *p)
 {
 	const struct dl_map *dlm;
-	const char *bid = p->pi.old_bid;
+	const char *bid = p->pi.target_bid;
 
 	dlm = find_dl_map_by_bid(&ctx->dl_maps, bid);
 	if (!dlm) {
@@ -404,7 +404,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	ctx->ops = &patch_jump_ops;
 
-	pr_info("  Target BuildId: %s\n", PI(ctx)->old_bid);
+	pr_info("  Target BuildId: %s\n", PI(ctx)->target_bid);
 	pr_info("  Patch path    : %s\n", PI(ctx)->path);
 
 	return 0;

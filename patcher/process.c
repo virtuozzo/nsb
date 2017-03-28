@@ -584,7 +584,7 @@ static int process_catch(struct process_ctx_s *ctx)
 {
 	int ret, err;
 	struct target_info ti = {
-		.bid = PI(ctx)->old_bid,
+		.bid = PI(ctx)->target_bid,
 	};
 
 	err = process_infect(ctx);
@@ -946,7 +946,7 @@ int process_collect_vmas(struct process_ctx_s *ctx)
 int process_find_target_dlm(struct process_ctx_s *ctx)
 {
 	const struct dl_map *dlm;
-	const char *bid = PI(ctx)->old_bid;
+	const char *bid = PI(ctx)->target_bid;
 
 	pr_info("= Searching target VMA:\n");
 
