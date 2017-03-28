@@ -60,6 +60,17 @@ struct dl_map *alloc_dl_map(struct elf_info_s *ei, const char *path)
 	return dlm;
 }
 
+static int print_dl_vma(struct vma_area *vma, void *data)
+{
+	print_vma(vma);
+	return 0;
+}
+
+void print_dl_vmas(const struct dl_map *dlm)
+{
+	(void)iterate_dl_vmas(dlm, NULL, print_dl_vma);
+}
+
 static int create_dl_map_by_vma(const struct vma_area *vma, struct dl_map **dl_map)
 {
 	struct elf_info_s *ei;

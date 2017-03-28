@@ -43,4 +43,6 @@ int add_dl_vma_sorted(struct dl_map *dlm, struct vma_area *vma);
 int iterate_dl_maps(const struct list_head *head, void *data,
 		    int (*actor)(const struct dl_map *dlm, void *data));
 
+void print_dl_vmas(const struct dl_map *dlm);
+
 #endif /* __PATCHER_DL_MAP_H__ */
