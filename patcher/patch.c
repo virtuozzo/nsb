@@ -470,3 +470,34 @@ int check_process(pid_t pid, const char *patchfile)
 
 	return !find_patch_by_bid(ctx, PI(ctx)->patch_bid);
 }
+
+static void list_patch(const struct patch_s *p)
+{
+	pr_msg("  %s (%s) - ", p->patch_dlm->path, p->pi.patch_bid);
+	if (p->target_dlm)
+		pr_msg("%s\n", p->target_dlm->path);
+}
+
+int list_process_patches(pid_t pid)
+{
+	int err;
+	struct process_ctx_s *ctx = &process_context;
+	struct patch_s *p;
+
+	if (elf_library_status())
+		return -1;
+
+	ctx->pid = pid;
+
+	err = process_collect_vmas(ctx);
+	if (err)
+		return err;
+
+	if (list_empty(&ctx->applied_patches))
+		return 0;
+
+	list_for_each_entry(p, &ctx->applied_patches, list)
+		list_patch(p);
+
+	return 0;
+}
