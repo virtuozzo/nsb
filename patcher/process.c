@@ -643,7 +643,7 @@ int process_suspend(struct process_ctx_s *ctx)
 {
 	int try = 0, tries = 25;
 	unsigned timeout_msec = 1;
-	int err;
+	int ret;
 
 	do {
 		if (try) {
@@ -654,12 +654,13 @@ int process_suspend(struct process_ctx_s *ctx)
 
 			timeout_msec = increase_timeout(timeout_msec);
 		}
-		err = process_catch(ctx);
-		if (err != -EAGAIN)
-			break;
+		ret = process_catch(ctx);
+		if (ret != -EAGAIN)
+			return ret;
 	} while (++try < tries);
 
-	return err == -EAGAIN ? -ETIME : err;
+	pr_err("failed to suspend process: Timeout reached\n");
+	return -ETIME;
 }
 
 int process_release_at(struct process_ctx_s *ctx, uint64_t addr,

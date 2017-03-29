@@ -414,11 +414,8 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run)
 	ctx->check_backtrace = jumps_check_backtrace;
 
 	err = process_suspend(ctx);
-	if (err) {
-		errno = -err;
-		pr_perror("Failed to suspend process");
+	if (err)
 		return err;
-	}
 
 	ret = process_link(ctx);
 	if (ret)
