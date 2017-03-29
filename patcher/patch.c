@@ -178,11 +178,18 @@ static int tune_func_jumps(struct process_ctx_s *ctx)
 	return tune_patch_func_jumps(P(ctx));
 }
 
+static int patch_unload(struct process_ctx_s *ctx, const struct patch_s *p)
+{
+	const struct dl_map *dlm = p->patch_dlm;
+
+	pr_info("= Unloading %s:\n", dlm->path);
+
+	return unload_elf(ctx, dlm);
+}
+
 static int unload_patch(struct process_ctx_s *ctx)
 {
-	pr_info("= Unloading %s:\n", PDLM(ctx)->path);
-
-	return unload_elf(ctx, PDLM(ctx));
+	return patch_unload(ctx, P(ctx));
 }
 
 static int load_patch(struct process_ctx_s *ctx)
@@ -238,15 +245,20 @@ static int revert_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	return write_func_code(ctx, fj);
 }
 
-static int revert_func_jumps(struct process_ctx_s *ctx)
+static int patch_revert_func_jumps(struct process_ctx_s *ctx, struct patch_s *p)
 {
 	int err;
 
 	pr_info("= Revert function jumps:\n");
-	err = iterate_patch_function_jumps(P(ctx), revert_func_jump, ctx);
+	err = iterate_patch_function_jumps(p, revert_func_jump, ctx);
 	if (err)
 		pr_err("failed to revert function jump\n");
 	return 0;
+}
+
+static int revert_func_jumps(struct process_ctx_s *ctx)
+{
+	return patch_revert_func_jumps(ctx, P(ctx));
 }
 
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
