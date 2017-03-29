@@ -13,38 +13,6 @@
 #include <protobuf/binpatch.pb-c.h>
 #include <protobuf/funcjump.pb-c.h>
 
-static ssize_t read_protobuf_binpatch(const char *path, void **patch)
-{
-	uint8_t *data;
-	ssize_t res;
-	struct stat st;
-
-	if (stat(path, &st)) {
-		pr_perror("failed to stat %s", path);
-		return -errno;
-	}
-
-	if (!st.st_size) {
-		pr_err("patch %s has zero size\n", path);
-		return -EINVAL;
-	}
-
-	data = xzalloc(st.st_size);
-	if (!data)
-		return -ENOMEM;
-
-	res = read_file(path, data, 0, st.st_size);
-	if (res < 0)
-		goto free_data;
-
-	*patch = data;
-	return res;
-
-free_data:
-	free(data);
-	return res;
-}
-
 static struct func_jump_s *create_funcjump(const FuncJump *fj)
 {
 	struct func_jump_s *func_jump;
@@ -153,29 +121,4 @@ free_patch_bid:
 free_target_bid:
 	free(patch_info->target_bid);
 	goto free_unpacked;
-}
-
-char *protobuf_get_bid(const char *patchfile)
-{
-	char *bid = NULL;
-	BinPatch *bp;
-	void *data = NULL;
-	ssize_t res;
-
-	res = read_protobuf_binpatch(patchfile, &data);
-	if (res < 0)
-		return NULL;
-
-	bp = bin_patch__unpack(NULL, res, data);
-	if (!bp) {
-		pr_err("failed to unpack patch_info\n");
-		goto free_data;
-	}
-
-	bid = xstrdup(bp->old_bid);
-
-	bin_patch__free_unpacked(bp, NULL);
-free_data:
-	free(data);
-	return bid;
 }
