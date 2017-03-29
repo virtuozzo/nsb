@@ -159,36 +159,6 @@ destroy_dlm:
 	return err;
 }
 
-static int apply_dyn_binpatch(struct process_ctx_s *ctx)
-{
-	int err;
-
-	err = load_patch(ctx);
-	if (err) {
-		pr_err("failed to load patch\n");
-		return err;
-	}
-
-	err = apply_relocations(ctx);
-	if (err)
-		goto unload_patch;
-
-	err = tune_func_jumps(ctx);
-	if (err)
-		goto unload_patch;
-
-	err = apply_func_jumps(ctx);
-	if (err)
-		goto unload_patch;
-
-	return 0;
-
-unload_patch:
-	if (ctx->ops->revert_patch(ctx))
-		pr_err("failed to revert patch\n");
-	return err;
-}
-
 static int func_jump_applied(struct process_ctx_s *ctx,
 			     const struct func_jump_s *fj)
 {
@@ -240,6 +210,36 @@ static int revert_dyn_binpatch(struct process_ctx_s *ctx)
 	if (err)
 		return err;
 	return unload_patch(ctx);
+}
+
+static int apply_dyn_binpatch(struct process_ctx_s *ctx)
+{
+	int err;
+
+	err = load_patch(ctx);
+	if (err) {
+		pr_err("failed to load patch\n");
+		return err;
+	}
+
+	err = apply_relocations(ctx);
+	if (err)
+		goto unload_patch;
+
+	err = tune_func_jumps(ctx);
+	if (err)
+		goto unload_patch;
+
+	err = apply_func_jumps(ctx);
+	if (err)
+		goto unload_patch;
+
+	return 0;
+
+unload_patch:
+	if (revert_dyn_binpatch(ctx))
+		pr_err("failed to revert patch\n");
+	return err;
 }
 
 int patch_set_target_dlm(struct process_ctx_s *ctx, struct patch_s *p)
@@ -381,8 +381,6 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 }
 
 struct patch_ops_s patch_jump_ops = {
-	.apply_patch = apply_dyn_binpatch,
-	.revert_patch = revert_dyn_binpatch,
 	.check_backtrace = jumps_check_backtrace,
 };
 
