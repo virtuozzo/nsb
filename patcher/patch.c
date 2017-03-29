@@ -458,7 +458,7 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run)
 	if (ret)
 		goto resume;
 
-	ret = ctx->ops->apply_patch(ctx);
+	ret = apply_dyn_binpatch(ctx);
 	if (ret)
 		pr_err("failed to apply binary patch\n");
 
