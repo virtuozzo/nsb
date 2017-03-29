@@ -53,7 +53,7 @@ struct ctx_dep {
 struct backtrace_s;
 typedef	int (*check_backtrace_t)(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt,
-				 uint64_t target_base);
+				 uint64_t start, uint64_t end);
 
 struct process_ctx_s {
 	pid_t			pid;

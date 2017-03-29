@@ -367,13 +367,13 @@ int process_resume(struct process_ctx_s *ctx)
 
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt,
-				 uint64_t target_base)
+				 uint64_t start, uint64_t end)
 {
 	const struct patch_info_s *pi = PI(ctx);
 	int i, err;
 
 	for (i = 0; i < pi->n_func_jumps; i++) {
-		err = backtrace_check_func(pi->func_jumps[i], bt, target_base);
+		err = backtrace_check_func(pi->func_jumps[i], bt, start);
 		if (err)
 			return err;
 	}
