@@ -413,7 +413,7 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run)
 
 	ctx->check_backtrace = jumps_check_backtrace;
 
-	err = process_suspend(ctx);
+	err = process_suspend(ctx, PI(ctx)->target_bid);
 	if (err)
 		return err;
 

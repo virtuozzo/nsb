@@ -580,11 +580,11 @@ int process_get_target_info(pid_t pid, struct target_info *ti)
 	return 0;
 }
 
-static int process_catch(struct process_ctx_s *ctx)
+static int process_catch(struct process_ctx_s *ctx, const char *target_bid)
 {
 	int ret, err;
 	struct target_info ti = {
-		.bid = PI(ctx)->target_bid,
+		.bid = target_bid,
 	};
 
 	err = process_infect(ctx);
@@ -639,7 +639,7 @@ int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 	return get_user_reg(&regs, ax);
 }
 
-int process_suspend(struct process_ctx_s *ctx)
+int process_suspend(struct process_ctx_s *ctx, const char *target_bid)
 {
 	int try = 0, tries = 25;
 	unsigned timeout_msec = 1;
@@ -654,7 +654,7 @@ int process_suspend(struct process_ctx_s *ctx)
 
 			timeout_msec = increase_timeout(timeout_msec);
 		}
-		ret = process_catch(ctx);
+		ret = process_catch(ctx, target_bid);
 		if (ret != -EAGAIN)
 			return ret;
 	} while (++try < tries);

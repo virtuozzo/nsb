@@ -23,7 +23,7 @@ int process_open_file(struct process_ctx_s *ctx, const char *path,
 			int flags, mode_t mode);
 int process_close_file(struct process_ctx_s *ctx, int fd);
 
-int process_suspend(struct process_ctx_s *ctx);
+int process_suspend(struct process_ctx_s *ctx, const char *target_bid);
 
 struct dl_map;
 int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm);
