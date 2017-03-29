@@ -85,14 +85,14 @@ static int apply_func_jumps(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int read_func_jump_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
+static int read_func_jump_code(const struct dl_map *target_dlm, struct func_jump_s *fj)
 {
 	int fd, err = 0;
 	ssize_t ret;
 	size_t size = sizeof(fj->code);
 	off_t offset;
-	const char *map_file = TDLM(ctx)->exec_vma->map_file;
-	const struct elf_info_s *ei = TDLM(ctx)->ei;
+	const char *map_file = target_dlm->exec_vma->map_file;
+	const struct elf_info_s *ei = target_dlm->ei;
 
 	fd = open(map_file, O_RDONLY);
 	if (fd == -1) {
@@ -126,15 +126,15 @@ close_fd:
 	return err;
 }
 
-static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
+static int tune_patch_func_jump(struct patch_s *p, struct func_jump_s *fj)
 {
 	uint64_t patch_addr;
 	ssize_t size;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 
-	fj->func_addr = dlm_load_base(TDLM(ctx)) + fj->func_value;
-	patch_addr = dlm_load_base(PDLM(ctx)) + fj->patch_value;
+	fj->func_addr = dlm_load_base(p->target_dlm) + fj->func_value;
+	patch_addr = dlm_load_base(p->patch_dlm) + fj->patch_value;
 
 	pr_info("      original address: %#lx\n", fj->func_addr);
 	pr_info("      patch address   : %#lx\n", patch_addr);
@@ -144,25 +144,30 @@ static int tune_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	if (size < 0)
 		return size;
 
-	return read_func_jump_code(ctx, fj);
+	return read_func_jump_code(p->target_dlm, fj);
 }
 
-static int tune_func_jumps(struct process_ctx_s *ctx)
+static int tune_patch_func_jumps(struct patch_s *p)
 {
+	struct patch_info_s *pi = &p->pi;
 	int i, err;
-	struct patch_info_s *pi = PI(ctx);
 
-	pr_info("= Tune function jumps:\n");
 	for (i = 0; i < pi->n_func_jumps; i++) {
 		struct func_jump_s *fj = pi->func_jumps[i];
 
-		err = tune_func_jump(ctx, fj);
+		err = tune_patch_func_jump(p, fj);
 		if (err) {
 			pr_err("failed to tune function jump\n");
 			return err;
 		}
 	}
 	return 0;
+}
+
+static int tune_func_jumps(struct process_ctx_s *ctx)
+{
+	pr_info("= Tune function jumps:\n");
+	return tune_patch_func_jumps(P(ctx));
 }
 
 static int unload_patch(struct process_ctx_s *ctx)
