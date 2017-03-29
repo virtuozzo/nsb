@@ -383,6 +383,19 @@ struct patch_s *find_patch_by_bid(struct process_ctx_s *ctx, const char *bid)
 	return NULL;
 }
 
+static int process_find_patch(struct process_ctx_s *ctx)
+{
+	const char *bid = PI(ctx)->patch_bid;
+
+	pr_info("= Cheking for %s patch is applied...\n", bid);
+
+	if (find_patch_by_bid(ctx, bid)) {
+		pr_err("Patch with Build ID %s is already applied\n", bid);
+		return -EEXIST;
+	}
+	return 0;
+}
+
 static int init_patch(struct process_ctx_s *ctx)
 {
 	int err;

@@ -46,7 +46,6 @@ int process_collect_needed(struct process_ctx_s *ctx);
 
 int process_collect_vmas(struct process_ctx_s *ctx);
 int process_find_target_dlm(struct process_ctx_s *ctx);
-int process_find_patch(struct process_ctx_s *ctx);
 
 int64_t process_find_place_for_elf(struct process_ctx_s *ctx,
 				   uint64_t hint, size_t size);

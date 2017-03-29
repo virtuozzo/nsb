@@ -965,19 +965,6 @@ int process_find_target_dlm(struct process_ctx_s *ctx)
 	return 0;
 }
 
-int process_find_patch(struct process_ctx_s *ctx)
-{
-	const char *bid = PI(ctx)->patch_bid;
-
-	pr_info("= Cheking for patch is applied...\n");
-
-	if (find_patch_by_bid(ctx, bid)) {
-		pr_err("Patch with Build ID %s is already applied\n", bid);
-		return -EEXIST;
-	}
-	return 0;
-}
-
 struct address_hole {
 	uint64_t		hint;
 	size_t			size;
