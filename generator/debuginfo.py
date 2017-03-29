@@ -85,26 +85,44 @@ def get_die_addr(die):
 	else:
 		assert 0
 
+def _read_CU(cu):
+	die_pos        = array.array('l', [-1])
+	die_parent_pos = array.array('l', [-1])
+
+	# See CompileUnit._unflatten_tree()
+	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
+	die_offset = cu.cu_die_offset
+	parent_stack = [-1]
+	while die_offset < cu_boundary:
+		die = DIE(
+			cu=cu,
+			stream=cu.dwarfinfo.debug_info_sec.stream,
+			offset=die_offset)
+
+		if not die.is_null():
+			die_pos.append(die_offset)
+			die_parent_pos.append(parent_stack[-1])
+			if die.has_children:
+				parent_stack.append(die_offset)
+		elif parent_stack:
+			parent_stack.pop()
+
+		die_offset += die.size
+
+	return die_pos, die_parent_pos
+
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
 		self._cu_pos  = cu_pos  = []
-
-		def walk(die):
-			assert die_pos[-1] < die.offset
-			die_pos.append(die.offset)
-
-			for child_die in die.iter_children():
-				walk(child_die)
 
 		if not self.elf.has_dwarf_info():
 			raise Exception("No debuginfo in ELF")
 		dwi = self.elf.get_dwarf_info()
 
 		for cu in dwi.iter_CUs():
-			die_pos = array.array('l', [-1])
-			cu_pos.append((-cu.cu_offset, cu, die_pos))
-			walk(cu.get_top_DIE())
+			die_pos, die_parent_pos = _read_CU(cu)
+			cu_pos.append((-cu.cu_offset, cu, die_pos, die_parent_pos))
 
 		cu_pos.append((1, None, None))
 		cu_pos.sort()
@@ -129,13 +147,14 @@ class DebugInfo(object):
 		# bisect_right() is the same as bisect()
 		cu_key =(-pos,)
 		cu_idx = bisect.bisect(self._cu_pos, cu_key)
-		_, cu, die_pos = self._cu_pos[cu_idx]
+		_, cu, die_pos, die_parent_pos = self._cu_pos[cu_idx]
 		if not cu:
 			return
 
 		die_idx = bisect.bisect(die_pos, pos)
 		assert die_idx > 0
-		die_offset = die_pos[die_idx - 1]
+		die_idx -= 1
+		die_offset = die_pos[die_idx]
 		if die_offset < 0:
 			return
 
@@ -144,5 +163,6 @@ class DebugInfo(object):
 			cu=cu,
 			stream=cu.dwarfinfo.debug_info_sec.stream,
 			offset=die_offset)
-		return die if die.offset <= pos < die.offset + die.size else None
+		within_die = die.offset <= pos < die.offset + die.size
+		return (die, die_parent_pos[die_idx]) if within_die else (None, None)
 
