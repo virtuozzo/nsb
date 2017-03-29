@@ -532,6 +532,9 @@ static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
 	if (!vma->path)
 		return 0;
 
+	if (!(vma_prot(vma) & PROT_EXEC))
+		return 0;
+
 	snprintf(map_file, sizeof(map_file), "/proc/%d/map_files/%lx-%lx",
 			pid, vma_start(vma), vma_end(vma));
 
