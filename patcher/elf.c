@@ -412,7 +412,7 @@ destroy_elf:
 	return err;
 }
 
-static char *get_section_name(struct elf_info_s *ei, Elf_Scn *scn)
+static char *get_section_name(const struct elf_info_s *ei, Elf_Scn *scn)
 {
 	GElf_Shdr shdr;
 	char *sname;
@@ -429,8 +429,8 @@ static char *get_section_name(struct elf_info_s *ei, Elf_Scn *scn)
 	return sname;
 }
 
-static Elf_Scn *find_section(struct elf_info_s *ei,
-			     int (*compare)(struct elf_info_s *ei,
+static Elf_Scn *find_section(const struct elf_info_s *ei,
+			     int (*compare)(const struct elf_info_s *ei,
 					    Elf_Scn *scn,
 					    const void *data),
 			     const void *data)
@@ -448,7 +448,7 @@ static Elf_Scn *find_section(struct elf_info_s *ei,
 	return NULL;
 }
 
-static int scn_compare_name(struct elf_info_s *ei, Elf_Scn *scn,
+static int scn_compare_name(const struct elf_info_s *ei, Elf_Scn *scn,
 			    const void *data)
 {
 	const char *name = data;
@@ -471,7 +471,7 @@ int elf_has_section(struct elf_info_s *ei, const char *name)
 	return !!elf_get_section_by_name(ei, name);
 }
 
-static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
+static GElf_Sxword get_section_addr(const struct elf_info_s *ei, Elf_Scn *scn)
 {
 	GElf_Shdr shdr;
 
@@ -483,7 +483,7 @@ static GElf_Sxword get_section_addr(struct elf_info_s *ei, Elf_Scn *scn)
 	return shdr.sh_addr;
 }
 
-static int scn_compare_addr(struct elf_info_s *ei, Elf_Scn *scn,
+static int scn_compare_addr(const struct elf_info_s *ei, Elf_Scn *scn,
 			    const void *data)
 {
 	GElf_Sxword addr = *(GElf_Sxword *)data;
@@ -507,7 +507,7 @@ static Elf_Scn *elf_get_section_by_addr(struct elf_info_s *ei, GElf_Addr addr)
 	return scn;
 }
 
-static Elf_Scn *elf_get_section_by_ndx(struct elf_info_s *ei, GElf_Section ndx)
+static Elf_Scn *elf_get_section_by_ndx(const struct elf_info_s *ei, GElf_Section ndx)
 {
 	Elf_Scn *scn;
 
@@ -1197,7 +1197,7 @@ int64_t elf_dyn_sym_value(struct elf_info_s *ei, const char *name)
 	return sym.st_value;
 }
 
-int64_t elf_section_virt_base(struct elf_info_s *ei, uint16_t ndx)
+int64_t elf_section_virt_base(const struct elf_info_s *ei, uint16_t ndx)
 {
 	Elf_Scn *scn;
 	GElf_Shdr shdr;
