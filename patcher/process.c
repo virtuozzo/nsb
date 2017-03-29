@@ -518,8 +518,7 @@ static int process_check_stack(const struct process_ctx_s *ctx,
 
 struct target_info {
 	const char		*bid;
-	struct elf_info_s	*ei;
-	uint64_t		addr;
+	uint64_t		start;
 };
 
 static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
@@ -528,7 +527,7 @@ static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
 	const char *bid = ti->bid;
 	struct elf_info_s *ei;
 	char map_file[PATH_MAX];
-	int err;
+	int ret;
 
 	if (!vma->path)
 		return 0;
@@ -542,9 +541,9 @@ static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
 	if (!is_elf_file(map_file))
 		return 0;
 
-	err = elf_create_info(map_file, &ei);
-	if (err)
-		return err;
+	ret = elf_create_info(map_file, &ei);
+	if (ret)
+		return ret;
 
         if (!elf_bid(ei))
 		goto destroy_ei;
@@ -552,13 +551,12 @@ static int compare_target_bid(pid_t pid, const struct vma_area *vma, void *data)
 	if (strcmp(elf_bid(ei), bid))
 		goto destroy_ei;
 
-	ti->ei = ei;
-	ti->addr = vma_start(vma);
-	return 1;
+	ti->start = elf_type_dyn(ei) ? vma_start(vma) : 0;
+	ret = 1;
 
 destroy_ei:
 	elf_destroy_info(ei);
-	return 0;
+	return ret;
 }
 
 int process_get_target_info(pid_t pid, struct target_info *ti)
@@ -595,10 +593,7 @@ static int process_catch(struct process_ctx_s *ctx, const char *target_bid)
 	if (ret)
 		goto cure;
 
-	ret = process_check_stack(ctx, elf_type_dyn(ti.ei) ? ti.addr : 0);
-
-	elf_destroy_info(ti.ei);
-
+	ret = process_check_stack(ctx, ti.start);
 	if (ret)
 		goto cure;
 
