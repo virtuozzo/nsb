@@ -313,9 +313,14 @@ int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
 	if (err)
 		goto free_patch;
 
+	p->patch_dlm = dlm;
+
+	err = tune_patch_func_jumps(p);
+	if (err)
+		goto free_patch;
+
 	INIT_LIST_HEAD(&p->rela_plt);
 	INIT_LIST_HEAD(&p->rela_dyn);
-	p->patch_dlm = dlm;
 
 	print_dl_vmas(p->patch_dlm);
 
