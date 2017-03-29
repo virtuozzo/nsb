@@ -202,16 +202,6 @@ static int revert_func_jumps(struct process_ctx_s *ctx)
 	return 0;
 }
 
-static int revert_dyn_binpatch(struct process_ctx_s *ctx)
-{
-	int err;
-
-	err = revert_func_jumps(ctx);
-	if (err)
-		return err;
-	return unload_patch(ctx);
-}
-
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
@@ -232,13 +222,18 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 
 	err = apply_func_jumps(ctx);
 	if (err)
-		goto unload_patch;
+		goto revert_jumps;
 
 	return 0;
 
+revert_jumps:
+	if (revert_func_jumps(ctx))
+		pr_err("failed to revert function jumps\n");
+	return err;
+
 unload_patch:
-	if (revert_dyn_binpatch(ctx))
-		pr_err("failed to revert patch\n");
+	if (unload_patch(ctx))
+		pr_err("failed to unload patch\n");
 	return err;
 }
 
