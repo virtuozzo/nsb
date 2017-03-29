@@ -458,18 +458,15 @@ resume:
 int check_process(pid_t pid, const char *patchfile)
 {
 	int err;
-	char *bid;
 	struct process_ctx_s *ctx = &process_context;
 
-	ctx->pid = pid;
+	err = init_context(ctx, pid, patchfile, 0);
+	if (err)
+		return err;
 
 	err = process_collect_vmas(ctx);
 	if (err)
 		return err;
 
-	bid = protobuf_get_bid(patchfile);
-	if (!bid)
-		return -1;
-
-	return !find_patch_by_bid(ctx, bid);
+	return !find_patch_by_bid(ctx, PI(ctx)->patch_bid);
 }
