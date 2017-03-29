@@ -2,6 +2,8 @@ from __future__ import print_function
 
 import array
 import bisect
+import functools
+from weakref import WeakKeyDictionary
 from elftools.dwarf import enums, dwarf_expr
 from elftools.dwarf.die import DIE
 
@@ -85,6 +87,23 @@ def get_die_addr(die):
 	else:
 		assert 0
 
+def memoize(dict_class):
+	def fix_dict_class(f):
+		cache = dict_class()
+
+		@functools.wraps(f)
+		def wrapper(arg):
+			res = cache.get(arg)
+			if res is not None:
+				return res
+			res = cache[arg] = f(arg)
+			return res
+
+		return wrapper
+
+	return fix_dict_class
+
+@memoize(WeakKeyDictionary)
 def _read_CU(cu):
 	die_pos        = array.array('l', [-1])
 	die_parent_pos = array.array('l', [-1])
@@ -121,8 +140,7 @@ class DebugInfo(object):
 		dwi = self.elf.get_dwarf_info()
 
 		for cu in dwi.iter_CUs():
-			die_pos, die_parent_pos = _read_CU(cu)
-			cu_pos.append((-cu.cu_offset, cu, die_pos, die_parent_pos))
+			cu_pos.append((-cu.cu_offset, cu))
 
 		cu_pos.append((1, None, None))
 		cu_pos.sort()
@@ -147,9 +165,10 @@ class DebugInfo(object):
 		# bisect_right() is the same as bisect()
 		cu_key =(-pos,)
 		cu_idx = bisect.bisect(self._cu_pos, cu_key)
-		_, cu, die_pos, die_parent_pos = self._cu_pos[cu_idx]
+		_, cu = self._cu_pos[cu_idx]
 		if not cu:
 			return
+		die_pos, die_parent_pos = _read_CU(cu)
 
 		die_idx = bisect.bisect(die_pos, pos)
 		assert die_idx > 0
