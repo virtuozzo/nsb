@@ -7,11 +7,6 @@
 
 struct backtrace_s;
 struct process_ctx_s;
-struct patch_ops_s {
-	int (*check_backtrace)(const struct process_ctx_s *ctx,
-			       const struct backtrace_s *bt,
-			       uint64_t target_base);
-};
 
 int patch_process(pid_t pid, const char *patchfile, int dry_run);
 int check_process(pid_t pid, const char *patchfile);

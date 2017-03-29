@@ -380,10 +380,6 @@ static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 	return 0;
 }
 
-struct patch_ops_s patch_jump_ops = {
-	.check_backtrace = jumps_check_backtrace,
-};
-
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
 			const char *patchfile, int dry_run)
 {
@@ -400,8 +396,6 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	if (init_patch(ctx))
 		return 1;
 
-	ctx->ops = &patch_jump_ops;
-
 	pr_info("  Patch path    : %s\n", ctx->patchfile);
 	pr_info("  Target BuildId: %s\n", PI(ctx)->target_bid);
 
@@ -416,6 +410,8 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run)
 	err = init_context(ctx, pid, patchfile, dry_run);
 	if (err)
 		return err;
+
+	ctx->check_backtrace = jumps_check_backtrace;
 
 	err = process_suspend(ctx);
 	if (err) {

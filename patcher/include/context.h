@@ -50,12 +50,19 @@ struct ctx_dep {
 	const struct dl_map	*dlm;
 };
 
+struct backtrace_s;
+typedef	int (*check_backtrace_t)(const struct process_ctx_s *ctx,
+				 const struct backtrace_s *bt,
+				 uint64_t target_base);
+
 struct process_ctx_s {
 	pid_t			pid;
 	const char		*patchfile;
-	struct elf_info_s	*patch_ei;
 	int			dry_run;
-	const struct patch_ops_s *ops;
+
+	struct elf_info_s	*patch_ei;
+	check_backtrace_t	check_backtrace;
+
 	struct parasite_ctl	*ctl;
 	struct service		service;
 	struct list_head	vmas;

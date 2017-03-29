@@ -495,7 +495,7 @@ static int task_check_stack(const struct process_ctx_s *ctx, const struct thread
 		return err;
 	}
 
-	err = ctx->ops->check_backtrace(ctx, bt, target_base);
+	err = ctx->check_backtrace(ctx, bt, target_base);
 
 	destroy_backtrace(bt);
 	return err;
