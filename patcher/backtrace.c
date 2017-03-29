@@ -190,17 +190,23 @@ free_bt:
 }
 
 static const struct backtrace_frame_s *bt_check_range(const struct backtrace_s *bt,
-						      uint64_t start, uint64_t end)
+						      uint64_t start, uint64_t end,
+						      int strict)
 {
 	const struct backtrace_frame_s *bf;
-	int i = 0;
+	int i = 0, hit;
 
 	list_for_each_entry(bf, &bt->calls, list) {
 		pr_debug("    #%d  %#lx in %s (signal frame: %d)\n", i++,
 				bf->ip, bf->name, bf->sigframe);
 		if (bf->sigframe)
 			return bf;
-		if ((start < bf->ip) && (bf->ip < end))
+
+		if (strict)
+			hit = ((start <= bf->ip) && (bf->ip <= end));
+		else
+			hit = ((start < bf->ip) && (bf->ip < end));
+		if (hit)
 			return bf;
 	}
 	return NULL;
@@ -216,7 +222,7 @@ int backtrace_check_func(const struct func_jump_s *fj,
 	func_start = target_base + fj->func_value;
 	func_end = func_start + fj->func_size;
 
-	bf = bt_check_range(bt, func_start, func_end);
+	bf = bt_check_range(bt, func_start, func_end, 0);
 	if (!bf)
 		return 0;
 
@@ -234,7 +240,7 @@ int backtrace_check_range(const struct backtrace_s *bt,
 {
 	const struct backtrace_frame_s *bf;
 
-	bf = bt_check_range(bt, start, end);
+	bf = bt_check_range(bt, start, end, 1);
 	if (!bf)
 		return 0;
 
