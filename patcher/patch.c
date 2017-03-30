@@ -60,7 +60,8 @@ static int write_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	patch_addr = dlm_load_base(p->patch_dlm) + fj->patch_value;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
-	pr_info("      jump: %#lx ---> %#lx\n", fj->func_addr, patch_addr);
+	pr_info("      jump: %#lx ---> %#lx (%s)\n", fj->func_addr, patch_addr,
+						     p->patch_dlm->path);
 
 	if (ctx->dry_run)
 		return 0;
@@ -233,6 +234,75 @@ static int func_jump_applied(struct process_ctx_s *ctx,
 	return !memcmp(code, fj->func_jump, sizeof(code));
 }
 
+static int find_function_jump(const struct patch_info_s *pi,
+			      int (*compare)(const struct func_jump_s *fj,
+					     const void *data),
+			      const void *data,
+			      struct func_jump_s **func_jump)
+{
+	int i, ret;
+
+	for (i = 0; i < pi->n_func_jumps; i++) {
+		struct func_jump_s *fj = pi->func_jumps[i];
+
+		ret = compare(fj, data);
+		if (ret < 0)
+			return ret;
+		if (ret) {
+			*func_jump = fj;
+			return 0;
+		}
+	}
+	return -ENOENT;
+}
+
+static int compare_fj_addr(const struct func_jump_s *fj, const void *data)
+{
+	uint64_t addr = *(uint64_t *)data;
+
+	return fj->func_addr == addr;
+}
+
+static int find_previous_func_jump(const struct process_ctx_s *ctx,
+				   const struct patch_s *p,
+				   const struct func_jump_s *fj,
+				   const struct patch_s **prev_patch,
+				   struct func_jump_s **prev_func_jump)
+{
+	const struct patch_s *pp = p;
+	int err;
+
+	list_for_each_entry_continue_reverse(pp, &ctx->applied_patches, list) {
+		if (pp->target_dlm != p->target_dlm)
+			continue;
+
+		err = find_function_jump(&pp->pi, compare_fj_addr,
+					 &fj->func_addr, prev_func_jump);
+		if (err != -ENOENT) {
+			*prev_patch = pp;
+			return err;
+		}
+	}
+	return -ENOENT;
+}
+
+static int do_revert_func_jump(struct process_ctx_s *ctx,
+			       const struct patch_s *p,
+			       struct func_jump_s *fj)
+{
+	int err;
+	const struct patch_s *prev_patch;
+	struct func_jump_s *prev_func_jump;
+
+	err = find_previous_func_jump(ctx, p, fj, &prev_patch, &prev_func_jump);
+	if (err < 0) {
+		if (err != -ENOENT)
+			return err;
+		return write_func_code(ctx, fj);
+	}
+	return write_func_jump(prev_patch, prev_func_jump, ctx);
+}
+
 static int revert_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 			    void *data)
 {
@@ -243,7 +313,7 @@ static int revert_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	if (applied <= 0)
 		return applied;
 
-	return write_func_code(ctx, fj);
+	return do_revert_func_jump(ctx, p, fj);
 }
 
 static int patch_revert_func_jumps(struct process_ctx_s *ctx, struct patch_s *p)
