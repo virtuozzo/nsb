@@ -190,7 +190,8 @@ static int print_dl_mmap(struct vma_area *vma, void *data)
 
 int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 {
-	int fd, err;
+	int fd;
+	int64_t addr;
 	struct vma_area *vma;
 
 	(void)iterate_dl_vmas(dlm, NULL, print_dl_mmap);
@@ -206,8 +207,8 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 		return fd;
 
 	list_for_each_entry(vma, &dlm->vmas, dl) {
-		err = process_map_vma(ctx, fd, vma);
-		if (err)
+		addr = process_map_vma(ctx, fd, vma);
+		if (addr < 0)
 			goto unmap;
 	}
 
@@ -218,7 +219,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 unmap:
 	list_for_each_entry_reverse(vma, &dlm->vmas, dl)
 		(void)process_unmap_vma(ctx, vma);
-	return err;
+	return addr;
 }
 
 int process_close_file(struct process_ctx_s *ctx, int fd)
