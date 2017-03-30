@@ -115,6 +115,7 @@ class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
 		self._cu_pos  = cu_pos  = []
+		self._cu_names = {}
 
 		if not self.elf.has_dwarf_info():
 			raise Exception("No debuginfo in ELF")
@@ -122,9 +123,14 @@ class DebugInfo(object):
 
 		for cu in dwi.iter_CUs():
 			cu_pos.append((-cu.cu_offset, cu))
+			cu_name = get_die_name(_iter_DIEs(cu).next())
+			self._cu_names[cu_name] = cu
 
 		cu_pos.append((1, None, None))
 		cu_pos.sort()
+
+	def get_cu_names(self):
+		return self._cu_names.keys()
 
 	def lookup_die(self, pos):
 		assert pos >= 0
