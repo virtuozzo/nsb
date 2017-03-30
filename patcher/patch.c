@@ -147,13 +147,8 @@ static int tune_patch_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	uint64_t patch_addr;
 	ssize_t size;
 
-	pr_info("  - Function \"%s\":\n", fj->name);
-
 	fj->func_addr = dlm_load_base(p->target_dlm) + fj->func_value;
 	patch_addr = dlm_load_base(p->patch_dlm) + fj->patch_value;
-
-	pr_info("      original address: %#lx\n", fj->func_addr);
-	pr_info("      patch address   : %#lx\n", patch_addr);
 
 	size = x86_jmpq_instruction(fj->func_jump, sizeof(fj->func_jump),
 				    fj->func_addr, patch_addr);
@@ -173,10 +168,27 @@ static int tune_patch_func_jumps(struct patch_s *p)
 	return 0;
 }
 
+static int print_patch_func_jump(const struct patch_s *p, struct func_jump_s *fj,
+				 void *data)
+{
+	pr_info("  - Function \"%s\":\n", fj->name);
+	pr_info("      original address: %#lx\n", fj->func_addr);
+	pr_info("      patch address   : %#lx\n",
+			dlm_load_base(p->patch_dlm) + fj->patch_value);
+	return 0;
+}
+
 static int tune_func_jumps(struct process_ctx_s *ctx)
 {
+	int err;
+
 	pr_info("= Tune function jumps:\n");
-	return tune_patch_func_jumps(P(ctx));
+
+	err = tune_patch_func_jumps(P(ctx));
+	if (err)
+		return err;
+
+	return iterate_patch_function_jumps(P(ctx), print_patch_func_jump, NULL);
 }
 
 static int patch_unload(struct process_ctx_s *ctx, const struct patch_s *p)
