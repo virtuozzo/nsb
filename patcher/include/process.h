@@ -50,4 +50,7 @@ int process_find_target_dlm(struct process_ctx_s *ctx);
 int64_t process_find_place_for_elf(struct process_ctx_s *ctx,
 				   uint64_t hint, size_t size);
 
+void process_print_mmap(const struct vma_area *vma);
+void process_print_munmap(const struct vma_area *vma);
+
 #endif

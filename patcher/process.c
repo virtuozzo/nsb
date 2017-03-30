@@ -150,9 +150,14 @@ int64_t process_map_vma(struct process_ctx_s *ctx, int fd,
 	return addr;
 }
 
-static int print_dl_munmap(struct vma_area *vma, void *data)
+void process_print_munmap(const struct vma_area *vma)
 {
 	pr_info("  - munmap: %#lx-%#lx\n", vma_start(vma), vma_end(vma));
+}
+
+static int print_dl_munmap(struct vma_area *vma, void *data)
+{
+	process_print_munmap(vma);
 	return 0;
 }
 
@@ -176,7 +181,7 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 	return iterate_dl_vmas(dlm, ctx, unmap_dl_vma);
 }
 
-static int print_dl_mmap(struct vma_area *vma, void *data)
+void process_print_mmap(const struct vma_area *vma)
 {
 	char fbuf[512];
 	char pbuf[4];
@@ -185,6 +190,11 @@ static int print_dl_mmap(struct vma_area *vma, void *data)
 			vma_start(vma), vma_end(vma), vma_offset(vma),
 			map_prot(vma_prot(vma), pbuf),
 			map_flags(vma_flags(vma), fbuf));
+}
+
+static int print_dl_mmap(struct vma_area *vma, void *data)
+{
+	process_print_mmap(vma);
 	return 0;
 }
 
