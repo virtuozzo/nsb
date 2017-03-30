@@ -51,11 +51,13 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 				  fj->code, sizeof(fj->code));
 }
 
-static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
+static int write_func_jump(const struct patch_s *p, struct func_jump_s *fj,
+			   void *data)
 {
+	struct process_ctx_s *ctx = data;
 	uint64_t patch_addr;
 
-	patch_addr = dlm_load_base(PDLM(ctx)) + fj->patch_value;
+	patch_addr = dlm_load_base(p->patch_dlm) + fj->patch_value;
 
 	pr_info("  - Function \"%s\":\n", fj->name);
 	pr_info("      jump: %#lx ---> %#lx\n", fj->func_addr, patch_addr);
@@ -67,21 +69,33 @@ static int write_func_jump(struct process_ctx_s *ctx, struct func_jump_s *fj)
 				  fj->func_jump, sizeof(fj->func_jump));
 }
 
-static int apply_func_jumps(struct process_ctx_s *ctx)
+static int iterate_patch_function_jumps(const struct patch_s *p,
+					int (*actor)(const struct patch_s *p,
+						     struct func_jump_s *fj,
+						     void *data),
+					void *data)
 {
+	const struct patch_info_s *pi = &p->pi;
 	int i, err;
-	struct patch_info_s *pi = PI(ctx);
 
-	pr_info("= Apply function jumps:\n");
 	for (i = 0; i < pi->n_func_jumps; i++) {
 		struct func_jump_s *fj = pi->func_jumps[i];
 
-		err = write_func_jump(ctx, fj);
-		if (err) {
-			pr_err("failed to apply function jump\n");
+		err = actor(p, fj, data);
+		if (err)
 			return err;
-		}
 	}
+	return 0;
+}
+
+static int apply_func_jumps(struct process_ctx_s *ctx)
+{
+	int err;
+
+	pr_info("= Apply function jumps:\n");
+	err = iterate_patch_function_jumps(P(ctx), write_func_jump, ctx);
+	if (err)
+		pr_err("failed to apply function jump\n");
 	return 0;
 }
 
@@ -126,7 +140,8 @@ close_fd:
 	return err;
 }
 
-static int tune_patch_func_jump(struct patch_s *p, struct func_jump_s *fj)
+static int tune_patch_func_jump(const struct patch_s *p, struct func_jump_s *fj,
+				void *data)
 {
 	uint64_t patch_addr;
 	ssize_t size;
@@ -149,18 +164,11 @@ static int tune_patch_func_jump(struct patch_s *p, struct func_jump_s *fj)
 
 static int tune_patch_func_jumps(struct patch_s *p)
 {
-	struct patch_info_s *pi = &p->pi;
-	int i, err;
+	int err;
 
-	for (i = 0; i < pi->n_func_jumps; i++) {
-		struct func_jump_s *fj = pi->func_jumps[i];
-
-		err = tune_patch_func_jump(p, fj);
-		if (err) {
-			pr_err("failed to tune function jump\n");
-			return err;
-		}
-	}
+	err = iterate_patch_function_jumps(p, tune_patch_func_jump, NULL);
+	if (err)
+		pr_err("failed to tune function jump\n");
 	return 0;
 }
 
@@ -217,28 +225,27 @@ static int func_jump_applied(struct process_ctx_s *ctx,
 	return !memcmp(code, fj->func_jump, sizeof(code));
 }
 
+static int revert_func_jump(const struct patch_s *p, struct func_jump_s *fj,
+			    void *data)
+{
+	struct process_ctx_s *ctx = data;
+	int applied;
+
+	applied = func_jump_applied(ctx, fj);
+	if (applied <= 0)
+		return applied;
+
+	return write_func_code(ctx, fj);
+}
+
 static int revert_func_jumps(struct process_ctx_s *ctx)
 {
-	int i, err, applied;
-	struct patch_info_s *pi = PI(ctx);
+	int err;
 
 	pr_info("= Revert function jumps:\n");
-	for (i = 0; i < pi->n_func_jumps; i++) {
-		struct func_jump_s *fj = pi->func_jumps[i];
-
-		applied = func_jump_applied(ctx, fj);
-		if (applied < 0)
-			return applied;
-
-		if (!applied)
-			continue;
-
-		err = write_func_code(ctx, fj);
-		if (err) {
-			pr_err("failed to revert function jump\n");
-			return err;
-		}
-	}
+	err = iterate_patch_function_jumps(P(ctx), revert_func_jump, ctx);
+	if (err)
+		pr_err("failed to revert function jump\n");
 	return 0;
 }
 
@@ -401,19 +408,29 @@ int process_resume(struct process_ctx_s *ctx)
 	return process_cure(ctx);
 }
 
+struct bt_fj_data {
+	const struct backtrace_s *bt;
+	uint64_t start;
+};
+
+static int jump_check_backtrace(const struct patch_s *p, struct func_jump_s *fj,
+				void *data)
+{
+	const struct bt_fj_data *d = data;
+
+	return backtrace_check_func(fj, d->bt, d->start);
+}
+
 static int jumps_check_backtrace(const struct process_ctx_s *ctx,
 				 const struct backtrace_s *bt,
 				 uint64_t start, uint64_t end)
 {
-	const struct patch_info_s *pi = PI(ctx);
-	int i, err;
+	struct bt_fj_data data = {
+		.bt = bt,
+		.start = start,
+	};
 
-	for (i = 0; i < pi->n_func_jumps; i++) {
-		err = backtrace_check_func(pi->func_jumps[i], bt, start);
-		if (err)
-			return err;
-	}
-	return 0;
+	return iterate_patch_function_jumps(P(ctx), jump_check_backtrace, &data);
 }
 
 static int init_context(struct process_ctx_s *ctx, pid_t pid,
