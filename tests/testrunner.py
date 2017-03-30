@@ -150,11 +150,17 @@ class BinPatch:
 		print stderr
 		return p.returncode
 
-	def generate(self):
+	def generate_patch(self):
 		return self.exec_cmd("python %s generate %s %s" % (self.generator, self.source, self.target))
 
-	def apply(self, test):
+	def apply_patch(self, test):
 		return self.exec_cmd("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
+
+	def check_patch(self, test):
+		return self.exec_cmd("%s check -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
+
+	def list_patches(self, test):
+		return self.exec_cmd("%s list -p %d" % (self.patcher, test.p.pid))
 
 
 class LivePatchTest:
@@ -187,12 +193,20 @@ class LivePatchTest:
 
 		patch = BinPatch(source, self.tgt_elf)
 
-		if patch.generate() != 0:
+		if patch.generate_patch() != 0:
 			print "Failed to generate binary patch\n"
 			raise
 
-		if patch.apply(test) != 0:
+		if patch.check_patch(test) == 0:
+			print "Failed to check whether patch is applied\n"
+			raise
+
+		if patch.apply_patch(test) != 0:
 			print "Failed to apply binary patch\n"
+			raise
+
+		if patch.list_patches(test) != 0:
+			print "Failed to list applied patches\n"
 			raise
 
 		return
