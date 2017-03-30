@@ -348,7 +348,7 @@ int service_stop(struct process_ctx_s *ctx, struct service *service)
 	if (err)
 		return err;
 
-	service->loaded = true;
+	service->loaded = false;
 
 	return 0;
 }
