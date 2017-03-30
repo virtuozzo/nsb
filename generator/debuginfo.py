@@ -43,29 +43,6 @@ def get_die_name(die):
 	assert attr.form in [STR.DW_FORM_string, STR.DW_FORM_strp], attr.form
 	return attr.value
 
-def get_die_key(die):
-	if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
-		return
-
-	skip_attrs = [
-		STR.DW_AT_abstract_origin,
-		STR.DW_AT_declaration,
-		STR.DW_AT_artificial,
-	]
-	if set(die.attributes).intersection(skip_attrs):
-		return
-
-	result = []
-	while die:
-		if die.tag == STR.DW_TAG_lexical_block:
-			return
-		sym_name = get_die_name(die)
-		result.append((sym_name, die.tag))
-		die = die.get_parent()
-
-	result.reverse()
-	return tuple(result)
-
 def get_die_addr(die):
 	structs = die.cu.structs
 
@@ -184,4 +161,33 @@ class DebugInfo(object):
 			offset=die_offset)
 		within_die = die.offset <= pos < die.offset + die.size
 		return (die, die_parent_pos[die_idx]) if within_die else (None, None)
+
+	def get_key(self, pos):
+		die, pos = self.lookup_die(pos)
+
+		if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
+			return
+
+		skip_attrs = [
+			STR.DW_AT_abstract_origin,
+			STR.DW_AT_declaration,
+			STR.DW_AT_artificial,
+		]
+		if set(die.attributes).intersection(skip_attrs):
+			return
+
+		result = []
+		while True:
+			if die.tag == STR.DW_TAG_lexical_block:
+				return
+			sym_name = get_die_name(die)
+			result.append((sym_name, die.tag))
+
+			if pos < 0:
+				break
+
+			die, pos = self.lookup_die(pos)
+
+		result.reverse()
+		return tuple(result)
 
