@@ -131,6 +131,8 @@ int64_t process_map_vma(struct process_ctx_s *ctx, int fd,
 {
 	int64_t addr;
 
+	process_print_munmap(vma);
+
 	if (ctx->service.loaded) {
 		pr_err("service is loaded\n");
 		return -EBUSY;
@@ -155,12 +157,6 @@ void process_print_munmap(const struct vma_area *vma)
 	pr_info("  - munmap: %#lx-%#lx\n", vma_start(vma), vma_end(vma));
 }
 
-static int print_dl_munmap(struct vma_area *vma, void *data)
-{
-	process_print_munmap(vma);
-	return 0;
-}
-
 static int unmap_dl_vma(struct vma_area *vma, void *data)
 {
 	struct process_ctx_s *ctx = data;
@@ -170,8 +166,6 @@ static int unmap_dl_vma(struct vma_area *vma, void *data)
 
 int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 {
-	(void)iterate_dl_vmas(dlm, NULL, print_dl_munmap);
-
 	if (ctx->dry_run)
 		return 0;
 
@@ -192,19 +186,11 @@ void process_print_mmap(const struct vma_area *vma)
 			map_flags(vma_flags(vma), fbuf));
 }
 
-static int print_dl_mmap(struct vma_area *vma, void *data)
-{
-	process_print_mmap(vma);
-	return 0;
-}
-
 int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 {
 	int fd;
 	int64_t addr;
 	struct vma_area *vma;
-
-	(void)iterate_dl_vmas(dlm, NULL, print_dl_mmap);
 
 	if (ctx->dry_run)
 		return 0;
@@ -476,6 +462,13 @@ int process_unmap_vma(struct process_ctx_s *ctx, const struct vma_area *vma)
 {
 	int err;
 
+	process_print_munmap(vma);
+
+	if (ctx->service.loaded) {
+		pr_err("service is loaded\n");
+		return -EBUSY;
+	}
+
 	err = process_syscall(ctx, __NR(munmap, false),
 			      vma_start(vma), vma_length(vma), 0, 0, 0, 0);
 	if (err < 0) {
@@ -483,8 +476,6 @@ int process_unmap_vma(struct process_ctx_s *ctx, const struct vma_area *vma)
 				vma_start(vma), vma_end(vma));
 		return -errno;
 	}
-
-	pr_info("  - munmap: %#lx-%#lx\n", vma_start(vma), vma_end(vma));
 	return 0;
 }
 

@@ -378,6 +378,8 @@ static int service_set_map_info(struct vma_area *vma, void *data)
 	struct nsb_service_mmap_info *mi;
 	size_t max_mmaps;
 
+	process_print_mmap(vma);
+
 	max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
 
 	if (mrq->nr_mmaps == max_mmaps) {
@@ -443,6 +445,8 @@ static int service_set_map_addr_info(struct vma_area *vma, void *data)
 	struct nsb_service_munmap_request *mrq = data;
 	struct nsb_service_map_addr_info *mai;
 	size_t max_munmaps;
+
+	process_print_munmap(vma);
 
 	max_munmaps = NSB_SERVICE_MUNMAP_DATA_SIZE_MAX / sizeof(*mai);
 
