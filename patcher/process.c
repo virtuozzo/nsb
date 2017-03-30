@@ -217,7 +217,7 @@ int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
 	return 0;
 
 unmap:
-	list_for_each_entry_reverse(vma, &dlm->vmas, dl)
+	list_for_each_entry_continue_reverse(vma, &dlm->vmas, dl)
 		(void)process_unmap_vma(ctx, vma);
 	return addr;
 }
