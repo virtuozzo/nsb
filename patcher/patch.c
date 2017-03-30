@@ -207,6 +207,7 @@ static int load_patch(struct process_ctx_s *ctx)
 	if (err)
 		goto destroy_dlm;
 
+	list_add_tail(&P(ctx)->list, &ctx->applied_patches);
 	P(ctx)->patch_dlm = dlm;
 	return 0;
 
