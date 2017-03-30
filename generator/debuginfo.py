@@ -4,6 +4,8 @@ import array
 import bisect
 import functools
 from weakref import WeakKeyDictionary
+import itertools
+
 from elftools.dwarf import enums, dwarf_expr
 from elftools.dwarf.die import DIE
 
@@ -172,11 +174,12 @@ class DebugInfo(object):
 		within_die = die.offset <= pos < die.offset + die.size
 		return (die, die_parent_pos[die_idx]) if within_die else (None, None)
 
-	def get_key(self, pos):
+	def _get_key_die(self, pos):
 		die, pos = self.lookup_die(pos)
+		nope = (None, None)
 
 		if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
-			return
+			return nope
 
 		skip_attrs = [
 			STR.DW_AT_abstract_origin,
@@ -184,20 +187,47 @@ class DebugInfo(object):
 			STR.DW_AT_artificial,
 		]
 		if set(die.attributes).intersection(skip_attrs):
-			return
+			return nope
 
-		result = []
+		key = []
+		leaf_die = die
 		while True:
 			if die.tag == STR.DW_TAG_lexical_block:
-				return
+				return nope
 			sym_name = get_die_name(die)
-			result.append((sym_name, die.tag))
+			key.append((sym_name, die.tag))
 
 			if pos < 0:
 				break
 
 			die, pos = self.lookup_die(pos)
 
-		result.reverse()
-		return tuple(result)
+		key.reverse()
+		return tuple(key), leaf_die
+
+	def get_key(self, pos):
+		return self._get_key_die(pos)[0]
+
+	def get_addr(self, key):
+		cu_name, die_type = key[0]
+		assert die_type == STR.DW_TAG_compile_unit
+		cu = self._cu_names[cu_name]
+		die_pos, die_parent_pos = _read_CU(cu)
+
+		found = False
+		addr = None
+		# Skip sentinel at position zero
+		for pos in itertools.islice(die_pos, 1, None):
+			curr_key, die = self._get_key_die(pos)
+			if curr_key != key:
+				continue
+
+			if found:
+				raise Exception("Duplicate key {0}".format(key))
+
+			addr = get_die_addr(die)
+			found = True
+
+		return addr
+			
 
