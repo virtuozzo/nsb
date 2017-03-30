@@ -122,14 +122,6 @@ class BinPatch:
 		self.source = source
 		self.target = target
 
-		self.gen_stderr = None
-		self.gen_stderr = None
-		self.gen_result = None
-
-		self.apply_result = None
-		self.apply_stdout = None
-		self.apply_stderr = None
-
 		self.generator = os.environ.get('NSB_GENERATOR')
 		if not self.generator:
 			print "NSB_GENERATOR environment variable must be set"
@@ -200,7 +192,7 @@ class LivePatchTest:
 			raise
 
 		if patch.apply(test) != 0:
-			print "Failed to apply binary patch:\n%s" % patch.apply_stderr
+			print "Failed to apply binary patch\n"
 			raise
 
 		return
