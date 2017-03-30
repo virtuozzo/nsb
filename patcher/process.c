@@ -829,6 +829,7 @@ int process_shutdown_service(struct process_ctx_s *ctx)
 		return -EFAULT;
 	}
 
+	ctx->service.handle = 0;
 	return 0;
 }
 
