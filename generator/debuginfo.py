@@ -80,30 +80,34 @@ def memoize(dict_class):
 
 	return fix_dict_class
 
-@memoize(WeakKeyDictionary)
-def _read_CU(cu):
-	die_pos        = array.array('l', [-1])
-	die_parent_pos = array.array('l', [-1])
-
+def _iter_DIEs(cu):
 	# See CompileUnit._unflatten_tree()
 	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
 	die_offset = cu.cu_die_offset
-	parent_stack = [-1]
+
 	while die_offset < cu_boundary:
 		die = DIE(
 			cu=cu,
 			stream=cu.dwarfinfo.debug_info_sec.stream,
 			offset=die_offset)
 
+		yield die
+		die_offset += die.size
+
+@memoize(WeakKeyDictionary)
+def _read_CU(cu):
+	die_pos        = array.array('l', [-1])
+	die_parent_pos = array.array('l', [-1])
+
+	parent_stack = [-1]
+	for die in _iter_DIEs(cu):
 		if not die.is_null():
-			die_pos.append(die_offset)
+			die_pos.append(die.offset)
 			die_parent_pos.append(parent_stack[-1])
 			if die.has_children:
-				parent_stack.append(die_offset)
+				parent_stack.append(die.offset)
 		elif parent_stack:
 			parent_stack.pop()
-
-		die_offset += die.size
 
 	return die_pos, die_parent_pos
 
