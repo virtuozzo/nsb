@@ -279,17 +279,12 @@ unload_patch:
 
 int patch_set_target_dlm(struct process_ctx_s *ctx, struct patch_s *p)
 {
-	const struct dl_map *dlm;
 	const char *bid = p->pi.target_bid;
 
-	dlm = find_dl_map_by_bid(&ctx->dl_maps, bid);
-	if (!dlm) {
-		pr_err("failed to find vma with Build ID %s in process %d\n",
+	p->target_dlm = find_dl_map_by_bid(&ctx->dl_maps, bid);
+	if (!p->target_dlm)
+		pr_warn("failed to find vma with Build ID %s in process %d\n",
 				bid, ctx->pid);
-		return -ENOENT;
-	}
-
-	p->target_dlm = dlm;
 	return 0;
 }
 
@@ -304,6 +299,7 @@ int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
 	p = xmalloc(sizeof(*p));
 	if (!p)
 		return -ENOMEM;
+	p->patch_dlm = dlm;
 
 	err = elf_info_binpatch(&p->pi, dlm->ei);
 	if (err)
@@ -313,11 +309,11 @@ int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
 	if (err)
 		goto free_patch;
 
-	p->patch_dlm = dlm;
-
-	err = tune_patch_func_jumps(p);
-	if (err)
-		goto free_patch;
+	if (p->target_dlm) {
+		err = tune_patch_func_jumps(p);
+		if (err)
+			goto free_patch;
+	}
 
 	INIT_LIST_HEAD(&p->rela_plt);
 	INIT_LIST_HEAD(&p->rela_dyn);
