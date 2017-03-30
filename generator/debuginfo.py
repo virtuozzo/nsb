@@ -146,23 +146,3 @@ class DebugInfo(object):
 			offset=die_offset)
 		return die if die.offset <= pos < die.offset + die.size else None
 
-	def get_die_key_addrs(self):
-		result = {}
-		for _, die in self._die_pos:
-			if not die:
-				continue
-
-			die_key = get_die_key(die)
-			if not die_key:
-				continue
-
-			if die_key in result:
-				print(die_key)
-				raise Exception("Duplicate DIE key")
-
-			sym_addr = get_die_addr(die)
-			if sym_addr is not None:
-				result[die_key] = sym_addr
-
-		return result
-
