@@ -243,9 +243,15 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 		return hole;
 	}
 
-	/* TODO: need to check, that found hole fits into 2GB boundary range
-	 * from VMA to patch.
-	 */
+	if (dl_map_check_jump_range(TDLM(ctx), hole) ||
+	    dl_map_check_jump_range(TDLM(ctx), hole + load_size)) {
+		pr_err("failed to find suitable address hole to patch %s\n",
+				TDLM(ctx)->ei->path);
+		pr_err("the nearest suitable hole is: %lx-%lx\n",
+				hole, hole + load_size);
+		return -ERANGE;
+	}
+
 	return iterate_dl_vmas(dlm, &hole, pin_elf_mmap);
 }
 
