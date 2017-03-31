@@ -1,18 +1,23 @@
 import os
 from abc import ABCMeta, abstractmethod
 
+from elftools.elf import elffile
+
 import binpatch_pb2
 from build_id import get_build_id
 from funcjump import FuncJump
 import markedsym_pb2
 import marked_symbol
+import staticsym_pb2
+import static_symbol
 
 class BinPatch:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, bf_old, bf_new, patchfile, mode):
+	def __init__(self, bf_old, bf_new, obj_files, patchfile, mode):
 		self.bf_old = bf_old
 		self.bf_new = bf_new
+		self.obj_files = [elffile.ELFFile(open(fn)) for fn in obj_files] 
 		self.patchfile = patchfile
 		self.mode = mode
 		self.common_func = []
@@ -54,8 +59,12 @@ class BinPatch:
 		return True
 
 	def __auto_patch_info__(self, pi):
-		print "Patch info creation in \"auto\" mode is not supported yet"
-		raise
+		print "\nResolving static symbols:"
+		static_sym_info = static_symbol.resolve(self.bf_old.elf.elf,
+				self.bf_new.elf.elf, self.obj_files)
+		pi.static_symbols.extend(staticsym_pb2.StaticSym(
+			patch_size=size, patch_address=addr, target_value=value)
+				for size, addr, value in static_sym_info)
 
 	def __manual_patch_info__(self, pi):
 		print "Resolving marked symbols"

@@ -12,7 +12,7 @@ def gen_patch(args):
 
 	bfa = BinFile(args.elfa, args.debugfile, args.keep_merged)
 
-	print "ELF B: %s" % args.elfb
+	print "ELF B: %s" % args.elfb, args.obj_files
 	bfb = BinFile(args.elfb)
 
 	if args.outfile:
@@ -21,7 +21,7 @@ def gen_patch(args):
 	if bfa.header.type != 'ET_DYN':
 		print "Only ET_DYN patch creation is supported"
 
-	binpatch = BinPatch(bfa, bfb, args.outfile, args.mode)
+	binpatch = BinPatch(bfa, bfb, args.obj_files, args.outfile, args.mode)
 
 	if not binpatch.applicable():
 		print "Can't apply patch"
