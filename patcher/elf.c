@@ -229,10 +229,12 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 {
 	size_t load_size;
 	int64_t hole;
-	uint64_t hint = dl_map_end(TDLM(ctx));
+	uint64_t hint;
 
 	load_size = ELF_PAGESTART(dl_map_end(dlm)) -
 		    ELF_PAGESTART(dl_map_start(dlm));
+
+	hint = dl_map_jump_hint(TDLM(ctx));
 
 	hole = process_find_place_for_elf(ctx, hint, load_size);
 	if (hole < 0) {
