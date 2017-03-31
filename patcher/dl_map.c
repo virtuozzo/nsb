@@ -6,6 +6,7 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 #include "include/elf.h"
+#include "include/x86_64.h"
 
 struct dl_info {
 	struct list_head	*head;
@@ -308,4 +309,13 @@ int iterate_dl_vmas(const struct dl_map *dlm, void *data,
 			break;
 	}
 	return err;
+}
+
+uint64_t dl_map_jump_hint(const struct dl_map *dlm)
+{
+	/* In case of static binary simply return end of the dl_map object. */
+        if (!elf_type_dyn(dlm->ei))
+		return dl_map_end(dlm);
+
+	return x86_jump_min_address(vma_end(dlm->exec_vma));
 }
