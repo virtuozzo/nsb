@@ -93,3 +93,60 @@ def process_obj(elf):
 				target_sec.name, debuginfo.format_di_key(di_key))
 
 	return result
+
+def resolve(old_so, new_so, obj_seq):
+	old_so_di = debuginfo.get_debug_info(old_so)
+
+	new_so_di = debuginfo.get_debug_info(new_so)
+	new_so_cus = set(new_so_di.get_cu_names())
+
+	obj_cus = set()
+	for obj in obj_seq:
+		obj_di = debuginfo.get_debug_info(obj)
+		obj_cus.update(obj_di.get_cu_names())
+
+	if new_so_cus != obj_cus:
+		print "SO  CUs", " ".join(new_so_cus)
+		print "OBJ CUs", " ".join(obj_cus)
+		raise Exception("CU mismatch")
+
+	text_sec = new_so.get_section_by_name('.text')
+	file_offset = text_sec.header.sh_offset - text_sec.header.sh_addr
+	stream = new_so.stream
+
+	def read(pos, size):
+		stream.seek(pos)
+		data = stream.read(size)
+		assert len(data) == size
+
+		result = 0
+		shift = 0
+		for b in data:
+			result += ord(b) << shift
+			shift += 8
+		return result
+
+	result = []
+	modulo = 1 << 64
+	for obj in obj_seq:
+		for func_di_key, relocs in process_obj(obj).iteritems():
+			func_addr = new_so_di.get_addr(func_di_key)
+			for rel_size, rel_offset, di_key in relocs:
+				patch_address = func_addr + rel_offset
+
+				rel_value = read(patch_address + file_offset, rel_size)
+				old_addr = old_so_di.get_addr(di_key)
+				new_addr = new_so_di.get_addr(di_key)
+				# Emulate arithmetic modulo 2**64
+				# To get final address, one should subtract base load address of new ELF, and
+				# add base load address of old ELF  (zero for executables).  This calculation
+				# should also be made with modulo arithmetic. Then, for small relocation size
+				# one should verify that truncated value sign-extends to the full value.
+				target_value = (rel_value + old_addr - new_addr) % modulo
+
+				result.append((rel_size, patch_address, target_value))
+
+	return result
+
+
+	
