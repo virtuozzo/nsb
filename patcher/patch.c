@@ -216,7 +216,7 @@ static int load_patch(struct process_ctx_s *ctx)
 	if (!dlm)
 		return -ENOMEM;
 
-	err = load_elf(ctx, dlm, dl_map_end(TDLM(ctx)));
+	err = load_elf(ctx, dlm, TDLM(ctx));
 	if (err)
 		goto destroy_dlm;
 

@@ -11,7 +11,8 @@ int is_elf_file(const char *path);
 
 struct process_ctx_s;
 struct dl_map;
-int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint);
+int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm,
+	     const struct dl_map *target_dlm);
 int unload_elf(struct process_ctx_s *ctx, const struct dl_map *dlm);
 
 struct elf_info_s;

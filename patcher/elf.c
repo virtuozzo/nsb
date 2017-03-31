@@ -225,10 +225,11 @@ static int pin_elf_mmap(struct vma_area *vma, void *data)
 }
 
 static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
-			 uint64_t hint)
+			 const struct dl_map *target_dlm)
 {
 	size_t load_size;
 	int64_t hole;
+	uint64_t hint = dl_map_end(TDLM(ctx));
 
 	load_size = ELF_PAGESTART(dl_map_end(dlm)) -
 		    ELF_PAGESTART(dl_map_start(dlm));
@@ -246,7 +247,8 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 	return iterate_dl_vmas(dlm, &hole, pin_elf_mmap);
 }
 
-int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
+int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm,
+	     const struct dl_map *target_dlm)
 {
 	int err;
 
@@ -254,7 +256,7 @@ int load_elf(struct process_ctx_s *ctx, struct dl_map *dlm, uint64_t hint)
 	if (err)
 		return err;
 
-	err = pin_elf_mmaps(ctx, dlm, hint);
+	err = pin_elf_mmaps(ctx, dlm, target_dlm);
 	if (err)
 		return err;
 
