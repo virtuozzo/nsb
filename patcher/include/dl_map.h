@@ -46,5 +46,6 @@ int iterate_dl_maps(const struct list_head *head, void *data,
 void print_dl_vmas(const struct dl_map *dlm);
 
 uint64_t dl_map_jump_hint(const struct dl_map *dlm);
+int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base);
 
 #endif /* __PATCHER_DL_MAP_H__ */
