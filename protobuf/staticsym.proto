@@ -1,0 +1,5 @@
+message StaticSym {
+	required int32		patch_size		= 1;
+	required uint64		patch_address		= 2;
+	required uint64		target_value		= 3 ;
+}
