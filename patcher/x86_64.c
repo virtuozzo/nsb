@@ -6,6 +6,20 @@
 #include "include/x86_64.h"
 #include "include/compiler.h"
 
+#define X86_64_JUMP_RANGE	(2UL << 30) /* 2 GB */
+
+uint64_t x86_jump_min_address(uint64_t address)
+{
+	if (address > X86_64_JUMP_RANGE)
+		return address - X86_64_JUMP_RANGE;
+	return 0;
+}
+
+uint64_t x86_jump_max_address(uint64_t address)
+{
+	return address + X86_64_JUMP_RANGE;
+}
+
 static int ip_gen_offset(uint64_t next_ip, uint64_t tgt_pos,
 			 char addr_size, int *buf)
 {

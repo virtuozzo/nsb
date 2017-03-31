@@ -6,6 +6,9 @@
  */
 #define X86_64_CALL_MAX_SIZE	102
 
+uint64_t x86_jump_min_address(uint64_t address);
+uint64_t x86_jump_max_address(uint64_t address);
+
 int x86_jmpq_instruction(unsigned char *buf, size_t size,
 			 uint64_t cur_pos, uint64_t tgt_pos);
 
