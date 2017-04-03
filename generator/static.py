@@ -53,7 +53,7 @@ def process_obj(elf):
 	def get_di_key(sec_idx):
 		di_offsets = di_reloc.get_offsets(sec_idx)
 		di_keys = map(di.get_key, di_offsets)
-		di_key_set = set(di_keys)
+		di_key_set = set(filter(None, di_keys))
 		if len(di_key_set) != 1:
 			for offs, key in zip(di_offsets, di_keys):
 				print "   0x{:<4x} {}".format(offs, key)
