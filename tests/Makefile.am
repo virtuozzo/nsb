@@ -13,7 +13,7 @@ TESTS_LIST = 				\
 AM_LDFLAGS = -avoid-version -rpath /whereever
 
 libtest_la_SOURCES = library.c test_types.h $(TESTS_LIST)
-libtests_la_CFLAGS = $(AM_CFLAGS) -g
+libtest_la_CFLAGS = $(AM_CFLAGS) -g
 
 check_LTLIBRARIES = libtest.la
 
