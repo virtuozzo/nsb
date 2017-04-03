@@ -52,12 +52,13 @@ def process_obj(elf):
 	@debuginfo.memoize(dict)
 	def get_di_key(sec_idx):
 		di_offsets = di_reloc.get_offsets(sec_idx)
-		di_keys = set(map(di.get_key, di_offsets))
-		if len(di_keys) != 1:
-			for k in di_keys:
-				print "     ", debuginfo.format_di_key(k)
+		di_keys = map(di.get_key, di_offsets)
+		di_key_set = set(di_keys)
+		if len(di_key_set) != 1:
+			for offs, key in zip(di_offsets, di_keys):
+				print "   0x{:<4x} {}".format(offs, key)
 			raise Exception("Got {} DIE keys for section {}".format(len(di_keys), sec_idx))
-		return di_keys.pop()
+		return di_key_set.pop()
 
 	result = defaultdict(list)
 	rel_type2size = {
