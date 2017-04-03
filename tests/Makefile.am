@@ -1,8 +1,18 @@
 LIBS =
 
+TESTS_LIST = 				\
+		global_func.c		\
+		ext_global_func.c	\
+		global_func_cb.c	\
+		global_func_p.c		\
+		global_var.c		\
+		global_var_addr.c	\
+		static_func_cb.c	\
+		static_var.c
+
 AM_LDFLAGS = -avoid-version -rpath /whereever
 
-libtest_la_SOURCES =	library.c test_types.h
+libtest_la_SOURCES = library.c test_types.h $(TESTS_LIST)
 libtests_la_CFLAGS = $(AM_CFLAGS) -g
 
 check_LTLIBRARIES = libtest.la
@@ -11,11 +21,11 @@ nsbtest_library_SOURCES = main.c
 nsbtest_library_LDADD = libtest.la -lpthread
 nsbtest_library_CFLAGS = $(AM_CFLAGS) -g
 
-nsbtest_static_SOURCES = main.c library.c test_types.h
+nsbtest_static_SOURCES = main.c library.c test_types.h $(TESTS_LIST)
 nsbtest_static_LDADD = -lpthread
 nsbtest_static_CFLAGS = $(AM_CFLAGS) -g
 
-nsbtest_shared_SOURCES = main.c library.c test_types.h
+nsbtest_shared_SOURCES = main.c library.c test_types.h $(TESTS_LIST)
 nsbtest_shared_LDADD = -lpthread
 nsbtest_shared_CFLAGS = $(AM_CFLAGS) -g -fpic -pie
 

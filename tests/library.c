@@ -3,17 +3,17 @@
 
 #include "test_types.h"
 
-#include "global_func.c"
-#include "static_func.c"
-#include "ext_global_func.c"
-#include "global_func_cb.c"
-#include "global_func_p.c"
-#include "global_var.c"
-#include "global_var_addr.c"
-#include "static_func_cb.c"
-#include "static_var.c"
-
 typedef long (*test_actor_t)(int tt);
+
+extern long test_global_func(int type);
+extern long test_static_func(int type);
+extern long ext_global_func(int type);
+extern long test_global_func_cb(int type);
+extern long test_global_func_p(int type);
+extern long test_global_var(int type);
+extern long test_global_var_addr(int type);
+extern long test_static_func_cb(int type);
+extern long test_static_var(int type);
 
 struct test_info_s {
 	test_actor_t	actor;
