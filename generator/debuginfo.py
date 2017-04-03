@@ -83,7 +83,6 @@ def memoize(dict_class):
 	return fix_dict_class
 
 def _iter_DIEs(cu):
-	# See CompileUnit._unflatten_tree()
 	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
 	die_offset = cu.cu_die_offset
 
@@ -101,6 +100,7 @@ def _read_CU(cu):
 	die_pos        = array.array('l', [-1])
 	die_parent_pos = array.array('l', [-1])
 
+	# See CompileUnit._unflatten_tree()
 	parent_stack = [-1]
 	for die in _iter_DIEs(cu):
 		if not die.is_null():
