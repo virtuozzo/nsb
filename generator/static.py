@@ -90,7 +90,7 @@ def process_obj(elf):
 
 			di_key = get_di_key(target_sec_idx)
 			result[func_di_key].append((rel_size, rel.entry.r_offset, di_key))
-			print "  +{:<5x} {:40s} {}".format(rel.entry.r_offset,
+			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
 				target_sec.name, debuginfo.format_di_key(di_key))
 
 	return result
