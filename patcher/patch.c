@@ -649,7 +649,7 @@ int check_process(pid_t pid, const char *patchfile)
 	if (err)
 		return err;
 
-	return !find_patch_by_bid(ctx, PI(ctx)->patch_bid);
+	return find_patch_by_bid(ctx, PI(ctx)->patch_bid) ? 0 : ENOENT;
 }
 
 static void list_patch(const struct patch_s *p)
