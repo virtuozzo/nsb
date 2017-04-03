@@ -1,4 +1,5 @@
 import sys
+import errno
 import os
 import re
 import subprocess
@@ -162,6 +163,9 @@ class BinPatch:
 	def list_patches(self, test):
 		return self.exec_cmd("%s list -p %d" % (self.patcher, test.p.pid))
 
+	def revert_patch(self, test):
+		return self.exec_cmd("%s revert -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
+
 
 class LivePatchTest:
 	__metaclass__ = ABCMeta
@@ -171,6 +175,45 @@ class LivePatchTest:
 		self.src_elf = self.source_elf(source)
 		self.tgt_elf = self.target_elf(target)
 		self.test_type = test_type
+
+	def __do_apply_patch_test__(self, patch, test):
+		res = patch.check_patch(test)
+		if res == 0:
+			print "Patch is considered as applied"
+			raise
+		if res != errno.ENOENT:
+			print "Failed to check whether patch is applied"
+			raise
+
+		if patch.apply_patch(test) != 0:
+			print "Failed to apply binary patch\n"
+			raise
+
+		if patch.apply_patch(test) == 0:
+			print "Binary patch successfully applied twise\n"
+			raise
+
+		if patch.list_patches(test) != 0:
+			print "Failed to list applied patches\n"
+			raise
+
+	def __do_revert_patch_test__(self, patch, test):
+		res = patch.check_patch(test)
+		if res == errno.ENOENT:
+			print "Patch is considered as unapplied"
+			raise
+		if res > 1:
+			print "Failed to check whether patch is applied"
+			raise
+
+		if patch.revert_patch(test) != 0:
+			print "Failed to revert applied patch\n"
+			raise
+
+		if patch.revert_patch(test) == 0:
+			print "Binary patch successfully reverted twise\n"
+			raise
+
 
 	def __do_test__(self, test):
 		try:
@@ -197,17 +240,11 @@ class LivePatchTest:
 			print "Failed to generate binary patch\n"
 			raise
 
-		if patch.check_patch(test) == 0:
-			print "Failed to check whether patch is applied\n"
-			raise
+		self.__do_apply_patch_test__(patch, test)
 
-		if patch.apply_patch(test) != 0:
-			print "Failed to apply binary patch\n"
-			raise
+		self.__do_revert_patch_test__(patch, test)
 
-		if patch.list_patches(test) != 0:
-			print "Failed to list applied patches\n"
-			raise
+		self.__do_apply_patch_test__(patch, test)
 
 		return
 
