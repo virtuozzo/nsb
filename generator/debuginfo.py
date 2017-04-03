@@ -176,7 +176,9 @@ class DebugInfo(object):
 			stream=cu.dwarfinfo.debug_info_sec.stream,
 			offset=die_offset)
 		within_die = die.offset <= pos < die.offset + die.size
-		return (die, die_parent_pos[die_idx]) if within_die else (None, None)
+		if not within_die:
+			raise Exception("Position is outside DIE")
+		return die, die_parent_pos[die_idx]
 
 	def _get_key_die(self, pos):
 		die, pos = self.lookup_die(pos)
