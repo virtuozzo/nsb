@@ -563,6 +563,29 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	return 0;
 }
 
+static int process_cease(struct process_ctx_s *ctx, const char *bid)
+{
+	int err, ret;
+
+	err = process_suspend(ctx, bid);
+	if (err)
+		return err;
+
+	ret = process_link(ctx);
+	if (ret)
+		goto resume;
+
+	ret = process_collect_vmas(ctx);
+	if (ret)
+		goto resume;
+
+	return 0;
+
+resume:
+	err = process_resume(ctx);
+	return ret ? ret : err;
+}
+
 int patch_process(pid_t pid, const char *patchfile, int dry_run)
 {
 	int ret, err;
@@ -574,17 +597,9 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run)
 
 	ctx->check_backtrace = jumps_check_backtrace;
 
-	err = process_suspend(ctx, PI(ctx)->target_bid);
+	err = process_cease(ctx, PI(ctx)->target_bid);
 	if (err)
 		return err;
-
-	ret = process_link(ctx);
-	if (ret)
-		goto resume;
-
-	ret = process_collect_vmas(ctx);
-	if (ret)
-		goto resume;
 
 	ret = process_find_patch(ctx);
 	if (ret)
@@ -700,17 +715,9 @@ int unpatch_process(pid_t pid, const char *patchfile, int dry_run)
 
 	ctx->check_backtrace = patch_check_backtrace;
 
-	err = process_suspend(ctx, PI(ctx)->patch_bid);
+	err = process_cease(ctx, PI(ctx)->patch_bid);
 	if (err)
 		return err;
-
-	ret = process_link(ctx);
-	if (ret)
-		goto resume;
-
-	ret = process_collect_vmas(ctx);
-	if (ret)
-		goto resume;
 
 	p = find_patch_by_bid(ctx, PI(ctx)->patch_bid);
 	if (!p) {
