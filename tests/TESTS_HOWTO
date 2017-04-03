@@ -47,9 +47,8 @@ test_type_t enum in a form:
 
 	TEST_TYPE_<TEST_TYPE>
 
-2) Test file has to be included (!) to tests/library.c to be built as
-part of the library to patch. The reason is to prevent convertion of static
-functions into global on linking.
+2) Test file has to be added to variable TESTS_LIST in tests/Makefile.am to be
+built.
 
 3) The following hunk has to be to tests/library.c:
 
