@@ -32,7 +32,7 @@ else:
 	print "Unsupported test type: \"%s\"" % test_type
 	exit(1)
 
-target = "patch_" + test_name + ".so"
+target = test_name + ".patch"
 test_type = get_test_type(test_name)
 
 code =	"#!/usr/bin/env python2\n" +						\

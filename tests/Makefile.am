@@ -42,25 +42,15 @@ check_SCRIPTS = nsb_test_types.py
 # Patches
 ########################
 
-patch_%.so: %.c test_types.h
+.c.patch: test_types.h
 	$(AM_V_CC) $(CC) -DPATCH -g -shared -fpic $^ -o $@
 
-patch_global_func.so$(EXEEXT): global_func.c
-patch_static_func.so$(EXEEXT): static_func.c
-patch_ext_global_func.so$(EXEEXT): ext_global_func.c
-patch_global_func_cb.so$(EXEEXT): global_func_cb.c
-patch_global_func_p.so$(EXEEXT): global_func_p.c
-patch_global_var.so$(EXEEXT): global_var.c
-patch_global_var_addr.so$(EXEEXT): global_var_addr.c
-patch_static_func_cb.so$(EXEEXT): static_func_cb.c
-patch_static_var.so$(EXEEXT): static_var.c
-
-check_DATA = patch_global_func.so$(EXEEXT)
-check_DATA += patch_static_func.so$(EXEEXT)
-check_DATA += patch_ext_global_func.so$(EXEEXT)
-check_DATA += patch_global_func_cb.so$(EXEEXT)
-check_DATA += patch_global_func_p.so$(EXEEXT)
-check_DATA += patch_global_var.so$(EXEEXT)
-check_DATA += patch_global_var_addr.so$(EXEEXT)
-check_DATA += patch_static_func_cb.so$(EXEEXT)
-check_DATA += patch_static_var.so$(EXEEXT)
+check_DATA = global_func.patch
+check_DATA += static_func.patch
+check_DATA += ext_global_func.patch
+check_DATA += global_func_cb.patch
+check_DATA += global_func_p.patch
+check_DATA += global_var.patch
+check_DATA += global_var_addr.patch
+check_DATA += static_func_cb.patch
+check_DATA += static_var.patch
