@@ -42,27 +42,14 @@ static int ip_gen_offset(uint64_t next_ip, uint64_t tgt_pos,
 	return 0;
 }
 
-static int ip_change_relative(unsigned char *addr,
-			      uint64_t next_ip, uint64_t tgt_pos,
-			      size_t addr_size)
-{
-	int offset;
-
-	if (ip_gen_offset(next_ip, tgt_pos, addr_size, &offset))
-		return -1;
-
-	memcpy(addr, (void *)&offset, addr_size);
-	return 0;
-}
-
 static int x86_modify_instruction(unsigned char *buf, size_t op_size, size_t addr_size,
 			   uint64_t cur_pos, uint64_t tgt_pos)
 {
-	unsigned char *addr;
+	int *addr;
 	size_t instr_size = op_size + addr_size;
 
-	addr = buf + op_size;
-	if (ip_change_relative(addr, cur_pos + instr_size, tgt_pos, addr_size))
+	addr = (int *)(buf + op_size);
+	if (ip_gen_offset(cur_pos + instr_size, tgt_pos, addr_size, addr))
 		return -1;
 	return instr_size;
 }
