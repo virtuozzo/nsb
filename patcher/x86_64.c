@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdint.h>
+#include <limits.h>
 
 #include "include/log.h"
 #include "include/x86_64.h"
@@ -23,16 +24,17 @@ uint64_t x86_jump_max_address(uint64_t address)
 static int ip_gen_offset(uint64_t next_ip, uint64_t tgt_pos,
 			 char addr_size, int *buf)
 {
-	int i;
-	long offset;
-	uint64_t mask = 0;
+	int64_t offset;
+	uint64_t mask = INT_MAX;
 
-	for (i = 0; i < addr_size; i++) {
-		mask |= ((uint64_t)0xff << (8 * i));
+	if (addr_size != 4) {
+		pr_err("relative offset with size other than 4 bytes "
+			"is not supported yet\n");
+		return -ENOTSUP;
 	}
 
 	offset = tgt_pos - next_ip;
-	if (abs(offset) & ~mask) {
+	if (labs(offset) & ~mask) {
 		pr_err("%s: offset is beyond command size: %#lx > %#lx\n",
 				__func__, offset, mask);
 		return -EINVAL;
