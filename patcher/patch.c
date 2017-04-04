@@ -141,6 +141,21 @@ close_fd:
 	return err;
 }
 
+/* How to create a jump to new function?
+ * We have here:
+ *   - function value in target binary
+ *   - function value in path
+ * And we want to create jump instruction, which uses relative offset to
+ * the *next* command (i.e. next after jump instruction we want).
+ * Thus to create a jump instruction we need:
+ *   1) Add target executable start address to function value in target binary.
+ *      This is so-called "target position".
+ *   2) Add patch executable start address to function value in patch binary
+ *      plus size of jump command.
+ *      This is so-called "current position".
+ * We can then use these two addresses, to find offset from current positon to
+ * target one, and write it as a part of jump command.
+ */
 static int tune_patch_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 				void *data)
 {
