@@ -137,6 +137,10 @@ def resolve(old_so, new_so, obj_seq):
 
 				rel_value = read(patch_address + file_offset, rel_size)
 				old_addr = old_so_di.get_addr(di_key)
+				if not old_addr:
+					print "!! {} is absent in old ELF".format(debuginfo.format_di_key(di_key))
+					continue
+
 				new_addr = new_so_di.get_addr(di_key)
 				# Emulate arithmetic modulo 2**64
 				# To get final address, one should subtract base load address of new ELF, and

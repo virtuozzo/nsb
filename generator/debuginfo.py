@@ -52,6 +52,11 @@ def get_die_addr(die):
 		return attr.value
 
 	elif die.tag == STR.DW_TAG_variable:
+		const_value_attr = die.attributes.get(STR.DW_AT_const_value)
+		if const_value_attr:
+			return "is optimized out, has constant value 0x{:x}".format(
+				const_value_attr.value)
+
 		attr = die.attributes[STR.DW_AT_location]
 		assert attr.form == STR.DW_FORM_exprloc, attr.form
 
@@ -225,9 +230,14 @@ class DebugInfo(object):
 
 			if found:
 				raise Exception("Duplicate key {0}".format(key))
-
-			addr = get_die_addr(die)
 			found = True
+
+			x_addr = get_die_addr(die)
+			if isinstance(x_addr, basestring):
+				print("!! {} {}".format(format_di_key(key), x_addr))
+			else:
+				assert isinstance(x_addr, (int, long))
+				addr = x_addr
 
 		return addr
 			
