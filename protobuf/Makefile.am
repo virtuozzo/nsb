@@ -1,7 +1,7 @@
 dist_noinst_DATA =			\
 		   binpatch.proto	\
 		   funcjump.proto	\
-		   staticsym.proto
+		   markedsym.proto
 
 DEPS	= $(dist_noinst_DATA:.proto=.dep)
 

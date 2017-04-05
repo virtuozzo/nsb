@@ -1,10 +1,10 @@
 import "funcjump.proto";
-import "staticsym.proto";
+import "markedsym.proto";
 
 message BinPatch {
 	required string		old_bid		= 1;
 	required string		new_bid		= 2;
 	optional string		new_path	= 3;
 	repeated FuncJump	func_jumps	= 4;
-	repeated StaticSym	static_symbols	= 5;
+	repeated MarkedSym	marked_symbols	= 5;
 }

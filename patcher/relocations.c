@@ -80,18 +80,18 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 	return -ENOENT;
 }
 
-static int64_t check_sym_info(const struct process_ctx_s *ctx,
-			      struct extern_symbol *es)
+static int64_t check_marked_symbols(const struct process_ctx_s *ctx,
+				    struct extern_symbol *es)
 {
 	int i;
 	const struct patch_info_s *pi = PI(ctx);
 
-	for (i = 0; i < pi->n_static_syms; i++) {
-		const struct static_sym_s *si = pi->static_syms[i];
+	for (i = 0; i < pi->n_marked_syms; i++) {
+		const struct marked_sym_s *ms = pi->marked_syms[i];
 
-		if (si->idx == es_r_sym(es)) {
+		if (ms->idx == es_r_sym(es)) {
 			es->dlm = TDLM(ctx);
-			return si->addr;
+			return ms->addr;
 		}
 	}
 	return 0;
@@ -102,7 +102,7 @@ static int64_t find_dym_sym(const struct process_ctx_s *ctx,
 {
 	int64_t value;
 
-	value = check_sym_info(ctx, es);
+	value = check_marked_symbols(ctx, es);
 	if (value)
 		return value;
 

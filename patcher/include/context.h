@@ -9,7 +9,7 @@
 #include "service.h"
 #include "vma.h"
 
-struct static_sym_s {
+struct marked_sym_s {
 	int32_t			idx;
 	int64_t			addr;
 };
@@ -32,8 +32,8 @@ struct patch_info_s {
 	size_t			n_func_jumps;
 	struct func_jump_s	**func_jumps;
 
-	size_t			n_static_syms;
-	struct static_sym_s	**static_syms;
+	size_t			n_marked_syms;
+	struct marked_sym_s	**marked_syms;
 };
 
 struct patch_s {

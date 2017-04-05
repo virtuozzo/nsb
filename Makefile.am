@@ -35,8 +35,8 @@ nsb_SOURCES =						\
 			protobuf/binpatch.pb-c.h	\
 			protobuf/funcjump.pb-c.c	\
 			protobuf/funcjump.pb-c.h	\
-			protobuf/staticsym.pb-c.c	\
-			protobuf/staticsym.pb-c.h	\
+			protobuf/markedsym.pb-c.c	\
+			protobuf/markedsym.pb-c.h	\
 							\
 			plugins/service.h		\
 							\
