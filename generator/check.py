@@ -43,3 +43,9 @@ def make_check(args):
 	if link:
 		return os.readlink(link)
 	return 1
+
+def check_mode(mode):
+	if mode != "auto" and mode != "manual":
+		msg = "Wrong mode (can be either \"auto\" or \"manual\")" % mode
+		raise argparse.ArgumentTypeError(msg)
+	return mode

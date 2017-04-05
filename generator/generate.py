@@ -21,7 +21,7 @@ def gen_patch(args):
 	if bfa.header.type != 'ET_DYN':
 		print "Only ET_DYN patch creation is supported"
 
-	binpatch = BinPatch(bfa, bfb, args.outfile)
+	binpatch = BinPatch(bfa, bfb, args.outfile, args.mode)
 
 	if not binpatch.applicable():
 		print "Can't apply patch"

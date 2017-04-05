@@ -10,10 +10,11 @@ import marked_symbol
 class BinPatch:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, bf_old, bf_new, patchfile):
+	def __init__(self, bf_old, bf_new, patchfile, mode):
 		self.bf_old = bf_old
 		self.bf_new = bf_new
 		self.patchfile = patchfile
+		self.mode = mode
 		self.common_func = []
 
 		old_func = self.bf_old.functions
@@ -63,6 +64,18 @@ class BinPatch:
 
 		return True
 
+	def __auto_patch_info__(self, pi):
+		print "Patch info creation in \"auto\" mode is not supported yet"
+		raise
+
+	def __manual_patch_info__(self, pi):
+		print "Resolving marked symbols"
+		marked_sym_info = marked_symbol.resolve(self.bf_old.elf.elf, self.bf_new.elf.elf)
+		pi.marked_symbols.extend(
+			markedsym_pb2.MarkedSym(idx=idx, addr=addr)
+				for idx, addr in marked_sym_info)
+		print"\n"
+
 	def patch_info(self):
 		print "\n*************************************************"
 		print "***************** Patch info ********************"
@@ -86,13 +99,13 @@ class BinPatch:
 			funcjump = fj.patch_info()
 			pi.func_jumps.extend([funcjump])
 
-		print "Resolving marked symbols"
-		marked_sym_info = marked_symbol.resolve(self.bf_old.elf.elf, self.bf_new.elf.elf)
-		pi.marked_symbols.extend(
-			markedsym_pb2.MarkedSym(idx=idx, addr=addr)
-				for idx, addr in marked_sym_info)
+		if self.mode == "manual":
+			self.__manual_patch_info__(pi)
+		elif self.mode == "auto":
+			self.__auto_patch_info__(pi)
+		else:
+			print "Unknown patch mode: \"%s\"" % self.mode
 
-		print"\n"
 		return pi
 
 	def write(self):

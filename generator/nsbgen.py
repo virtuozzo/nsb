@@ -3,7 +3,7 @@ import argparse
 
 from generate import gen_patch
 from build_id import print_build_id
-from check import check_pid, check_build_id, make_check
+from check import check_pid, check_build_id, make_check, check_mode
 
 parser = argparse.ArgumentParser()
 sp = parser.add_subparsers(help = "Use --help for list of actions")
@@ -16,6 +16,9 @@ genp.add_argument("-o", "--outfile", help="Output file")
 genp.add_argument("-d", "--debugfile", help="File containing separate debuginfo")
 genp.add_argument("--keep-merged", action="store_true",
 	help="Keep result of merging with debuginfo file")
+
+genp.add_argument("--mode", type=check_mode,  default="manual",
+		  help="Patch creation mode: auto or manual")
 
 bid = sp.add_parser("build-id", help = "Get ELF file Build ID")
 bid.set_defaults(action = print_build_id)
