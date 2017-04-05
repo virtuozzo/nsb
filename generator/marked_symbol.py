@@ -4,7 +4,7 @@ import sys
 import re
 from elftools.elf import elffile
 
-import debuginfo
+import marked_symbol_debuginfo
 
 ELF64_R_INFO = lambda s, t: (s << 32) | t
 
@@ -71,10 +71,10 @@ def resolve(o_elf, p_elf):
 		lookup = lambda name, addr: sym_name2addr[name]
 	else:
 		print("== Reading debuginfo for old ELF")
-		o_di2addr = debuginfo.read(o_elf, sym_names)
+		o_di2addr = marked_symbol_debuginfo.read(o_elf, sym_names)
 
 		print("== Reading debuginfo for new ELF")
-		p_di2addr = debuginfo.read(p_elf, sym_names,
+		p_di2addr = marked_symbol_debuginfo.read(p_elf, sym_names,
 				lambda n: demangle(n) if is_mangled(n) else n)
 
 		p_addr2di = reverse_mapping(p_di2addr)
