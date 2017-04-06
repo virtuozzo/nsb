@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2016-2017, Parallels International GmbH
+ *
+ * Our contact details: Parallels International GmbH, Vordergasse 59, 8200
+ * Schaffhausen, Switzerland.
+ */
+
 #include "include/relocations.h"
 #include "include/list.h"
 #include "include/log.h"
