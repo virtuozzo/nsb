@@ -7,7 +7,7 @@ TESTS_LIST = 				\
 		global_func_p.c		\
 		global_var.c		\
 		global_var_addr.c	\
-		static_func_cb.c	\
+		static_func.c		\
 		const_var.c		\
 		static_var.c
 
@@ -56,7 +56,6 @@ check_DATA += global_func_cb.patch
 check_DATA += global_func_p.patch
 check_DATA += global_var.patch
 check_DATA += global_var_addr.patch
-check_DATA += static_func_cb.patch
 check_DATA += static_var.patch
 check_DATA += const_var.patch
 

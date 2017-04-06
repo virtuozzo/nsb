@@ -12,7 +12,6 @@ extern long test_global_func_cb(int type);
 extern long test_global_func_p(int type);
 extern long test_global_var(int type);
 extern long test_global_var_addr(int type);
-extern long test_static_func_cb(int type);
 extern long test_static_var(int type);
 extern long test_const_var(int type);
 
@@ -26,7 +25,7 @@ struct test_info_s {
 	},
 	[TEST_TYPE_STATIC_FUNC] = {
 		.actor = test_static_func,
-		.match = false,
+		.match = true,
 	},
 	[TEST_TYPE_EXT_GLOBAL_FUNC] = {
 		.actor = ext_global_func,
@@ -46,10 +45,6 @@ struct test_info_s {
 	},
 	[TEST_TYPE_GLOBAL_VAR_ADDR] = {
 		.actor = test_global_var_addr,
-		.match = true,
-	},
-	[TEST_TYPE_STATIC_FUNC_CB] = {
-		.actor = test_static_func_cb,
 		.match = true,
 	},
 	[TEST_TYPE_STATIC_VAR] = {

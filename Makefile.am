@@ -84,7 +84,6 @@ MANUAL_TEST_FILES += tests/global_func_cb.c
 MANUAL_TEST_FILES += tests/global_func_p.c
 MANUAL_TEST_FILES += tests/global_var.c
 MANUAL_TEST_FILES += tests/global_var_addr.c
-MANUAL_TEST_FILES += tests/static_func_cb.c
 MANUAL_TEST_FILES += tests/static_var.c
 MANUAL_TEST_FILES += tests/const_var.c
 
@@ -106,7 +105,6 @@ AUTO_TEST_FILES += tests/global_func_cb.c
 AUTO_TEST_FILES += tests/global_func_p.c
 AUTO_TEST_FILES += tests/global_var.c
 AUTO_TEST_FILES += tests/global_var_addr.c
-AUTO_TEST_FILES += tests/static_func_cb.c
 AUTO_TEST_FILES += tests/static_var.c
 AUTO_TEST_FILES += tests/const_var.c
 
@@ -122,6 +120,7 @@ AUTO_TESTS = $(AUTO_LIBRARY_TESTS) $(AUTO_STATIC_TESTS) $(AUTO_SHARED_TESTS)
 AUTO_XFAIL_TESTS = $(AUTO_LIBRARY_XFAIL_TESTS) $(AUTO_STATIC_XFAIL_TESTS)  $(AUTO_SHARED_XFAIL_TESTS)
 
 TESTS = $(MANUAL_TESTS) $(AUTO_TESTS)
+
 XFAIL_TESTS = $(MANUAL_XFAIL_TESTS) $(AUTO_XFAIL_TESTS)
 
 $(TESTS): $(TESTS_DIR)/testgen.py
