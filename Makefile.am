@@ -37,6 +37,8 @@ nsb_SOURCES =						\
 			protobuf/funcjump.pb-c.h	\
 			protobuf/markedsym.pb-c.c	\
 			protobuf/markedsym.pb-c.h	\
+			protobuf/staticsym.pb-c.c	\
+			protobuf/staticsym.pb-c.h	\
 							\
 			plugins/service.h		\
 							\
