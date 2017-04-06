@@ -86,6 +86,7 @@ MANUAL_TEST_FILES += tests/global_var.c
 MANUAL_TEST_FILES += tests/global_var_addr.c
 MANUAL_TEST_FILES += tests/static_func_cb.c
 MANUAL_TEST_FILES += tests/static_var.c
+MANUAL_TEST_FILES += tests/const_var.c
 
 MANUAL_LIBRARY_TESTS = $(MANUAL_TEST_FILES:.c=__manual__library.py)
 

@@ -8,6 +8,7 @@ TESTS_LIST = 				\
 		global_var.c		\
 		global_var_addr.c	\
 		static_func_cb.c	\
+		const_var.c		\
 		static_var.c
 
 AM_LDFLAGS = -avoid-version -rpath /whereever
@@ -54,3 +55,4 @@ check_DATA += global_var.patch
 check_DATA += global_var_addr.patch
 check_DATA += static_func_cb.patch
 check_DATA += static_var.patch
+check_DATA += const_var.patch

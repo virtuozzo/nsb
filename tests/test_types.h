@@ -16,6 +16,8 @@ typedef enum {
 
 	TEST_TYPE_STATIC_FUNC_CB,
 	TEST_TYPE_STATIC_VAR,
+
+	TEST_TYPE_CONST_VAR,
 	TEST_TYPE_MAX,
 } test_type_t;
 

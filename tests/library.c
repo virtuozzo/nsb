@@ -14,6 +14,7 @@ extern long test_global_var(int type);
 extern long test_global_var_addr(int type);
 extern long test_static_func_cb(int type);
 extern long test_static_var(int type);
+extern long test_const_var(int type);
 
 struct test_info_s {
 	test_actor_t	actor;
@@ -54,6 +55,10 @@ struct test_info_s {
 	[TEST_TYPE_STATIC_VAR] = {
 		.actor = test_static_var,
 		.match = true,
+	},
+	[TEST_TYPE_CONST_VAR] = {
+		.actor = test_const_var,
+		.match = false,
 	},
 };
 
