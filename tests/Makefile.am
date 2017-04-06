@@ -43,8 +43,11 @@ check_SCRIPTS = nsb_test_types.py
 # Patches
 ########################
 
-.c.patch: test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -g -shared -fpic $^ -o $@
+.c.o: test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.o.patch:
+	$(AM_V_CC) $(CC) -g -shared -fpic $^ -o $@
 
 check_DATA = global_func.patch
 check_DATA += static_func.patch
@@ -56,3 +59,7 @@ check_DATA += global_var_addr.patch
 check_DATA += static_func_cb.patch
 check_DATA += static_var.patch
 check_DATA += const_var.patch
+
+.SECONDARY: $(TESTS_LIST:.c=.o)
+
+CLEANFILES = $(TESTS_LIST:.c=.o) $(TESTS_LIST:.c=.patch)
