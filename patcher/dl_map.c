@@ -317,15 +317,15 @@ uint64_t dl_map_jump_hint(const struct dl_map *dlm)
         if (!elf_type_dyn(dlm->ei))
 		return dl_map_end(dlm);
 
-	return x86_jump_min_address(vma_end(dlm->exec_vma));
+	return x86_jump_min_address(vma_end(last_dl_vma(dlm)));
 }
 
 int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base)
 {
-	if (base < x86_jump_min_address(vma_end(dlm->exec_vma)))
+	if (base < x86_jump_min_address(vma_end(last_dl_vma(dlm))))
 		return -ERANGE;
 
-	if (base > x86_jump_max_address(vma_start(dlm->exec_vma)))
+	if (base > x86_jump_max_address(vma_start(first_dl_vma(dlm))))
 		return -ERANGE;
 
 	return 0;
