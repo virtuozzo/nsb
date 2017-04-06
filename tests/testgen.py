@@ -37,6 +37,7 @@ if patch_mode != "manual" and patch_mode != "auto":
 	exit(1)
 
 target = test_name + ".patch"
+target_obj = test_name + ".o"
 test_type = get_test_type(test_name)
 
 code =	"#!/usr/bin/env python2\n" +						\
@@ -55,8 +56,8 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"except:\n"								\
 	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/plugins/.libs'\n"	\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
-	"exit(testrunner.%s('%s', '%s', %d, '%s').run())\n" %	\
-	(test_class, source, target, test_type, patch_mode)
+	"exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())\n" %	\
+	(test_class, source, target, target_obj, test_type, patch_mode)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

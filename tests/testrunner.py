@@ -178,10 +178,11 @@ class ManualBinPatch(BinPatch):
 class LivePatchTest:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, source, target, test_type, patch_mode):
+	def __init__(self, source, target, target_obj, test_type, patch_mode):
 		self.test_bin = self.test_binary(source)
 		self.src_elf = self.source_elf(source)
 		self.tgt_elf = self.target_elf(target)
+		self.target_obj = self.target_elf(target_obj)
 		self.test_type = test_type
 		self.patch_mode = patch_mode
 
