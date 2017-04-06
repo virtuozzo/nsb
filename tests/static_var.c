@@ -18,4 +18,11 @@ long test_static_var(int type)
 	return static_var;
 }
 
+/* This is a dummy function to prevent compiler from optimizing away the
+ * variable */
+void set_static_var(long value)
+{
+	static_var = value;
+}
+
 #endif
