@@ -5,14 +5,16 @@ TESTS_LIST = 				\
 		ext_global_func.c	\
 		global_func_cb_manual.c	\
 		global_func_p.c		\
-		global_var.c		\
-		global_var_addr.c	\
+		global_var_manual.c	\
+		global_var_addr_manual.c\
 		static_func_manual.c	\
 		const_var.c		\
 		static_var.c		\
 					\
 		static_func_auto.c	\
-		global_func_cb_auto.c
+		global_func_cb_auto.c	\
+		global_var_auto.c	\
+		global_var_addr_auto.c
 
 AM_LDFLAGS = -avoid-version -rpath /whereever
 
@@ -57,13 +59,15 @@ check_DATA += static_func_manual.patch
 check_DATA += ext_global_func.patch
 check_DATA += global_func_cb_manual.patch
 check_DATA += global_func_p.patch
-check_DATA += global_var.patch
-check_DATA += global_var_addr.patch
+check_DATA += global_var_manual.patch
+check_DATA += global_var_addr_manual.patch
 check_DATA += static_var.patch
 check_DATA += const_var.patch
-check_DATA += global_func_cb_auto.patch
 
+check_DATA += global_func_cb_auto.patch
 check_DATA += static_func_auto.patch
+check_DATA += global_var_auto.patch
+check_DATA += global_var_addr_auto.patch
 
 .SECONDARY: $(TESTS_LIST:.c=.o)
 

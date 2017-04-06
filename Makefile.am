@@ -82,8 +82,8 @@ MANUAL_TEST_FILES += tests/static_func_manual.c
 MANUAL_TEST_FILES += tests/ext_global_func.c
 MANUAL_TEST_FILES += tests/global_func_cb_manual.c
 MANUAL_TEST_FILES += tests/global_func_p.c
-MANUAL_TEST_FILES += tests/global_var.c
-MANUAL_TEST_FILES += tests/global_var_addr.c
+MANUAL_TEST_FILES += tests/global_var_manual.c
+MANUAL_TEST_FILES += tests/global_var_addr_manual.c
 MANUAL_TEST_FILES += tests/static_var.c
 MANUAL_TEST_FILES += tests/const_var.c
 
@@ -103,8 +103,8 @@ AUTO_TEST_FILES += tests/static_func_auto.c
 AUTO_TEST_FILES += tests/ext_global_func.c
 AUTO_TEST_FILES += tests/global_func_cb_auto.c
 AUTO_TEST_FILES += tests/global_func_p.c
-AUTO_TEST_FILES += tests/global_var.c
-AUTO_TEST_FILES += tests/global_var_addr.c
+AUTO_TEST_FILES += tests/global_var_auto.c
+AUTO_TEST_FILES += tests/global_var_addr_auto.c
 AUTO_TEST_FILES += tests/static_var.c
 AUTO_TEST_FILES += tests/const_var.c
 

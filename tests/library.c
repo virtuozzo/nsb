@@ -10,13 +10,15 @@ extern long test_static_func_manual(int type);
 extern long ext_global_func(int type);
 extern long test_global_func_cb_manual(int type);
 extern long test_global_func_p(int type);
-extern long test_global_var(int type);
-extern long test_global_var_addr(int type);
+extern long test_global_var_manual(int type);
+extern long test_global_var_addr_manual(int type);
 extern long test_static_var(int type);
 extern long test_const_var(int type);
 
 extern long test_static_func_auto(int type);
 extern long test_global_func_cb_auto(int type);
+extern long test_global_var_auto(int type);
+extern long test_global_var_addr_auto(int type);
 
 struct test_info_s {
 	test_actor_t	actor;
@@ -42,12 +44,12 @@ struct test_info_s {
 		.actor = test_global_func_p,
 		.match = false,
 	},
-	[TEST_TYPE_GLOBAL_VAR] = {
-		.actor = test_global_var,
+	[TEST_TYPE_GLOBAL_VAR_MANUAL] = {
+		.actor = test_global_var_manual,
 		.match = true,
 	},
-	[TEST_TYPE_GLOBAL_VAR_ADDR] = {
-		.actor = test_global_var_addr,
+	[TEST_TYPE_GLOBAL_VAR_ADDR_MANUAL] = {
+		.actor = test_global_var_addr_manual,
 		.match = true,
 	},
 	[TEST_TYPE_STATIC_VAR] = {
@@ -64,6 +66,14 @@ struct test_info_s {
 	},
 	[TEST_TYPE_GLOBAL_FUNC_CB_AUTO] = {
 		.actor = test_global_func_cb_auto,
+		.match = true,
+	},
+	[TEST_TYPE_GLOBAL_VAR_AUTO] = {
+		.actor = test_global_var_auto,
+		.match = true,
+	},
+	[TEST_TYPE_GLOBAL_VAR_ADDR_AUTO] = {
+		.actor = test_global_var_addr_manual,
 		.match = true,
 	},
 };
