@@ -119,10 +119,11 @@ class Test:
 
 
 class BinPatch:
-	def __init__(self, source, target, patch_mode):
+	__metaclass__ = ABCMeta
+
+	def __init__(self, source, target):
 		self.source = source
 		self.target = target
-		self.patch_mode = patch_mode
 
 		self.generator = os.environ.get('NSB_GENERATOR')
 		if not self.generator:
@@ -152,9 +153,8 @@ class BinPatch:
 		print stderr
 		return p.returncode
 
-	def generate_patch(self):
-		return self.exec_cmd("python %s generate %s %s --mode %s" %
-				(self.generator, self.source, self.target, self.patch_mode))
+	@abstractmethod
+	def generate_patch(self): pass
 
 	def apply_patch(self, test):
 		return self.exec_cmd("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
@@ -167,6 +167,12 @@ class BinPatch:
 
 	def revert_patch(self, test):
 		return self.exec_cmd("%s revert -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
+
+
+class ManualBinPatch(BinPatch):
+	def generate_patch(self):
+		return self.exec_cmd("python %s generate %s %s --mode manual" %
+				(self.generator, self.source, self.target))
 
 
 class LivePatchTest:
@@ -237,7 +243,11 @@ class LivePatchTest:
 
 		print "Test map by Build-ID: %s" % source
 
-		patch = BinPatch(source, self.tgt_elf, self.patch_mode)
+		if self.patch_mode == "manual":
+			patch = ManualBinPatch(source, self.tgt_elf)
+		else:
+			print "Unknown patch mode: %s" % self.patch_mode
+			raise
 
 		if patch.generate_patch() != 0:
 			print "Failed to generate binary patch\n"
