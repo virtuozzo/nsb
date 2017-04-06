@@ -17,7 +17,7 @@ outfile = args.name
 if args.name.endswith('.py'):
     args.name = args.name[:-3]
 
-test_name, test_type = os.path.basename(args.name).split('__', 1)
+test_name, patch_mode, test_type = os.path.basename(args.name).split('__', 2)
 
 if test_type == "library":
 	source = "nsbtest_library"
@@ -30,6 +30,10 @@ elif test_type == "shared":
 	test_class = "ExecutableLivePatchTest"
 else:
 	print "Unsupported test type: \"%s\"" % test_type
+	exit(1)
+
+if patch_mode != "manual" and patch_mode != "auto":
+	print "Unsupported test patch mode: \"%s\"" % patch_mode
 	exit(1)
 
 target = test_name + ".patch"
@@ -51,8 +55,8 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"except:\n"								\
 	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/plugins/.libs'\n"	\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
-	"exit(testrunner.%s('%s', '%s', %d).run())\n" %	\
-	(test_class, source, target, test_type)
+	"exit(testrunner.%s('%s', '%s', %d, '%s').run())\n" %	\
+	(test_class, source, target, test_type, patch_mode)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

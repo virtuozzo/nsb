@@ -77,27 +77,29 @@ nsb_SOURCES =						\
 nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
-TEST_FILES = tests/global_func.c
-TEST_FILES += tests/static_func.c
-TEST_FILES += tests/ext_global_func.c
-TEST_FILES += tests/global_func_cb.c
-TEST_FILES += tests/global_func_p.c
-TEST_FILES += tests/global_var.c
-TEST_FILES += tests/global_var_addr.c
-TEST_FILES += tests/static_func_cb.c
-TEST_FILES += tests/static_var.c
+MANUAL_TEST_FILES = tests/global_func.c
+MANUAL_TEST_FILES += tests/static_func.c
+MANUAL_TEST_FILES += tests/ext_global_func.c
+MANUAL_TEST_FILES += tests/global_func_cb.c
+MANUAL_TEST_FILES += tests/global_func_p.c
+MANUAL_TEST_FILES += tests/global_var.c
+MANUAL_TEST_FILES += tests/global_var_addr.c
+MANUAL_TEST_FILES += tests/static_func_cb.c
+MANUAL_TEST_FILES += tests/static_var.c
 
-LIBRARY_TESTS = $(TEST_FILES:.c=__library.py)
+MANUAL_LIBRARY_TESTS = $(MANUAL_TEST_FILES:.c=__manual__library.py)
 
-STATIC_TESTS = $(TEST_FILES:.c=__static.py)
-STATIC_XFAIL_TESTS =
+MANUAL_STATIC_TESTS = $(MANUAL_TEST_FILES:.c=__manual__static.py)
+MANUAL_STATIC_XFAIL_TESTS =
 
-SHARED_TESTS = $(TEST_FILES:.c=__shared.py)
-SHARED_XFAIL_TESTS =
+MANUAL_SHARED_TESTS = $(MANUAL_TEST_FILES:.c=__manual__shared.py)
+MANUAL_SHARED_XFAIL_TESTS =
 
-TESTS = $(LIBRARY_TESTS) $(STATIC_TESTS) $(SHARED_TESTS)
+MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TESTS)
+MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
 
-XFAIL_TESTS = $(LIBRARY_XFAIL_TESTS) $(STATIC_XFAIL_TESTS)  $(SHARED_XFAIL_TESTS)
+TESTS = $(MANUAL_TESTS)
+XFAIL_TESTS = $(MANUAL_XFAIL_TESTS)
 
 $(TESTS): $(TESTS_DIR)/testgen.py
 	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@

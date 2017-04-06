@@ -119,9 +119,10 @@ class Test:
 
 
 class BinPatch:
-	def __init__(self, source, target):
+	def __init__(self, source, target, patch_mode):
 		self.source = source
 		self.target = target
+		self.patch_mode = patch_mode
 
 		self.generator = os.environ.get('NSB_GENERATOR')
 		if not self.generator:
@@ -152,7 +153,8 @@ class BinPatch:
 		return p.returncode
 
 	def generate_patch(self):
-		return self.exec_cmd("python %s generate %s %s" % (self.generator, self.source, self.target))
+		return self.exec_cmd("python %s generate %s %s --mode %s" %
+				(self.generator, self.source, self.target, self.patch_mode))
 
 	def apply_patch(self, test):
 		return self.exec_cmd("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
@@ -170,11 +172,12 @@ class BinPatch:
 class LivePatchTest:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, source, target, test_type):
+	def __init__(self, source, target, test_type, patch_mode):
 		self.test_bin = self.test_binary(source)
 		self.src_elf = self.source_elf(source)
 		self.tgt_elf = self.target_elf(target)
 		self.test_type = test_type
+		self.patch_mode = patch_mode
 
 	def __do_apply_patch_test__(self, patch, test):
 		res = patch.check_patch(test)
@@ -234,7 +237,7 @@ class LivePatchTest:
 
 		print "Test map by Build-ID: %s" % source
 
-		patch = BinPatch(source, self.tgt_elf)
+		patch = BinPatch(source, self.tgt_elf, self.patch_mode)
 
 		if patch.generate_patch() != 0:
 			print "Failed to generate binary patch\n"
