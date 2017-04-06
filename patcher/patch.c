@@ -359,6 +359,93 @@ static int revert_func_jumps(struct process_ctx_s *ctx)
 	return patch_revert_func_jumps(ctx, P(ctx));
 }
 
+static int write_static_ref(const struct process_ctx_s *ctx,
+			    uint64_t addr,
+			    int64_t offset, int64_t offset_size)
+{
+	char bytes[8];
+	const void *off = &offset;
+	int offset_small = offset;
+
+	if (offset_size == 4) {
+		int err;
+
+		err = process_read_data(ctx, addr, bytes, sizeof(bytes));
+		if (err)
+			return err;
+
+		off = &offset_small;
+	}
+
+	memcpy(bytes, off, offset_size);
+
+	return process_write_data(ctx, addr, bytes, sizeof(bytes));
+}
+
+/*
+ * How to fix a static variable reference?
+ * All this commands uses relative addressation and thus we have to create
+ * "offset" and place it into the right place.
+ * We are provided with:
+ *   - patch_size - this is size of the offset we need to write.
+ *   - patch_address - this is address in patch, which has to be patched with
+ *                     the offset.
+ *   - target_value - some interim value.
+ *
+ * Offset has to be calculated by using the following formula:
+ *
+ *    offset = target_value + "target ELF load base" - "Patch load base"
+ *
+ * What is "target_value"?
+ * This interim value was constructed by generator to simplify offset
+ * calculation here in patcher.
+ *
+ * TODO: add target value formula with good description
+ *
+ * Ro = So + X = (So - Sn) + (Sn + X) = Rn + (So - Sn)
+ *
+ * So = old_so_addr + offset_old
+ * Sn = new_so_addr + offset_new
+ *
+ *
+ */
+static int apply_static_ref(struct process_ctx_s *ctx,
+			    const struct static_sym_s *ss)
+{
+	uint64_t patch_ref_addr, var_addr;
+	int64_t offset;
+
+	patch_ref_addr = dlm_load_base(PDLM(ctx)) + ss->patch_address;
+
+	offset = ss->target_value + dlm_load_base(TDLM(ctx)) -
+		 dlm_load_base(PDLM(ctx));
+
+	var_addr = patch_ref_addr + offset + ss->patch_size;
+
+	pr_debug("  - ref: %#lx ---> %#lx (%#lx + %#lx)\n", patch_ref_addr,
+			var_addr, dlm_load_base(TDLM(ctx)),
+			var_addr - dlm_load_base(TDLM(ctx)));
+
+	return write_static_ref(ctx, patch_ref_addr, offset, ss->patch_size);
+}
+
+static int apply_static_refs(struct process_ctx_s *ctx)
+{
+	int i, err;
+	struct static_sym_s *ss;
+
+	pr_info("= Fix static variables references:\n");
+
+	for (i = 0; i < PI(ctx)->n_static_syms; i++) {
+		ss = PI(ctx)->static_syms[i];
+
+		err = apply_static_ref(ctx, ss);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
 static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 {
 	int err;
@@ -370,6 +457,10 @@ static int apply_dyn_binpatch(struct process_ctx_s *ctx)
 	}
 
 	err = apply_relocations(ctx);
+	if (err)
+		goto unload_patch;
+
+	err = apply_static_refs(ctx);
 	if (err)
 		goto unload_patch;
 
