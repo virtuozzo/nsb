@@ -175,6 +175,17 @@ class ManualBinPatch(BinPatch):
 				(self.generator, self.source, self.target))
 
 
+class AutoBinPatch(BinPatch):
+	def __init__(self, source, target, target_obj):
+		BinPatch.__init__(self, source, target)
+		self.target_obj = target_obj
+
+	def generate_patch(self):
+		return self.exec_cmd("python %s generate %s %s %s --mode auto" %
+				(self.generator, self.source,
+					self.target, self.target_obj))
+
+
 class LivePatchTest:
 	__metaclass__ = ABCMeta
 
@@ -246,6 +257,8 @@ class LivePatchTest:
 
 		if self.patch_mode == "manual":
 			patch = ManualBinPatch(source, self.tgt_elf)
+		elif self.patch_mode == "auto":
+			patch = AutoBinPatch(source, self.tgt_elf, self.target_obj)
 		else:
 			print "Unknown patch mode: %s" % self.patch_mode
 			raise
