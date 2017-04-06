@@ -78,7 +78,7 @@ nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
 nsb_LDFLAGS = -rdynamic
 
 MANUAL_TEST_FILES = tests/global_func.c
-MANUAL_TEST_FILES += tests/static_func.c
+MANUAL_TEST_FILES += tests/static_func_manual.c
 MANUAL_TEST_FILES += tests/ext_global_func.c
 MANUAL_TEST_FILES += tests/global_func_cb.c
 MANUAL_TEST_FILES += tests/global_func_p.c
@@ -99,7 +99,7 @@ MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TE
 MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
 
 AUTO_TEST_FILES = tests/global_func.c
-AUTO_TEST_FILES += tests/static_func.c
+AUTO_TEST_FILES += tests/static_func_auto.c
 AUTO_TEST_FILES += tests/ext_global_func.c
 AUTO_TEST_FILES += tests/global_func_cb.c
 AUTO_TEST_FILES += tests/global_func_p.c

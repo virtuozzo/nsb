@@ -6,7 +6,7 @@
 typedef long (*test_actor_t)(int tt);
 
 extern long test_global_func(int type);
-extern long test_static_func(int type);
+extern long test_static_func_manual(int type);
 extern long ext_global_func(int type);
 extern long test_global_func_cb(int type);
 extern long test_global_func_p(int type);
@@ -14,6 +14,8 @@ extern long test_global_var(int type);
 extern long test_global_var_addr(int type);
 extern long test_static_var(int type);
 extern long test_const_var(int type);
+
+extern long test_static_func_auto(int type);
 
 struct test_info_s {
 	test_actor_t	actor;
@@ -23,8 +25,8 @@ struct test_info_s {
 		.actor = test_global_func,
 		.match = false,
 	},
-	[TEST_TYPE_STATIC_FUNC] = {
-		.actor = test_static_func,
+	[TEST_TYPE_STATIC_FUNC_MANUAL] = {
+		.actor = test_static_func_manual,
 		.match = true,
 	},
 	[TEST_TYPE_EXT_GLOBAL_FUNC] = {
@@ -53,6 +55,10 @@ struct test_info_s {
 	},
 	[TEST_TYPE_CONST_VAR] = {
 		.actor = test_const_var,
+		.match = false,
+	},
+	[TEST_TYPE_STATIC_FUNC_AUTO] = {
+		.actor = test_static_func_auto,
 		.match = false,
 	},
 };
