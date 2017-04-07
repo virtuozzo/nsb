@@ -134,6 +134,14 @@ def resolve(old_so, new_so, obj_seq):
 			shift += 8
 		return result
 
+	def sign_extend(n, low_bits, high_bits):
+		low_sign = 1 << (low_bits - 1)
+		low_lim  = low_sign << 1
+		high_lim = 1 << high_bits
+		assert 0 <= n < low_lim
+		sign = n & low_sign
+		return n + high_lim - low_lim if sign else n
+
 	result = []
 	modulo = 1 << 64
 	for obj in obj_seq:
@@ -142,11 +150,14 @@ def resolve(old_so, new_so, obj_seq):
 			for rel_size, rel_offset, di_key in relocs:
 				patch_address = func_addr + rel_offset
 
-				rel_value = read(patch_address + file_offset, rel_size)
 				old_addr = old_so_di.get_addr(di_key)
 				if not old_addr:
 					print "!! {} is absent in old ELF".format(debuginfo.format_di_key(di_key))
 					continue
+
+				rel_value = read(patch_address + file_offset, rel_size)
+				if rel_size < 8:
+					rel_value = sign_extend(rel_value, 8*rel_size, 64)
 
 				new_addr = new_so_di.get_addr(di_key)
 				# Emulate arithmetic modulo 2**64
