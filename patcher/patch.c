@@ -434,21 +434,35 @@ static int write_static_ref(const struct process_ctx_s *ctx,
 static int apply_static_ref(struct process_ctx_s *ctx,
 			    const struct static_sym_s *ss)
 {
-	uint64_t patch_ref_addr, var_addr;
-	int64_t offset;
+	uint64_t patch_ref_addr, var_addr, reloc;
 
 	patch_ref_addr = dlm_load_base(PDLM(ctx)) + ss->patch_address;
 
-	offset = ss->target_value + dlm_load_base(TDLM(ctx)) -
+	reloc = ss->target_value + dlm_load_base(TDLM(ctx)) -
 		 dlm_load_base(PDLM(ctx));
 
-	var_addr = patch_ref_addr + offset + ss->patch_size;
+	var_addr = patch_ref_addr + reloc + ss->patch_size;
+
+	if (ss->patch_size < 8) {
+		int reloc_bit_size;
+		uint64_t reloc_sign, reloc_high_bits;
+
+		reloc_bit_size = 8 * ss->patch_size;
+		reloc_sign = (reloc >> (reloc_bit_size  - 1)) & 1;
+		reloc_high_bits = (reloc_sign ? ~reloc : reloc) >> reloc_bit_size;
+
+		if (reloc_high_bits) {
+			pr_err("Relocation %#lx at offset %#lx overflows\n",
+					reloc, var_addr);
+			return -EINVAL;
+		}
+	}
 
 	pr_debug("  - ref: %#lx ---> %#lx (%#lx + %#lx)\n", patch_ref_addr,
 			var_addr, dlm_load_base(TDLM(ctx)),
 			var_addr - dlm_load_base(TDLM(ctx)));
 
-	return write_static_ref(ctx, patch_ref_addr, offset, ss->patch_size);
+	return write_static_ref(ctx, patch_ref_addr, reloc, ss->patch_size);
 }
 
 static int apply_static_refs(struct process_ctx_s *ctx)
