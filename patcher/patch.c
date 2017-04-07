@@ -407,14 +407,29 @@ static int write_static_ref(const struct process_ctx_s *ctx,
  * This interim value was constructed by generator to simplify offset
  * calculation here in patcher.
  *
- * TODO: add target value formula with good description
+ * Consider relocation generated for some symbol,
+ * having address Sn in new library:
+ *
+ * Rn = Sn + X
+ *
+ * where X indicates terms indepedent of address symbols (relocation offset,
+ * addend, etc). If the new library should refer to symbol from old library,
+ * then, by relocation definition, its value should be:
  *
  * Ro = So + X = (So - Sn) + (Sn + X) = Rn + (So - Sn)
  *
- * So = old_so_addr + offset_old
- * Sn = new_so_addr + offset_new
+ * Note that all arithmetic here is done modulo 2**64
  *
+ * Symbol address equals library load address Lx plus offset to library Dx:
  *
+ * So = Lo + Do
+ * Sn = Ln + Dn
+ *
+ * Substituting these to formula above and rearranging terms, we get
+ *
+ * Ro = (Rn + Do - Dn) + (Lo - Ln)
+ *
+ * Value in the first parens is 'target_value'
  */
 static int apply_static_ref(struct process_ctx_s *ctx,
 			    const struct static_sym_s *ss)
