@@ -1,3 +1,10 @@
+'''
+Copyright (c) 2016-2017, Parallels International GmbH
+
+Our contact details: Parallels International GmbH, Vordergasse 59, 8200
+Schaffhausen, Switzerland.
+'''
+
 from __future__ import print_function
 
 from elftools.dwarf import enums, dwarf_expr

@@ -1,3 +1,10 @@
+'''
+Copyright (c) 2016-2017, Parallels International GmbH
+
+Our contact details: Parallels International GmbH, Vordergasse 59, 8200
+Schaffhausen, Switzerland.
+'''
+
 import os
 import argparse
 from build_id import get_build_id
