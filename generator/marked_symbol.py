@@ -11,7 +11,7 @@ import sys
 import re
 from elftools.elf import elffile
 
-import marked_symbol_debuginfo
+import ms_debuginfo
 
 ELF64_R_INFO = lambda s, t: (s << 32) | t
 
