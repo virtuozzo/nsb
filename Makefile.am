@@ -17,16 +17,20 @@ generator_PYTHON =					\
 			generator/binpatch.py		\
 			generator/elffile.py		\
 			generator/funcjump.py		\
-			generator/static.py		\
+			generator/static_symbol.py	\
 			generator/debuginfo.py		\
 			generator/check.py		\
 			generator/build_id.py		\
 			generator/generate.py		\
 			generator/nsbgen.py		\
+			generator/consts.py		\
+			generator/marked_symbol.py	\
+			generator/ms_debuginfo.py	\
 							\
 			protobuf/binpatch_pb2.py	\
 			protobuf/funcjump_pb2.py	\
-			protobuf/staticsym_pb2.py
+			protobuf/staticsym_pb2.py	\
+			protobuf/markedsym_pb2.py
 
 sbin_PROGRAMS = nsb
 
