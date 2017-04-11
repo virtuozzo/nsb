@@ -78,7 +78,7 @@ nsb_SOURCES =						\
 			patcher/patch.c
 
 
-nsb_CFLAGS = $(AM_CFLAGS) -I$(top_srcdir)
+nsb_CFLAGS = $(AM_CFLAGS)
 nsb_LDFLAGS = -rdynamic
 
 MANUAL_TEST_FILES = tests/global_func.c
