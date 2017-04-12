@@ -210,21 +210,21 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 	return process_exec_code(ctx, code_addr, code, size);
 }
 
-static int service_run(struct process_ctx_s *ctx, const struct service *service,
-		       bool once)
+static int __service_do(struct process_ctx_s *ctx, uint64_t address,
+			uint64_t arg1, uint64_t arg2,
+			uint64_t arg3, uint64_t arg4,
+			uint64_t arg5, uint64_t arg6,
+			bool once)
 {
 	uint64_t code_addr = vma_start(&ctx->remote_vma);
 	ssize_t size;
 	void *code;
 
-	if (service->released)
-		return 0;
-
-	size = x86_64_call(service->runner, code_addr,
-			   once, !once, 0, 0, 0, 0,
+	size = x86_64_call(address, code_addr,
+			   arg1, arg2, arg3, arg4, arg5, arg6,
 			   &code);
 	if (size < 0) {
-		pr_err("failed to construct runner call\n");
+		pr_err("failed to construct service call\n");
 		return size;
 	}
 
@@ -232,6 +232,16 @@ static int service_run(struct process_ctx_s *ctx, const struct service *service,
 		return process_exec_code(ctx, code_addr, code, size);
 	else
 		return process_release_at(ctx, code_addr, code, size);
+}
+
+static int service_run(struct process_ctx_s *ctx, const struct service *service,
+		       bool once)
+{
+	if (service->released)
+		return 0;
+
+	return __service_do(ctx, service->runner, once, !once, 0, 0, 0, 0,
+			    once);
 }
 
 static int service_provide_sigframe(struct process_ctx_s *ctx, struct service *service)
