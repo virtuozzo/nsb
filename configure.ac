@@ -16,7 +16,6 @@ AC_CONFIG_HEADERS([nsb_config.h])
 AC_CONFIG_FILES([
 		 Makefile
 		 protobuf/Makefile
-		 plugins/Makefile
 		 tests/Makefile
 ])
 
@@ -83,5 +82,6 @@ AC_PYTHON_MODULE(google.protobuf)
 AC_SUBST([NSB_GENERATOR], ${ac_pwd}/generator/nsbgen.py)
 AC_SUBST([NSB_PATCHER], ${ac_pwd}/nsb)
 AC_SUBST([TESTS_DIR], ${ac_pwd}/tests)
+AC_SUBST([NSB_LIBS], ${LIBS})
 
 AC_OUTPUT

@@ -1,9 +1,14 @@
-SUBDIRS = plugins protobuf tests
+SUBDIRS = protobuf tests
 
 ACLOCAL_AMFLAGS = -I m4
 
 AM_CFLAGS = -Wall -Wformat-security -Werror -DCONFIG_X86_64 -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 AM_MAKEFLAGS = --no-print-directory
+
+# Erase LIBS, so plugin won't depend on collected list of libraries.
+# Libraries for binary are passed in NSB_LIBS
+
+LIBS =
 
 # These exports are required for tests generation and tests running
 # For tests running they can be set via AM_TESTS_ENVIRONMENT.
@@ -80,6 +85,16 @@ nsb_SOURCES =						\
 
 nsb_CFLAGS = $(AM_CFLAGS)
 nsb_LDFLAGS = -rdynamic
+nsb_LDADD = $(NSB_LIBS)
+
+libnsb_service_la_SOURCES =				\
+			plugins/service.h		\
+							\
+			plugins/service.c
+
+libnsb_service_la_CFLAGS = $(AM_CFLAGS)
+
+lib_LTLIBRARIES = libnsb_service.la
 
 MANUAL_TEST_FILES = tests/global_func.c
 MANUAL_TEST_FILES += tests/static_func_manual.c

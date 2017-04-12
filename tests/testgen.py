@@ -61,7 +61,7 @@ code =	"#!/usr/bin/env python2\n" +						\
 	"try:\n"								\
 	"\tos.environ['LD_LIBRARY_PATH']\n"					\
 	"except:\n"								\
-	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/plugins/.libs'\n"	\
+	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/.libs'\n"		\
 	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
 	"exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())\n" %	\
 	(test_class, source, target, target_obj, test_type, patch_mode)
