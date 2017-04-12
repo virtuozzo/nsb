@@ -60,4 +60,6 @@ int64_t process_find_place_for_elf(struct process_ctx_s *ctx,
 void process_print_mmap(const struct vma_area *vma);
 void process_print_munmap(const struct vma_area *vma);
 
+int process_send_fd(struct process_ctx_s *ctx, int fd);
+
 #endif

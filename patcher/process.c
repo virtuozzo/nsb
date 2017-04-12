@@ -40,6 +40,16 @@ struct thread_s {
 	int			seized;
 };
 
+int process_send_fd(struct process_ctx_s *ctx, int fd)
+{
+	if (!ctx->service.loaded) {
+		pr_err("service is not loaded\n");
+		return -EINVAL;
+	}
+
+	return service_transfer_fd(ctx, &ctx->service, fd);
+}
+
 int process_write_data(const struct process_ctx_s *ctx, uint64_t addr, const void *data, size_t size)
 {
 	pid_t pid = ctx->pid;
