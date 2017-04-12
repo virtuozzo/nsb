@@ -206,7 +206,13 @@ void process_print_mmap(const struct vma_area *vma)
 static int process_mmap_dlm_service(struct process_ctx_s *ctx,
 				    const struct dl_map *dlm)
 {
-	return service_mmap_dlm(ctx, &ctx->service, dlm);
+	int fd;
+
+	fd = service_transfer_fd(ctx, &ctx->service, elf_info_fd(dlm->ei));
+	if (fd < 0)
+		return fd;
+
+	return service_mmap_dlm(ctx, &ctx->service, dlm, fd);
 }
 
 static int process_mmap_dlm_manual(struct process_ctx_s *ctx,
