@@ -189,7 +189,7 @@ static int nsb_service_cmd_mmap(const void *data, size_t size,
 {
 	const struct nsb_service_mmap_request *rq = data;
 	const struct nsb_service_mmap_info *mi;
-	int fd, nr, err;
+	int nr, err;
 	size_t max_mmaps = NSB_SERVICE_MMAP_DATA_SIZE_MAX / sizeof(*mi);
 
 	if (rq->nr_mmaps > max_mmaps) {
@@ -203,19 +203,14 @@ static int nsb_service_cmd_mmap(const void *data, size_t size,
 				rq->nr_mmaps);
 		return -EINVAL;
 	}
-	fd = open(rq->path, O_RDONLY);
-	if (fd < 0) {
-		nsb_service_response_print(rd, "failed to open %s", rq->path);
-		return -errno;
-	}
 
 	for (nr = 0, mi = rq->mmap; nr < rq->nr_mmaps; nr++, mi++) {
-		err = nsb_service_cmd_do_mmap(fd, mi, rd);
+		err = nsb_service_cmd_do_mmap(rq->fd, mi, rd);
 		if (err)
 			goto unmap;
 	}
 
-	close(fd);
+	close(rq->fd);
 	return 0;
 
 unmap:

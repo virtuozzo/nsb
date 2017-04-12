@@ -31,7 +31,7 @@ int service_stop(struct process_ctx_s *ctx, struct service *plugin);
 
 struct dl_map;
 int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
-		     const struct dl_map *dlm);
+		     const struct dl_map *dlm, int fd);
 int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 		       const struct dl_map *dlm);
 

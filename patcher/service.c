@@ -420,7 +420,7 @@ static int service_set_map_info(struct vma_area *vma, void *data)
 }
 
 int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
-		     const struct dl_map *dlm)
+		     const struct dl_map *dlm, int fd)
 {
 	struct nsb_service_request rq = {
 		.cmd = NSB_SERVICE_CMD_MMAP,
@@ -434,7 +434,7 @@ int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 	if (err)
 		return err;
 
-	strcpy(mrq->path, dlm->path);
+	mrq->fd = fd;
 
 	rqlen = sizeof(rq.cmd) + sizeof(*mrq) +
 		sizeof(struct nsb_service_mmap_info) * mrq->nr_mmaps;

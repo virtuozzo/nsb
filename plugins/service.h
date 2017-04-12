@@ -52,7 +52,7 @@ struct nsb_service_mmap_info {
 };
 
 struct nsb_service_mmap_request {
-	char path[PATH_MAX];
+	int fd;
 	size_t nr_mmaps;
 	struct nsb_service_mmap_info mmap[0];
 };
