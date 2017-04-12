@@ -203,17 +203,18 @@ void process_print_mmap(const struct vma_area *vma)
 			map_flags(vma_flags(vma), fbuf));
 }
 
-int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
+static int process_mmap_dlm_service(struct process_ctx_s *ctx,
+				    const struct dl_map *dlm)
+{
+	return service_mmap_dlm(ctx, &ctx->service, dlm);
+}
+
+static int process_mmap_dlm_manual(struct process_ctx_s *ctx,
+				   const struct dl_map *dlm)
 {
 	int fd;
 	int64_t addr;
 	struct vma_area *vma;
-
-	if (ctx->dry_run)
-		return 0;
-
-	if (ctx->service.loaded)
-		return service_mmap_dlm(ctx, &ctx->service, dlm);
 
 	fd = process_open_file(ctx, dlm->path, O_RDONLY, 0);
 	if (fd < 0)
@@ -233,6 +234,17 @@ unmap:
 	list_for_each_entry_continue_reverse(vma, &dlm->vmas, dl)
 		(void)process_unmap_vma(ctx, vma);
 	return addr;
+}
+
+int process_mmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm)
+{
+	if (ctx->dry_run)
+		return 0;
+
+	if (ctx->service.loaded)
+		return process_mmap_dlm_service(ctx, dlm);
+
+	return process_mmap_dlm_manual(ctx, dlm);
 }
 
 int process_close_file(struct process_ctx_s *ctx, int fd)
