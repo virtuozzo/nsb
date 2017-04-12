@@ -24,6 +24,8 @@
 #include "include/xmalloc.h"
 #include "include/dl_map.h"
 
+#include <common/scm.h>
+
 #include <plugins/service.h>
 
 static int nsb_service_send_request(const struct service *service,
@@ -565,3 +567,28 @@ ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *se
 	return nl->nr_addrs;
 }
 
+int service_transfer_fd(struct process_ctx_s *ctx, struct service *service,
+			int fd)
+{
+	int err, tfd;
+	int64_t address;
+
+	address = service_sym_addr(service, "nsb_service_receive_fd");
+	if (address <= 0)
+		return address;
+
+	err = send_fd(service->sock, fd);
+	if (err < 0) {
+		pr_perror("failed to send fd %d via service socket %d",
+				fd, ctx->service.sock);
+		return -errno;
+	}
+
+	tfd = __service_do(ctx, address, 0, 0, 0, 0, 0, 0, true);
+	if (tfd < 0) {
+		errno = -tfd;
+		pr_perror("failed to receive fd %d in target process %d",
+				fd, service->pid);
+	}
+	return tfd;
+}

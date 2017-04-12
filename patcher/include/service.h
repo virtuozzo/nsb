@@ -38,4 +38,7 @@ int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *service,
 			     uint64_t **needed_array);
 
+int service_transfer_fd(struct process_ctx_s *ctx, struct service *service,
+			int fd);
+
 #endif
