@@ -68,6 +68,9 @@ nsb_SOURCES =						\
 			patcher/include/service.h	\
 			patcher/include/dl_map.h	\
 							\
+			common/scm.h			\
+			common/scm.c			\
+							\
 			patcher/x86_64.c		\
 			patcher/protobuf.c		\
 			patcher/process.c		\
