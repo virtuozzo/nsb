@@ -896,6 +896,9 @@ int process_collect_needed(struct process_ctx_s *ctx)
 	}
 
 free_array:
+	if (err)
+		pr_err("failed to collect process %d binary dependences\n",
+				ctx->pid);
 	free(needed_array);
 	return err;
 }
