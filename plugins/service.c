@@ -25,6 +25,8 @@
 
 #include "service.h"
 
+#include "common/scm.h"
+
 static int listen_sock;
 static int cmd_sock = -1;
 static int nsb_service_stop;
@@ -371,6 +373,14 @@ int nsb_service_accept(void)
 		return errno;
 
 	return 0;
+}
+
+int nsb_service_receive_fd(void)
+{
+	if (cmd_sock == -1)
+		return -ENOENT;
+
+	return recv_fd(cmd_sock);
 }
 
 __attribute__((destructor))

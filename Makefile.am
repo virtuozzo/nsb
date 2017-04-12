@@ -93,6 +93,9 @@ nsb_LDADD = $(NSB_LIBS)
 libnsb_service_la_SOURCES =				\
 			plugins/service.h		\
 							\
+			common/scm.h			\
+			common/scm.c			\
+							\
 			plugins/service.c
 
 libnsb_service_la_CFLAGS = $(AM_CFLAGS)
