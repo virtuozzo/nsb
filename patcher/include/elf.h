@@ -84,4 +84,6 @@ int elf_contains_sym(struct elf_info_s *ei, const char *symname);
 
 int64_t elf_section_virt_base(const struct elf_info_s *ei, uint16_t ndx);
 
+int elf_info_fd(const struct elf_info_s *ei);
+
 #endif /* __PATCHER_ELF_H__ */

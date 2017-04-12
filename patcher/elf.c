@@ -145,6 +145,11 @@ static int __elf_get_soname(struct elf_info_s *ei, char **soname);
 static int elf_collect_needed(struct elf_info_s *ei);
 static char *elf_get_bid(struct elf_info_s *ei);
 
+int elf_info_fd(const struct elf_info_s *ei)
+{
+	return ei->fd;
+}
+
 int elf_library_status(void)
 {
 	if (elf_version(EV_CURRENT) == EV_NONE) {
