@@ -115,3 +115,14 @@ class SymResolver:
 			print("{0:<4d} {1:016x} {2}".format(sym.num, o_addr, sym.name))
 
 		return result
+
+
+class ManualSymResolver(SymResolver):
+	PREFIX = 'vzpatch'
+	prefix_re = re.compile(r'^{0}_(\d+_)*'.format(PREFIX))
+
+	def demangle(self, n):
+		return self.prefix_re.sub('', n)
+
+	def match(self, sym):
+		return sym.name.startswith(self.PREFIX)
