@@ -14,7 +14,6 @@ import binpatch_pb2
 from build_id import get_build_id
 from funcjump import FuncJump
 import markedsym_pb2
-import marked_symbol
 import staticsym_pb2
 import static_symbol
 

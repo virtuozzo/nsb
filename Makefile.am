@@ -29,7 +29,6 @@ generator_PYTHON =					\
 			generator/generate.py		\
 			generator/nsbgen.py		\
 			generator/consts.py		\
-			generator/marked_symbol.py	\
 			generator/ms_debuginfo.py	\
 			generator/sym_resolver.py	\
 							\
