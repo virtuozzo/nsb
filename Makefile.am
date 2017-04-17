@@ -31,6 +31,7 @@ generator_PYTHON =					\
 			generator/consts.py		\
 			generator/marked_symbol.py	\
 			generator/ms_debuginfo.py	\
+			generator/sym_resolver.py	\
 							\
 			protobuf/binpatch_pb2.py	\
 			protobuf/funcjump_pb2.py	\
