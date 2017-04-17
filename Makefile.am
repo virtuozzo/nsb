@@ -102,15 +102,17 @@ libnsb_service_la_CFLAGS = $(AM_CFLAGS)
 
 lib_LTLIBRARIES = libnsb_service.la
 
-MANUAL_TEST_FILES = tests/global_func.c
+COMMON_TEST_FILES = tests/global_func.c
+COMMON_TEST_FILES += tests/ext_global_func.c
+COMMON_TEST_FILES += tests/global_func_cb.c
+COMMON_TEST_FILES += tests/global_func_p.c
+COMMON_TEST_FILES += tests/global_var.c
+COMMON_TEST_FILES += tests/global_var_addr.c
+COMMON_TEST_FILES += tests/const_var.c
+
+MANUAL_TEST_FILES = $(COMMON_TEST_FILES)
 MANUAL_TEST_FILES += tests/static_func_manual.c
-MANUAL_TEST_FILES += tests/ext_global_func.c
-MANUAL_TEST_FILES += tests/global_func_cb_manual.c
-MANUAL_TEST_FILES += tests/global_func_p.c
-MANUAL_TEST_FILES += tests/global_var_manual.c
-MANUAL_TEST_FILES += tests/global_var_addr_manual.c
 MANUAL_TEST_FILES += tests/static_var_manual.c
-MANUAL_TEST_FILES += tests/const_var.c
 
 MANUAL_LIBRARY_TESTS = $(MANUAL_TEST_FILES:.c=__manual__library.py)
 
@@ -123,15 +125,9 @@ MANUAL_SHARED_XFAIL_TESTS =
 MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TESTS)
 MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
 
-AUTO_TEST_FILES = tests/global_func.c
+AUTO_TEST_FILES = $(COMMON_TEST_FILES)
 AUTO_TEST_FILES += tests/static_func_auto.c
-AUTO_TEST_FILES += tests/ext_global_func.c
-AUTO_TEST_FILES += tests/global_func_cb_auto.c
-AUTO_TEST_FILES += tests/global_func_p.c
-AUTO_TEST_FILES += tests/global_var_auto.c
-AUTO_TEST_FILES += tests/global_var_addr_auto.c
 AUTO_TEST_FILES += tests/static_var_auto.c
-AUTO_TEST_FILES += tests/const_var.c
 
 AUTO_LIBRARY_TESTS = $(AUTO_TEST_FILES:.c=__auto__library.py)
 
