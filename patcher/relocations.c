@@ -104,7 +104,7 @@ static int64_t check_manual_symbols(const struct process_ctx_s *ctx,
 	return 0;
 }
 
-static int64_t find_dym_sym(const struct process_ctx_s *ctx,
+static int64_t find_dyn_sym(const struct process_ctx_s *ctx,
 			    struct extern_symbol *es)
 {
 	int64_t value;
@@ -125,7 +125,7 @@ static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol 
 	int err;
 	int64_t value;
 
-	value = find_dym_sym(ctx, es);
+	value = find_dyn_sym(ctx, es);
 	if (value < 0)
 		return value;
 
