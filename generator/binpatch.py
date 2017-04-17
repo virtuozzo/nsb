@@ -18,6 +18,8 @@ import marked_symbol
 import staticsym_pb2
 import static_symbol
 
+from sym_resolver import ManualSymResolver
+
 class BinPatch:
 	__metaclass__ = ABCMeta
 
@@ -74,12 +76,12 @@ class BinPatch:
 				for size, addr, value in static_sym_info)
 
 	def __manual_patch_info__(self, pi):
-		print "Resolving marked symbols"
-		marked_sym_info = marked_symbol.resolve(self.bf_old.elf.elf, self.bf_new.elf.elf)
-		pi.marked_symbols.extend(
+		print "\nResolving marked symbols"
+		msr = ManualSymResolver(self.bf_old.elf, self.bf_new.elf)
+		manual_sym_info = msr.resolve()
+		pi.manual_symbols.extend(
 			markedsym_pb2.MarkedSym(idx=idx, addr=addr)
-				for idx, addr in marked_sym_info)
-		print"\n"
+				for idx, addr in manual_sym_info)
 
 	def patch_info(self):
 		print "\n*************************************************"
