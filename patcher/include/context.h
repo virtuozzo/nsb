@@ -48,6 +48,9 @@ struct patch_info_s {
 	size_t			n_manual_syms;
 	struct marked_sym_s	**manual_syms;
 
+	size_t			n_global_syms;
+	struct marked_sym_s	**global_syms;
+
 	size_t			n_static_syms;
 	struct static_sym_s	**static_syms;
 };

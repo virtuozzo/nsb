@@ -90,6 +90,38 @@ static int set_patch_manual_syms(struct patch_info_s *patch_info, BinPatch *bp)
 	return 0;
 }
 
+static struct marked_sym_s *create_global_sym(const MarkedSym *ms)
+{
+	struct marked_sym_s *global_sym;
+
+	global_sym = xmalloc(sizeof(struct marked_sym_s));
+	if (!global_sym)
+		return NULL;
+
+	global_sym->idx = ms->idx;
+	global_sym->addr = ms->addr;
+	return global_sym;
+}
+
+static int set_patch_global_syms(struct patch_info_s *patch_info, BinPatch *bp)
+{
+	int i;
+	struct marked_sym_s **global_syms;
+
+	global_syms = xmalloc(sizeof(struct marked_sym_s *) * bp->n_global_symbols);
+	if (!global_syms)
+		return -ENOMEM;
+
+	for (i = 0; i < bp->n_global_symbols; i++) {
+		global_syms[i] = create_global_sym(bp->global_symbols[i]);
+		if (!global_syms[i])
+			return -ENOMEM;
+	}
+	patch_info->n_global_syms = bp->n_global_symbols;
+	patch_info->global_syms = global_syms;
+	return 0;
+}
+
 static struct static_sym_s *create_static_sym(const StaticSym *ss)
 {
 	struct static_sym_s *static_sym;
@@ -148,8 +180,11 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	if (set_patch_manual_syms(patch_info, bp))
 		goto free_func_jumps;
 
-	if (set_patch_static_syms(patch_info, bp))
+	if (set_patch_global_syms(patch_info, bp))
 		goto free_manual_syms;
+
+	if (set_patch_static_syms(patch_info, bp))
+		goto free_global_syms;
 
 	err = 0;
 
@@ -157,6 +192,8 @@ free_unpacked:
 	bin_patch__free_unpacked(bp, NULL);
 	return err;
 
+free_global_syms:
+	// TODO
 free_manual_syms:
 	// TODO
 free_func_jumps:
