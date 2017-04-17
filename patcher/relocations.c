@@ -87,14 +87,15 @@ static int64_t __find_dym_sym(const struct list_head *deps,
 	return -ENOENT;
 }
 
-static int64_t check_manual_symbols(const struct process_ctx_s *ctx,
+static int64_t check_marked_symbols(const struct process_ctx_s *ctx,
+				    struct marked_sym_s **msyms,
+				    size_t nr_msyms,
 				    struct extern_symbol *es)
 {
 	int i;
-	const struct patch_info_s *pi = PI(ctx);
 
-	for (i = 0; i < pi->n_manual_syms; i++) {
-		const struct marked_sym_s *ms = pi->manual_syms[i];
+	for (i = 0; i < nr_msyms; i++) {
+		const struct marked_sym_s *ms = msyms[i];
 
 		if (ms->idx == es_r_sym(es)) {
 			es->dlm = TDLM(ctx);
@@ -102,6 +103,28 @@ static int64_t check_manual_symbols(const struct process_ctx_s *ctx,
 		}
 	}
 	return 0;
+}
+
+static int64_t check_manual_symbols(const struct process_ctx_s *ctx,
+				    struct extern_symbol *es)
+{
+	const struct patch_info_s *pi = PI(ctx);
+
+	return check_marked_symbols(ctx, pi->manual_syms, pi->n_manual_syms, es);
+}
+
+static int64_t check_global_symbols(const struct process_ctx_s *ctx,
+				    struct extern_symbol *es)
+{
+	const struct patch_info_s *pi = PI(ctx);
+
+	return check_marked_symbols(ctx, pi->global_syms, pi->n_global_syms, es);
+}
+
+static int target_is_executable(const struct process_ctx_s *ctx)
+{
+	return TDLM(ctx) == list_entry(ctx->needed_list.next,
+				       typeof(struct ctx_dep), list)->dlm;
 }
 
 static int64_t find_dyn_sym(const struct process_ctx_s *ctx,
@@ -112,6 +135,12 @@ static int64_t find_dyn_sym(const struct process_ctx_s *ctx,
 	value = check_manual_symbols(ctx, es);
 	if (value)
 		return value;
+
+	if (target_is_executable(ctx)) {
+		value = check_global_symbols(ctx, es);
+		if (value)
+			return value;
+	}
 
 	value = __find_dym_sym(&ctx->needed_list, TDLM(ctx), es, es_s_value(es));
 	if (value != -ENOENT)
