@@ -7,6 +7,6 @@ message BinPatch {
 	required string		new_bid		= 2;
 	optional string		new_path	= 3;
 	repeated FuncJump	func_jumps	= 4;
-	repeated MarkedSym	marked_symbols	= 5;
+	repeated MarkedSym	manual_symbols	= 5;
 	repeated StaticSym	static_symbols	= 6;
 }

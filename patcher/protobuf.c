@@ -58,35 +58,35 @@ static int set_patch_func_jumps(struct patch_info_s *patch_info, BinPatch *bp)
 	return 0;
 }
 
-static struct marked_sym_s *create_marked_sym(const MarkedSym *ms)
+static struct marked_sym_s *create_manual_sym(const MarkedSym *ms)
 {
-	struct marked_sym_s *marked_sym;
+	struct marked_sym_s *manual_sym;
 
-	marked_sym = xmalloc(sizeof(struct marked_sym_s));
-	if (!marked_sym)
+	manual_sym = xmalloc(sizeof(struct marked_sym_s));
+	if (!manual_sym)
 		return NULL;
 
-	marked_sym->idx = ms->idx;
-	marked_sym->addr = ms->addr;
-	return marked_sym;
+	manual_sym->idx = ms->idx;
+	manual_sym->addr = ms->addr;
+	return manual_sym;
 }
 
-static int set_patch_marked_syms(struct patch_info_s *patch_info, BinPatch *bp)
+static int set_patch_manual_syms(struct patch_info_s *patch_info, BinPatch *bp)
 {
 	int i;
-	struct marked_sym_s **marked_syms;
+	struct marked_sym_s **manual_syms;
 
-	marked_syms = xmalloc(sizeof(struct marked_sym_s *) * bp->n_marked_symbols);
-	if (!marked_syms)
+	manual_syms = xmalloc(sizeof(struct marked_sym_s *) * bp->n_manual_symbols);
+	if (!manual_syms)
 		return -ENOMEM;
 
-	for (i = 0; i < bp->n_marked_symbols; i++) {
-		marked_syms[i] = create_marked_sym(bp->marked_symbols[i]);
-		if (!marked_syms[i])
+	for (i = 0; i < bp->n_manual_symbols; i++) {
+		manual_syms[i] = create_manual_sym(bp->manual_symbols[i]);
+		if (!manual_syms[i])
 			return -ENOMEM;
 	}
-	patch_info->n_marked_syms = bp->n_marked_symbols;
-	patch_info->marked_syms = marked_syms;
+	patch_info->n_manual_syms = bp->n_manual_symbols;
+	patch_info->manual_syms = manual_syms;
 	return 0;
 }
 
@@ -145,11 +145,11 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	if (set_patch_func_jumps(patch_info, bp))
 		goto free_patch_bid;
 
-	if (set_patch_marked_syms(patch_info, bp))
+	if (set_patch_manual_syms(patch_info, bp))
 		goto free_func_jumps;
 
 	if (set_patch_static_syms(patch_info, bp))
-		goto free_marked_syms;
+		goto free_manual_syms;
 
 	err = 0;
 
@@ -157,7 +157,7 @@ free_unpacked:
 	bin_patch__free_unpacked(bp, NULL);
 	return err;
 
-free_marked_syms:
+free_manual_syms:
 	// TODO
 free_func_jumps:
 	// TODO
