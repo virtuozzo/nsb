@@ -126,3 +126,18 @@ class ManualSymResolver(SymResolver):
 
 	def match(self, sym):
 		return sym.name.startswith(self.PREFIX)
+
+
+class GlobalSymResolver(SymResolver):
+	def demangle(self, n):
+		return n
+
+	def match(self, sym):
+		return sym.bind == 'STB_GLOBAL'
+
+	def resolve_symbol(self, sym, lookup):
+		try:
+			return lookup(sym.name, sym.value)
+		except:
+			pass
+		return None
