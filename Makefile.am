@@ -135,16 +135,12 @@ AUTO_TEST_FILES += tests/const_var.c
 
 AUTO_LIBRARY_TESTS = $(AUTO_TEST_FILES:.c=__auto__library.py)
 
-AUTO_STATIC_XFAIL_FILES = tests/global_func_cb_auto.c
-AUTO_STATIC_XFAIL_FILES += tests/global_var_auto.c
-AUTO_STATIC_XFAIL_FILES += tests/global_var_addr_auto.c
+AUTO_STATIC_XFAIL_FILES =
 
 AUTO_STATIC_TESTS = $(AUTO_TEST_FILES:.c=__auto__static.py)
 AUTO_STATIC_XFAIL_TESTS = $(AUTO_STATIC_XFAIL_FILES:.c=__auto__static.py)
 
-AUTO_SHARED_XFAIL_FILES = tests/global_func_cb_auto.c
-AUTO_SHARED_XFAIL_FILES += tests/global_var_auto.c
-AUTO_SHARED_XFAIL_FILES += tests/global_var_addr_auto.c
+AUTO_SHARED_XFAIL_FILES =
 
 AUTO_SHARED_TESTS = $(AUTO_TEST_FILES:.c=__auto__shared.py)
 AUTO_SHARED_XFAIL_TESTS = $(AUTO_SHARED_XFAIL_FILES:.c=__auto__shared.py)
