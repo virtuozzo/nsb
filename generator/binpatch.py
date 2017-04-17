@@ -18,7 +18,7 @@ import marked_symbol
 import staticsym_pb2
 import static_symbol
 
-from sym_resolver import ManualSymResolver
+from sym_resolver import ManualSymResolver, GlobalSymResolver
 
 class BinPatch:
 	__metaclass__ = ABCMeta
@@ -106,12 +106,20 @@ class BinPatch:
 			funcjump = fj.patch_info()
 			pi.func_jumps.extend([funcjump])
 
+		print "\nResolving global symbols"
+		gsr = GlobalSymResolver(self.bf_old.elf, self.bf_new.elf)
+		global_sym_info = gsr.resolve()
+		pi.global_symbols.extend(
+			markedsym_pb2.MarkedSym(idx=idx, addr=addr)
+				for idx, addr in global_sym_info)
+
 		if self.mode == "manual":
 			self.__manual_patch_info__(pi)
 		elif self.mode == "auto":
 			self.__auto_patch_info__(pi)
 		else:
 			print "Unknown patch mode: \"%s\"" % self.mode
+
 
 		return pi
 

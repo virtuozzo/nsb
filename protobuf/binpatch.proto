@@ -9,4 +9,5 @@ message BinPatch {
 	repeated FuncJump	func_jumps	= 4;
 	repeated MarkedSym	manual_symbols	= 5;
 	repeated StaticSym	static_symbols	= 6;
+	repeated MarkedSym	global_symbols	= 7;
 }
