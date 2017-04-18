@@ -38,7 +38,7 @@ class DebugInfoReloc(object):
 		return self._sec_idx2offset[sec_idx]
 
 def should_resolve(sec):
-	if sec.name == ".rodata":
+	if sec.name.startswith(".rodata"):
 		return False
 	if sec.name.startswith(".text"):
 		return False
