@@ -102,25 +102,25 @@ def process_obj(elf):
 
 	return result
 
-def resolve(old_so, new_so, obj_seq):
-	old_so_di = debuginfo.get_debug_info(old_so)
+def resolve(old_elf, new_elf, obj_seq):
+	old_elf_di = debuginfo.get_debug_info(old_elf)
 
-	new_so_di = debuginfo.get_debug_info(new_so)
-	new_so_cus = set(new_so_di.get_cu_names())
+	new_elf_di = debuginfo.get_debug_info(new_elf)
+	new_elf_cus = set(new_elf_di.get_cu_names())
 
 	obj_cus = set()
 	for obj in obj_seq:
 		obj_di = debuginfo.get_debug_info(obj)
 		obj_cus.update(obj_di.get_cu_names())
 
-	if new_so_cus != obj_cus:
-		print "SO  CUs", " ".join(new_so_cus)
+	if new_elf_cus != obj_cus:
+		print "SO  CUs", " ".join(new_elf_cus)
 		print "OBJ CUs", " ".join(obj_cus)
 		raise Exception("CU mismatch")
 
-	text_sec = new_so.get_section_by_name('.text')
+	text_sec = new_elf.get_section_by_name('.text')
 	file_offset = text_sec.header.sh_offset - text_sec.header.sh_addr
-	stream = new_so.stream
+	stream = new_elf.stream
 
 	def read(pos, size):
 		stream.seek(pos)
@@ -146,11 +146,11 @@ def resolve(old_so, new_so, obj_seq):
 	modulo = 1 << 64
 	for obj in obj_seq:
 		for func_di_key, relocs in process_obj(obj).iteritems():
-			func_addr = new_so_di.get_addr(func_di_key)
+			func_addr = new_elf_di.get_addr(func_di_key)
 			for rel_size, rel_offset, di_key in relocs:
 				patch_address = func_addr + rel_offset
 
-				old_addr = old_so_di.get_addr(di_key)
+				old_addr = old_elf_di.get_addr(di_key)
 				if not old_addr:
 					print "!! {} is absent in old ELF".format(debuginfo.format_di_key(di_key))
 					continue
@@ -159,7 +159,7 @@ def resolve(old_so, new_so, obj_seq):
 				if rel_size < 8:
 					rel_value = sign_extend(rel_value, 8*rel_size, 64)
 
-				new_addr = new_so_di.get_addr(di_key)
+				new_addr = new_elf_di.get_addr(di_key)
 				# Emulate arithmetic modulo 2**64
 				# To get final address, one should subtract base load address of new ELF, and
 				# add base load address of old ELF  (zero for executables).  This calculation
