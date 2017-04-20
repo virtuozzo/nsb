@@ -38,6 +38,20 @@ class DebugInfoReloc(object):
 	def get_offsets(self, sec_idx):
 		return self._sec_idx2offset[sec_idx]
 
+class SymTab(object):
+	def __init__(self, elf):
+		self.elf = elf
+		self.sec = elf.get_section_by_name('.symtab')
+		if not self.sec:
+			raise Exception("No symbol table")
+	
+	def get_sym(self, name):
+		sym_list = self.sec.get_symbol_by_name(name)
+		if len(sym_list) != 1:
+			raise Exception("Found {} symbols with name {}".format(
+				len(sym_list), name))
+		return sym_list[0]
+
 def should_resolve(sec):
 	if sec.name.startswith(".rodata"):
 		return False
