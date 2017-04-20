@@ -120,10 +120,6 @@ def _read_CU(cu):
 
 	return die_pos, die_parent_pos
 
-@memoize(WeakKeyDictionary)
-def get_debug_info(elf):
-	return DebugInfo(elf)
-
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
