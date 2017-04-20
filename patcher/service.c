@@ -232,8 +232,6 @@ static int __service_do(struct process_ctx_s *ctx, uint64_t address,
 
 	if (once)
 		return process_exec_code(ctx, code_addr, code, size);
-	else
-		return process_release_at(ctx, code_addr, code, size);
 }
 
 static int service_run(struct process_ctx_s *ctx, const struct service *service,

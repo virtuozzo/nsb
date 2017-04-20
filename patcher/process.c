@@ -700,26 +700,6 @@ int process_suspend(struct process_ctx_s *ctx, const char *target_bid)
 	return -ETIME;
 }
 
-int process_release_at(struct process_ctx_s *ctx, uint64_t addr,
-		       void *code, size_t code_size)
-{
-	int err;
-
-	err = process_write_data(ctx, addr, code, round_up(code_size, 8));
-	if (err) {
-		pr_err("failed to write code\n");
-		return err;
-	}
-
-	err = compel_release_at(ctx->ctl, addr);
-	if (err) {
-		pr_err("failed to call code at %#lx: %d\n", addr, err);
-		return err;
-	}
-
-	return 0;
-}
-
 int process_acquire(struct process_ctx_s *ctx)
 {
 	int err;
