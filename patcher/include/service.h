@@ -22,7 +22,6 @@ struct service {
 	int			sock;
 	uint64_t		runner;
 	bool			loaded;
-	bool			released;
 };
 
 struct process_ctx_s;

@@ -124,12 +124,6 @@ static long process_syscall(struct process_ctx_s *ctx, int nr,
 	int ret;
 	long sret = -ENOSYS;
 
-	if (ctx->service.released) {
-		pr_err("service plugin in running\n");
-		errno = EBUSY;
-		return -1;
-	}
-
 	ret = compel_syscall(ctx->ctl, nr, &sret,
 			     arg1, arg2, arg3, arg4, arg5, arg6);
 	if (ret < 0) {
@@ -698,29 +692,6 @@ int process_suspend(struct process_ctx_s *ctx, const char *target_bid)
 
 	pr_err("failed to suspend process: Timeout reached\n");
 	return -ETIME;
-}
-
-int process_acquire(struct process_ctx_s *ctx)
-{
-	int err;
-
-	err = compel_catch(ctx->ctl, NULL);
-	if (err)
-		pr_err("failed to catch process %d\n", err);
-	return err;
-}
-
-ssize_t process_emergency_sigframe(struct process_ctx_s *ctx, void *data,
-				   void *where)
-{
-	int err;
-
-	err = compel_emergency_sigframe(ctx->ctl, data, where);
-	if (err) {
-		pr_err("failed to get emergency sigframe: %d\n", err);
-		return err;
-	}
-	return sizeof(struct rt_sigframe);
 }
 
 static int process_find_sym(struct process_ctx_s *ctx,

@@ -215,8 +215,7 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 static int __service_do(struct process_ctx_s *ctx, uint64_t address,
 			uint64_t arg1, uint64_t arg2,
 			uint64_t arg3, uint64_t arg4,
-			uint64_t arg5, uint64_t arg6,
-			bool once)
+			uint64_t arg5, uint64_t arg6)
 {
 	uint64_t code_addr = vma_start(&ctx->remote_vma);
 	ssize_t size;
@@ -230,101 +229,12 @@ static int __service_do(struct process_ctx_s *ctx, uint64_t address,
 		return size;
 	}
 
-	if (once)
-		return process_exec_code(ctx, code_addr, code, size);
+	return process_exec_code(ctx, code_addr, code, size);
 }
 
-static int service_run(struct process_ctx_s *ctx, const struct service *service,
-		       bool once)
+static int service_run(struct process_ctx_s *ctx, const struct service *service)
 {
-	if (service->released)
-		return 0;
-
-	return __service_do(ctx, service->runner, once, !once, 0, 0, 0, 0,
-			    once);
-}
-
-static int service_provide_sigframe(struct process_ctx_s *ctx, struct service *service)
-{
-	int err;
-	struct nsb_service_request rq = {
-		.cmd = NSB_SERVICE_CMD_EMERG_SIGFRAME,
-	};
-	struct nsb_service_response rs;
-	ssize_t size;
-	size_t rqlen;
-	int64_t address;
-
-	address = service_sym_addr(service, "emergency_sigframe");
-	if (address <= 0)
-		return address;
-
-	size = process_emergency_sigframe(ctx, rq.data, (void *)address);
-	if (size < 0)
-		return size;
-
-	rqlen = sizeof(rq.cmd) + size;
-
-	err = nsb_service_send_request(service, &rq, rqlen);
-	if (err)
-		return err;
-
-	err = service_run(ctx, service, true);
-	if (err)
-		return err;
-
-	size = nsb_service_receive_response(service, &rs);
-	if (size < 0)
-		return size;
-
-	return err;
-}
-#if 0
-static int service_release(struct process_ctx_s *ctx, struct service *service)
-{
-	int err;
-
-	if (service->released)
-		return 0;
-
-	err = service_run(ctx, service, false);
-	if (err)
-		return err;
-
-	pr_debug("  Service released\n");
-	service->released = true;
-	return 0;
-}
-#endif
-static int service_interrupt(struct process_ctx_s *ctx, struct service *service)
-{
-	int err;
-	const struct nsb_service_request rq = {
-		.cmd = NSB_SERVICE_CMD_STOP,
-		.data = { },
-	};
-	struct nsb_service_response rs;
-	ssize_t size;
-	size_t rqlen = sizeof(rq.cmd) + strlen(rq.data) + 1;
-
-	if (!service->released)
-		return 0;
-
-	err = nsb_service_send_request(service, &rq, rqlen);
-	if (err)
-		return err;
-
-	size = nsb_service_receive_response(service, &rs);
-	if (size < 0)
-		return size;
-
-	err = process_acquire(ctx);
-	if (err)
-		return err;
-
-	pr_debug("  Service caught\n");
-	service->released = false;
-	return 0;
+	return __service_do(ctx, service->runner, 1, 0, 0, 0, 0, 0);
 }
 
 static int service_find_runner(struct process_ctx_s *ctx, struct service *service)
@@ -354,10 +264,6 @@ static int service_connect(struct process_ctx_s *ctx, struct service *service)
 	if (err)
 		return err;
 
-	err = service_provide_sigframe(ctx, service);
-	if (err)
-		return err;
-
 	service->loaded = true;
 
 	return 0;
@@ -366,10 +272,6 @@ static int service_connect(struct process_ctx_s *ctx, struct service *service)
 int service_stop(struct process_ctx_s *ctx, struct service *service)
 {
 	int err;
-
-	err = service_interrupt(ctx, service);
-	if (err)
-		return err;
 
 	err = service_disconnect(ctx, service);
 	if (err)
@@ -451,7 +353,7 @@ int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 	if (err)
 		return err;
 
-	err = service_run(ctx, service, true);
+	err = service_run(ctx, service);
 	if (err)
 		return err;
 
@@ -514,7 +416,7 @@ int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 	if (err)
 		return err;
 
-	err = service_run(ctx, service, true);
+	err = service_run(ctx, service);
 	if (err)
 		return err;
 
@@ -549,7 +451,7 @@ ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *se
 	if (err)
 		return err;
 
-	err = service_run(ctx, service, true);
+	err = service_run(ctx, service);
 	if (err)
 		return err;
 
@@ -592,7 +494,7 @@ int service_transfer_fd(struct process_ctx_s *ctx, struct service *service,
 		return -errno;
 	}
 
-	tfd = __service_do(ctx, address, 0, 0, 0, 0, 0, 0, true);
+	tfd = __service_do(ctx, address, 0, 0, 0, 0, 0, 0);
 	if (tfd < 0) {
 		errno = -tfd;
 		pr_perror("failed to receive fd %d in target process %d",

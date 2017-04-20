@@ -39,11 +39,6 @@ int process_munmap_dl_map(struct process_ctx_s *ctx, const struct dl_map *dlm);
 int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 			  void *code, size_t code_size);
 
-int process_acquire(struct process_ctx_s *ctx);
-
-ssize_t process_emergency_sigframe(struct process_ctx_s *ctx, void *data,
-				   void *where);
-
 int process_inject_service(struct process_ctx_s *ctx);
 int process_shutdown_service(struct process_ctx_s *ctx);
 
