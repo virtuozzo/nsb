@@ -126,6 +126,7 @@ def process_obj(elf, di=None):
 
 def resolve(old_elf, new_elf, obj_seq):
 	get_debug_info = debuginfo.memoize(dict)(debuginfo.DebugInfo)
+	get_symtab = debuginfo.memoize(dict)(SymTab)
 
 	old_elf_di = get_debug_info(old_elf)
 	old_elf_cus = set(old_elf_di.get_cu_names())
@@ -172,24 +173,35 @@ def resolve(old_elf, new_elf, obj_seq):
 		sign = n & low_sign
 		return n + high_lim - low_lim if sign else n
 
+	def get_addr(elf, key):
+		if isinstance(key, basestring):
+			symtab = get_symtab(elf)
+			sym = symtab.get_sym(key)
+			return sym.entry.st_value
+		else:
+			di = get_debug_info(elf)
+			return di.get_dio_by_key(key).get_addr()
+
+
 	result = []
 	modulo = 1 << 64
+	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	for obj in obj_seq:
 		for func_di_key, relocs in process_obj(obj, get_debug_info(obj)).iteritems():
 			func_addr = new_elf_di.get_dio_by_key(func_di_key).get_addr()
-			for rel_size, rel_offset, di_key in relocs:
+			for rel_size, rel_offset, key in relocs:
 				patch_address = func_addr + rel_offset
 
-				old_addr = old_elf_di.get_addr(di_key)
+				old_addr = get_addr(old_elf, key)
 				if not old_addr:
-					print "!! {} is absent in old ELF".format(debuginfo.format_di_key(di_key))
+					print "!! {} is absent in old ELF".format(format_key())
 					continue
 
 				rel_value = read(patch_address + file_offset, rel_size)
 				if rel_size < 8:
 					rel_value = sign_extend(rel_value, 8*rel_size, 64)
 
-				new_addr = new_elf_di.get_addr(di_key)
+				new_addr = get_addr(new_elf, key)
 				# Emulate arithmetic modulo 2**64
 				# To get final address, one should subtract base load address of new ELF, and
 				# add base load address of old ELF  (zero for executables).  This calculation
