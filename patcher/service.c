@@ -354,8 +354,10 @@ int service_mmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 		return err;
 
 	err = service_run(ctx, service);
-	if (err)
+	if (err) {
+		pr_err("failed to send mmap request\n");
 		return err;
+	}
 
 	size = nsb_service_receive_response(service, &rs);
 	if (size < 0)
@@ -417,8 +419,10 @@ int service_munmap_dlm(struct process_ctx_s *ctx, const struct service *service,
 		return err;
 
 	err = service_run(ctx, service);
-	if (err)
+	if (err) {
+		pr_err("failed to send munmap request\n");
 		return err;
+	}
 
 	size = nsb_service_receive_response(service, &rs);
 	if (size < 0)
@@ -452,8 +456,10 @@ ssize_t service_needed_array(struct process_ctx_s *ctx, const struct service *se
 		return err;
 
 	err = service_run(ctx, service);
-	if (err)
+	if (err) {
+		pr_err("failed to send \"process needed list\" request\n");
 		return err;
+	}
 
 	size = nsb_service_receive_response(service, &rs);
 	if (size < 0)
