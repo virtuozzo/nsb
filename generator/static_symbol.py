@@ -44,8 +44,8 @@ def should_resolve(sec):
 		return False
 	return True
 
-def process_obj(elf):
-	di = debuginfo.get_debug_info(elf)
+def process_obj(elf, di=None):
+	di = di or debuginfo.DebugInfo(elf)
 	di_reloc = DebugInfoReloc(elf)
 	symtab = di_reloc.symtab
 
@@ -103,14 +103,16 @@ def process_obj(elf):
 	return result
 
 def resolve(old_elf, new_elf, obj_seq):
-	old_elf_di = debuginfo.get_debug_info(old_elf)
+	get_debug_info = debuginfo.memoize(dict)(debuginfo.DebugInfo)
 
-	new_elf_di = debuginfo.get_debug_info(new_elf)
+	old_elf_di = get_debug_info(old_elf)
+
+	new_elf_di = get_debug_info(new_elf)
 	new_elf_cus = set(new_elf_di.get_cu_names())
 
 	obj_cus = set()
 	for obj in obj_seq:
-		obj_di = debuginfo.get_debug_info(obj)
+		obj_di = get_debug_info(obj)
 		obj_cus.update(obj_di.get_cu_names())
 
 	if new_elf_cus != obj_cus:
@@ -145,7 +147,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	result = []
 	modulo = 1 << 64
 	for obj in obj_seq:
-		for func_di_key, relocs in process_obj(obj).iteritems():
+		for func_di_key, relocs in process_obj(obj, get_debug_info(obj)).iteritems():
 			func_addr = new_elf_di.get_addr(func_di_key)
 			for rel_size, rel_offset, di_key in relocs:
 				patch_address = func_addr + rel_offset
