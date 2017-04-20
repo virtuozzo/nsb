@@ -257,11 +257,6 @@ static int service_provide_sigframe(struct process_ctx_s *ctx, struct service *s
 	size_t rqlen;
 	int64_t address;
 
-	address = service_sym_addr(service, "nsb_service_run_loop");
-	if (address <= 0)
-		return address;
-	service->runner = address;
-
 	address = service_sym_addr(service, "emergency_sigframe");
 	if (address <= 0)
 		return address;
@@ -334,9 +329,24 @@ static int service_interrupt(struct process_ctx_s *ctx, struct service *service)
 	return 0;
 }
 
+static int service_find_runner(struct process_ctx_s *ctx, struct service *service)
+{
+	int64_t address;
+
+	address = service_sym_addr(service, "nsb_service_run_loop");
+	if (address <= 0)
+		return address;
+	service->runner = address;
+	return 0;
+}
+
 static int service_connect(struct process_ctx_s *ctx, struct service *service)
 {
 	int err;
+
+	err = service_find_runner(ctx, service);
+	if (err)
+		return err;
 
 	err = service_local_connect(service);
 	if (err)
