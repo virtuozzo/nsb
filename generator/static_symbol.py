@@ -13,6 +13,7 @@ import debuginfo
 from consts import *
 
 set_const_str(enums.ENUM_SH_TYPE)
+set_const_str(enums.ENUM_ST_SHNDX)
 set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 
 class DebugInfoReloc(object):
@@ -90,15 +91,22 @@ def process_obj(elf, di=None):
 			if rel_size is None:
 				continue
 
-			target_sec_idx = symtab.get_symbol(rel.entry.r_info_sym).entry.st_shndx
-			target_sec = elf.get_section(target_sec_idx)
-			if not should_resolve(target_sec):
-				continue
+			sym = symtab.get_symbol(rel.entry.r_info_sym)
+			target_sec_idx = sym.entry.st_shndx
+			if target_sec_idx in [STR.SHN_COMMON, STR.SHN_UNDEF]:
+				target_sec_name = target_sec_idx
+				key = key_repr = sym.name
+			else:
+				target_sec = elf.get_section(target_sec_idx)
+				if not should_resolve(target_sec):
+					continue
+				target_sec_name = target_sec.name
+				key = get_di_key(target_sec_idx)
+				key_repr = debuginfo.format_di_key(key)
 
-			di_key = get_di_key(target_sec_idx)
-			result[func_di_key].append((rel_size, rel.entry.r_offset, di_key))
+			result[func_di_key].append((rel_size, rel.entry.r_offset, key))
 			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
-				target_sec.name, debuginfo.format_di_key(di_key))
+					target_sec_name, key_repr)
 
 	return result
 
