@@ -42,13 +42,6 @@ AC_CHECK_LIB(
 ])
 
 AC_CHECK_LIB(
-		[dl],
-		[dlopen],
-		[],
-		[AC_MSG_ERROR([*** libdl not found.])
-])
-
-AC_CHECK_LIB(
 		[unwind],
 		[_ULx86_64_create_addr_space],
 		[],
