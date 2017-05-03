@@ -15,6 +15,7 @@ import itertools
 
 from elftools.dwarf import enums, dwarf_expr
 from elftools.dwarf.die import DIE
+from elftools.dwarf import descriptions
 
 from consts import *
 
@@ -70,6 +71,23 @@ def get_die_addr(die):
 		expr_visitor = ExprVisitor(structs)
 		return expr_visitor.get_addr(attr.value)
 
+	else:
+		assert 0
+
+def get_die_size(die):
+	if die.tag in [STR.DW_TAG_compile_unit, STR.DW_TAG_subprogram]:
+		low_pc  = die.attributes.get(STR.DW_AT_low_pc)
+		high_pc = die.attributes.get(STR.DW_AT_high_pc)
+		if low_pc is None or high_pc is None:
+			raise Exception("DW_AT_{low,high}_pc attr missing. Non-continuos code?")
+
+		high_pc_form = descriptions.describe_form_class(high_pc.form)
+		if high_pc_form == "constant":
+			return high_pc.value
+		elif high_pc_form == "address":
+			return high_pc.value - low_pc.value
+		else:
+			raise Exception("Unknown attribute form {}".format(high_pc.form))
 	else:
 		assert 0
 
