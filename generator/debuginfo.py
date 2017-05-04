@@ -148,6 +148,34 @@ class DebugInfoObject(object):
 		pos = self.parent_die_pos
 		return self.debug_info.get_dio_by_pos(pos) if pos >= 0 else None
 
+	def get_key(self):
+		die = self.die
+
+		if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
+			return
+
+		skip_attrs = [
+			STR.DW_AT_abstract_origin,
+			STR.DW_AT_declaration,
+			STR.DW_AT_artificial,
+		]
+		if set(die.attributes).intersection(skip_attrs):
+			return
+
+		key = []
+		dio = self
+		while dio:
+			die = dio.die
+			if die.tag == STR.DW_TAG_lexical_block:
+				return
+			sym_name = get_die_name(die)
+			key.append((sym_name, die.tag))
+
+			dio = dio.get_parent()
+
+		key.reverse()
+		return tuple(key)
+
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -212,38 +240,7 @@ class DebugInfo(object):
 		return DebugInfoObject(self, die, die_parent_pos[die_idx])
 
 	def _get_key_die(self, pos):
-		die, pos = self.get_dio_by_pos(pos)
-		nope = (None, None)
-
-		if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
-			return nope
-
-		skip_attrs = [
-			STR.DW_AT_abstract_origin,
-			STR.DW_AT_declaration,
-			STR.DW_AT_artificial,
-		]
-		if set(die.attributes).intersection(skip_attrs):
-			return nope
-
-		key = []
-		leaf_die = die
-		while True:
-			if die.tag == STR.DW_TAG_lexical_block:
-				return nope
-			sym_name = get_die_name(die)
-			key.append((sym_name, die.tag))
-
-			if pos < 0:
-				break
-
-			die, pos = self.get_dio_by_pos(pos)
-
-		key.reverse()
-		return tuple(key), leaf_die
-
-	def get_key(self, pos):
-		return self._get_key_die(pos)[0]
+		pass
 
 	def get_addr(self, key):
 		cu_name, die_type = key[0]
