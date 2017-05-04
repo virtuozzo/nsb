@@ -143,6 +143,7 @@ class DebugInfoObject(object):
 		self.debug_info		= debug_info
 		self.die		= die
 		self.parent_die_pos	= parent_die_pos
+		self._str		= None
 
 	def get_parent(self):
 		pos = self.parent_die_pos
@@ -184,6 +185,19 @@ class DebugInfoObject(object):
 
 		assert isinstance(addr, (int, long))
 		return addr
+
+	def __str__(self):
+		if self._str:
+			return self._str
+
+		die = self.die
+		key = self.get_key()
+		self._str = "DIO<{}>".format(
+			format_di_key(key) if key else
+			"{}@{:x}".format(die.tag, die.offset))
+		return self._str
+	
+	__repr__ = __str__
 
 class DebugInfo(object):
 	def __init__(self, elf):
