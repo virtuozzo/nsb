@@ -248,9 +248,6 @@ class DebugInfo(object):
 			raise Exception("Position is outside DIE")
 		return DebugInfoObject(self, die, die_parent_pos[die_idx])
 
-	def _get_key_die(self, pos):
-		pass
-
 	def get_dio_by_key(self, key):
 		cu_name, die_type = key[0]
 		assert die_type == STR.DW_TAG_compile_unit
