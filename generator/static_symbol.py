@@ -59,7 +59,7 @@ def process_obj(elf, di=None):
 	@debuginfo.memoize(dict)
 	def get_di_key(sec_idx):
 		di_offsets = di_reloc.get_offsets(sec_idx)
-		di_keys = map(di.get_key, di_offsets)
+		di_keys = [di.get_dio_by_pos(offset).get_key() for offset in di_offsets]
 		di_key_set = set(filter(None, di_keys))
 		if len(di_key_set) != 1:
 			for offs, key in zip(di_offsets, di_keys):
@@ -154,7 +154,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	modulo = 1 << 64
 	for obj in obj_seq:
 		for func_di_key, relocs in process_obj(obj, get_debug_info(obj)).iteritems():
-			func_addr = new_elf_di.get_addr(func_di_key)
+			func_addr = new_elf_di.get_dio_by_key(func_di_key).get_addr()
 			for rel_size, rel_offset, di_key in relocs:
 				patch_address = func_addr + rel_offset
 
