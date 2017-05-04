@@ -186,6 +186,9 @@ class DebugInfoObject(object):
 		assert isinstance(addr, (int, long))
 		return addr
 
+	def get_size(self):
+		return get_die_size(self.die)
+
 	def __str__(self):
 		if self._str:
 			return self._str
