@@ -144,6 +144,10 @@ class DebugInfoObject(object):
 		self.die		= die
 		self.parent_die_pos	= parent_die_pos
 
+	def get_parent(self):
+		pos = self.parent_die_pos
+		return self.debug_info.get_dio_by_pos(pos) if pos >= 0 else None
+
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -165,7 +169,7 @@ class DebugInfo(object):
 	def get_cu_names(self):
 		return self._cu_names.keys()
 
-	def lookup_die(self, pos):
+	def get_dio_by_pos(self, pos):
 		assert pos >= 0
 		# Consider sorted array A  having no duplicate elements
 		# [..., X, Y, ...], where X < Y, and some element P
@@ -205,10 +209,10 @@ class DebugInfo(object):
 		within_die = die.offset <= pos < die.offset + die.size
 		if not within_die:
 			raise Exception("Position is outside DIE")
-		return die, die_parent_pos[die_idx]
+		return DebugInfoObject(self, die, die_parent_pos[die_idx])
 
 	def _get_key_die(self, pos):
-		die, pos = self.lookup_die(pos)
+		die, pos = self.get_dio_by_pos(pos)
 		nope = (None, None)
 
 		if die.tag not in [STR.DW_TAG_subprogram, STR.DW_TAG_variable]:
@@ -233,7 +237,7 @@ class DebugInfo(object):
 			if pos < 0:
 				break
 
-			die, pos = self.lookup_die(pos)
+			die, pos = self.get_dio_by_pos(pos)
 
 		key.reverse()
 		return tuple(key), leaf_die
