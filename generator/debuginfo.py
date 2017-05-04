@@ -176,6 +176,15 @@ class DebugInfoObject(object):
 		key.reverse()
 		return tuple(key)
 
+	def get_addr(self):
+		addr = get_die_addr(self.die)
+		if isinstance(addr, basestring):
+			print("!! {} {}".format(self, addr))
+			return
+
+		assert isinstance(addr, (int, long))
+		return addr
+
 class DebugInfo(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -242,31 +251,23 @@ class DebugInfo(object):
 	def _get_key_die(self, pos):
 		pass
 
-	def get_addr(self, key):
+	def get_dio_by_key(self, key):
 		cu_name, die_type = key[0]
 		assert die_type == STR.DW_TAG_compile_unit
 		cu = self._cu_names[cu_name]
 		die_pos, die_parent_pos = _read_CU(cu)
 
-		found = False
-		addr = None
+		dio = None
 		# Skip sentinel at position zero
 		for pos in itertools.islice(die_pos, 1, None):
-			curr_key, die = self._get_key_die(pos)
-			if curr_key != key:
+			curr_dio = self.get_dio_by_pos(pos)
+			if curr_dio.get_key() != key:
 				continue
 
-			if found:
+			if dio:
 				raise Exception("Duplicate key {0}".format(key))
-			found = True
+			dio = curr_dio
 
-			x_addr = get_die_addr(die)
-			if isinstance(x_addr, basestring):
-				print("!! {} {}".format(format_di_key(key), x_addr))
-			else:
-				assert isinstance(x_addr, (int, long))
-				addr = x_addr
-
-		return addr
+		return dio
 			
 
