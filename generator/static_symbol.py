@@ -106,9 +106,15 @@ def resolve(old_elf, new_elf, obj_seq):
 	get_debug_info = debuginfo.memoize(dict)(debuginfo.DebugInfo)
 
 	old_elf_di = get_debug_info(old_elf)
+	old_elf_cus = set(old_elf_di.get_cu_names())
 
 	new_elf_di = get_debug_info(new_elf)
 	new_elf_cus = set(new_elf_di.get_cu_names())
+
+	if not (new_elf_cus <= old_elf_cus):
+		print "NEW CUs", " ".join(new_elf_cus)
+		print "OLD CUs", " ".join(old_elf_cus)
+		raise Exception("CU mismatch")
 
 	obj_cus = set()
 	for obj in obj_seq:
@@ -116,7 +122,7 @@ def resolve(old_elf, new_elf, obj_seq):
 		obj_cus.update(obj_di.get_cu_names())
 
 	if new_elf_cus != obj_cus:
-		print "SO  CUs", " ".join(new_elf_cus)
+		print "NEW CUs", " ".join(new_elf_cus)
 		print "OBJ CUs", " ".join(obj_cus)
 		raise Exception("CU mismatch")
 
