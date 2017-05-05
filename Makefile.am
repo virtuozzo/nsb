@@ -13,9 +13,9 @@ LIBS =
 # These exports are required for tests generation and tests running
 # For tests running they can be set via AM_TESTS_ENVIRONMENT.
 # But how to set them for tests generation?
-export NSB_GENERATOR=$(top_srcdir)/generator/nsbgen.py
-export NSB_PATCHER=$(top_srcdir)/nsb
-export NSB_TESTS=$(top_srcdir)/tests
+export NSB_GENERATOR
+export NSB_PATCHER
+export NSB_TESTS
 
 generator_PYTHON =					\
 			generator/binfile.py		\
