@@ -88,6 +88,11 @@ def process_obj(elf, di=None):
 		RAW.R_X86_64_PC64:		8,
 		RAW.R_X86_64_GOTOFF64:		8,
 	}
+	pic_rel_types = [RAW.R_X86_64_PC32, RAW.R_X86_64_PC64, RAW.R_X86_64_GOTOFF64]
+
+	def append_rel():
+		reloc_list.append((rel_size, rel.entry.r_offset, key))
+
 	for sec in elf.iter_sections():
 		if not sec.name.startswith('.rela.text'):
 			continue
@@ -102,9 +107,13 @@ def process_obj(elf, di=None):
 		func_di_key = get_di_key(text_sec_idx)
 		reloc_list = []
 		result[func_di_key] = (text_sec, reloc_list)
+
 		for rel in sec.iter_relocations():
-			rel_size = rel_type2size.get(rel.entry.r_info_type)
-			if rel_size is None:
+			rel_type = rel.entry.r_info_type
+			rel_size = rel_type2size[rel_type]
+			if rel_type not in pic_rel_types:
+				key = None
+				append_rel()
 				continue
 
 			sym = symtab.get_symbol(rel.entry.r_info_sym)
@@ -115,14 +124,18 @@ def process_obj(elf, di=None):
 			else:
 				target_sec = elf.get_section(target_sec_idx)
 				if not should_resolve(target_sec):
+					key = None
+					append_rel()
 					continue
+
 				target_sec_name = target_sec.name
 				key = get_di_key(target_sec_idx)
 				key_repr = debuginfo.format_di_key(key)
 
-			reloc_list.append((rel_size, rel.entry.r_offset, key))
+			append_rel()
 			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
 					target_sec_name, key_repr)
+
 	return result
 
 def resolve(old_elf, new_elf, obj_seq):
@@ -235,6 +248,9 @@ def resolve(old_elf, new_elf, obj_seq):
 			cmp_func()
 
 			for rel_size, rel_offset, key in relocs:
+				if key is None:
+					continue
+
 				patch_address = func_new_addr + rel_offset
 
 				old_addr = get_addr(old_elf, key)
