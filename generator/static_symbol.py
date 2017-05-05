@@ -188,15 +188,54 @@ def resolve(old_elf, new_elf, obj_seq):
 			di = get_debug_info(elf)
 			return di.get_dio_by_key(key).get_addr()
 
+	def cmp_func():
+		func_new_size = func_new_dio.get_size()
+		func_obj_size = func_obj_dio.get_size()
+
+		if func_new_size != func_obj_size:
+			raise Exception("Function {} size mismatch".format(func_new_dio))
+		func_size = func_new_size
+
+		reloc_map = {}
+		for rel_size, rel_offset, key in relocs:
+			reloc_map[rel_offset] = rel_size
+		assert len(reloc_map) == len(relocs)
+
+		func_new_code = read(new_text_sec, func_new_addr, func_size)
+		func_obj_code = read(obj_text_sec, func_obj_addr, func_size)
+
+		next_offset = 0
+		for offset, (x_new, x_obj) in enumerate(zip(func_new_code, func_obj_code)):
+			if offset < next_offset:
+				continue
+
+			if x_new != x_obj:
+				skip = reloc_map.get(offset)
+			else:
+				skip = 0
+
+			if skip is None:
+				raise Exception("Code mismatch for function {} at offset {}".format(
+					debuginfo.format_di_key(func_di_key), offset))
+
+			next_offset = offset + skip
 
 	result = []
 	modulo = 1 << 64
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	for obj in obj_seq:
-		for func_di_key, (obj_text_sec, relocs) in process_obj(obj, get_debug_info(obj)).iteritems():
-			func_addr = new_elf_di.get_dio_by_key(func_di_key).get_addr()
+		obj_di = get_debug_info(obj)
+		for func_di_key, (obj_text_sec, relocs) in process_obj(obj, obj_di).iteritems():
+			func_new_dio = new_elf_di.get_dio_by_key(func_di_key)
+			func_obj_dio = obj_di.get_dio_by_key(func_di_key)
+
+			func_new_addr = func_new_dio.get_addr()
+			func_obj_addr = func_obj_dio.get_addr()
+
+			cmp_func()
+
 			for rel_size, rel_offset, key in relocs:
-				patch_address = func_addr + rel_offset
+				patch_address = func_new_addr + rel_offset
 
 				old_addr = get_addr(old_elf, key)
 				if not old_addr:
