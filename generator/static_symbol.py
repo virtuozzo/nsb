@@ -82,7 +82,7 @@ def process_obj(elf, di=None):
 			raise Exception("Got {} DIE keys for section {}".format(len(di_keys), sec_idx))
 		return di_key_set.pop()
 
-	result = defaultdict(list)
+	result = {}
 	rel_type2size = {
 		RAW.R_X86_64_PC32:		4,
 		RAW.R_X86_64_PC64:		8,
@@ -100,6 +100,8 @@ def process_obj(elf, di=None):
 		print "=>", text_sec.name
 
 		func_di_key = get_di_key(text_sec_idx)
+		reloc_list = []
+		result[func_di_key] = (text_sec, reloc_list)
 		for rel in sec.iter_relocations():
 			rel_size = rel_type2size.get(rel.entry.r_info_type)
 			if rel_size is None:
@@ -118,10 +120,9 @@ def process_obj(elf, di=None):
 				key = get_di_key(target_sec_idx)
 				key_repr = debuginfo.format_di_key(key)
 
-			result[func_di_key].append((rel_size, rel.entry.r_offset, key))
+			reloc_list.append((rel_size, rel.entry.r_offset, key))
 			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
 					target_sec_name, key_repr)
-
 	return result
 
 def resolve(old_elf, new_elf, obj_seq):
@@ -192,7 +193,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	modulo = 1 << 64
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	for obj in obj_seq:
-		for func_di_key, relocs in process_obj(obj, get_debug_info(obj)).iteritems():
+		for func_di_key, (obj_text_sec, relocs) in process_obj(obj, get_debug_info(obj)).iteritems():
 			func_addr = new_elf_di.get_dio_by_key(func_di_key).get_addr()
 			for rel_size, rel_offset, key in relocs:
 				patch_address = func_addr + rel_offset
