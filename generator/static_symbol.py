@@ -149,11 +149,12 @@ def resolve(old_elf, new_elf, obj_seq):
 		print "OBJ CUs", " ".join(obj_cus)
 		raise Exception("CU mismatch")
 
-	text_sec = new_elf.get_section_by_name('.text')
-	file_offset = text_sec.header.sh_offset - text_sec.header.sh_addr
-	stream = new_elf.stream
+	new_text_sec = new_elf.get_section_by_name('.text')
 
-	def read(pos, size):
+	def read(sec, addr, size):
+		stream = sec.stream
+		pos = addr - sec.header.sh_addr + sec.header.sh_offset 
+
 		stream.seek(pos)
 		data = stream.read(size)
 		assert len(data) == size
@@ -197,7 +198,7 @@ def resolve(old_elf, new_elf, obj_seq):
 					print "!! {} is absent in old ELF".format(format_key())
 					continue
 
-				rel_value = read(patch_address + file_offset, rel_size)
+				rel_value = read(new_text_sec, patch_address, rel_size)
 				if rel_size < 8:
 					rel_value = sign_extend(rel_value, 8*rel_size, 64)
 
