@@ -50,7 +50,6 @@ test_type = get_test_type(test_name)
 code = """
 #!/usr/bin/env python2
 import os
-import testrunner
 
 try:
 	os.environ['NSB_GENERATOR']
@@ -74,6 +73,10 @@ except:
 
 os.environ['PYTHONPATH'] = os.getcwd() + '/protobuf'
 
+import sys
+sys.path.append(os.path.dirname(os.environ['NSB_GENERATOR']))
+
+import testrunner
 exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())
 """ % (test_class, source, target, target_obj, test_type, patch_mode)
 
