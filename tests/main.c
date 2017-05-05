@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "test_types.h"
 
