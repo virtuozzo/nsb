@@ -29,7 +29,10 @@ def convert_enum(header):
 		nr += 1
 	code += ")\n"
 
-	pyfile = "nsb_" + header[:header.find('.')] + ".py"
+	header_dirname = os.path.dirname(header)
+	header_basename = os.path.basename(header)
+
+	pyfile = header_dirname + "/nsb_" + header_basename[:header_basename.find('.')] + ".py"
 	dst = os.open(pyfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 	os.write(dst, code)
 
