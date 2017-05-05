@@ -158,6 +158,10 @@ def resolve(old_elf, new_elf, obj_seq):
 		stream.seek(pos)
 		data = stream.read(size)
 		assert len(data) == size
+		return data
+	
+	def read_num(sec, addr, size):
+		data = read(sec, addr, size)
 
 		result = 0
 		shift = 0
@@ -198,7 +202,7 @@ def resolve(old_elf, new_elf, obj_seq):
 					print "!! {} is absent in old ELF".format(format_key())
 					continue
 
-				rel_value = read(new_text_sec, patch_address, rel_size)
+				rel_value = read_num(new_text_sec, patch_address, rel_size)
 				if rel_size < 8:
 					rel_value = sign_extend(rel_value, 8*rel_size, 64)
 
