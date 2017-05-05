@@ -87,6 +87,8 @@ def process_obj(elf, di=None):
 		RAW.R_X86_64_PC32:		4,
 		RAW.R_X86_64_PC64:		8,
 		RAW.R_X86_64_GOTOFF64:		8,
+		RAW.R_X86_64_PLT32:		4,
+		RAW.R_X86_64_GOTPCREL:		4,
 	}
 	pic_rel_types = [RAW.R_X86_64_PC32, RAW.R_X86_64_PC64, RAW.R_X86_64_GOTOFF64]
 
