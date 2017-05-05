@@ -701,6 +701,7 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 
 	pr_info("  Patch path    : %s\n", ctx->patchfile);
 	pr_info("  Target BuildId: %s\n", PI(ctx)->target_bid);
+	pr_info("  Patch BuildId : %s\n", PI(ctx)->patch_bid);
 
 	return 0;
 }
