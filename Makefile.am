@@ -1,4 +1,4 @@
-SUBDIRS = protobuf tests
+SUBDIRS = protobuf
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -102,6 +102,53 @@ libnsb_service_la_CFLAGS = $(AM_CFLAGS)
 
 lib_LTLIBRARIES = libnsb_service.la
 
+##############################################################
+# Test engine
+##############################################################
+
+TESTS_LIST = 					\
+		tests/global_func.c		\
+		tests/ext_global_func.c		\
+		tests/global_func_cb.c		\
+		tests/global_var.c		\
+		tests/global_var_addr.c		\
+		tests/global_func_p.c		\
+		tests/const_var.c		\
+						\
+		tests/static_func_manual.c	\
+		tests/static_var_manual.c	\
+						\
+		tests/static_func_auto.c	\
+		tests/static_var_auto.c
+
+AM_LDFLAGS = -avoid-version -rpath /whereever
+
+tests_libtest_la_SOURCES = tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_libtest_la_CFLAGS = $(AM_CFLAGS) -g
+
+check_LTLIBRARIES = tests/libtest.la
+
+tests_nsbtest_library_SOURCES = tests/main.c
+tests_nsbtest_library_LDADD = tests/libtest.la -lpthread
+tests_nsbtest_library_CFLAGS = $(AM_CFLAGS) -g
+
+tests_nsbtest_static_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_nsbtest_static_LDADD = -lpthread
+tests_nsbtest_static_CFLAGS = $(AM_CFLAGS) -g
+
+tests_nsbtest_shared_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_nsbtest_shared_LDADD = -lpthread
+tests_nsbtest_shared_CFLAGS = $(AM_CFLAGS) -g -fpic -pie
+
+check_PROGRAMS = tests/nsbtest_library tests/nsbtest_static tests/nsbtest_shared
+
+tests/nsb_test_types.py$(EXEEXT): tests/test_types.h
+	$(AM_V_GEN) python tests/convert_test_types.py $<
+
+tests/nsb_test_types.py$(EXEEXT):  tests/convert_test_types.py
+
+check_SCRIPTS = tests/nsb_test_types.py
+
 COMMON_TEST_FILES = tests/global_func.c
 COMMON_TEST_FILES += tests/ext_global_func.c
 COMMON_TEST_FILES += tests/global_func_cb.c
@@ -156,3 +203,44 @@ TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = python
 
 CLEANFILES = $(TESTS) $(TESTS:.py=.binpatch)
+
+#########################
+# Patches
+########################
+
+TESTS_PATCHES = $(TESTS:.py=.patch)
+
+%.o: tests/test_types.h
+
+SUFFIXES = __manual__library.o
+SUFFIXES += __manual__shared.o
+SUFFIXES += __manual__static.o
+
+.c__manual__library.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.c__manual__shared.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.c__manual__static.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+SUFFIXES += __auto__library.o
+SUFFIXES += __auto__shared.o
+SUFFIXES += __auto__static.o
+
+.c__auto__library.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.c__auto__shared.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.c__auto__static.o: tests/test_types.h
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+
+.o.patch:
+	$(AM_V_CC) $(CC) -g -shared -fpic $^ -o $@
+
+check_DATA = $(TESTS_PATCHES)
+
+.SECONDARY: $(TESTS_PATCHES:.patch=.o)

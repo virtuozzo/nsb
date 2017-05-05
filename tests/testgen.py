@@ -24,7 +24,8 @@ outfile = args.name
 if args.name.endswith('.py'):
     args.name = args.name[:-3]
 
-test_name, patch_mode, test_type = os.path.basename(args.name).split('__', 2)
+test_name = os.path.basename(args.name)
+test_flavour, patch_mode, test_type = test_name.split('__', 2)
 
 if test_type == "library":
 	source = "nsbtest_library"
@@ -45,7 +46,7 @@ if patch_mode != "manual" and patch_mode != "auto":
 
 target = test_name + ".patch"
 target_obj = test_name + ".o"
-test_type = get_test_type(test_name)
+test_type = get_test_type(test_flavour)
 
 code = """
 #!/usr/bin/env python2

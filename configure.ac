@@ -16,7 +16,6 @@ AC_CONFIG_HEADERS([nsb_config.h])
 AC_CONFIG_FILES([
 		 Makefile
 		 protobuf/Makefile
-		 tests/Makefile
 ])
 
 AM_PATH_PYTHON([2.7])
