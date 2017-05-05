@@ -103,27 +103,31 @@ libnsb_service_la_CFLAGS = $(AM_CFLAGS)
 lib_LTLIBRARIES = libnsb_service.la
 
 ##############################################################
-# Test engine
+# Test engine: binaries + generation
 ##############################################################
 
-TESTS_LIST = 					\
+COMMON_TEST_FILES = 					\
 		tests/global_func.c		\
 		tests/ext_global_func.c		\
 		tests/global_func_cb.c		\
 		tests/global_var.c		\
 		tests/global_var_addr.c		\
 		tests/global_func_p.c		\
-		tests/const_var.c		\
-						\
+		tests/const_var.c
+
+MANUAL_TEST_FILES = 					\
 		tests/static_func_manual.c	\
-		tests/static_var_manual.c	\
-						\
+		tests/static_var_manual.c
+
+AUTO_TEST_FILES = 					\
 		tests/static_func_auto.c	\
 		tests/static_var_auto.c
 
+TEST_FILES = $(COMMON_TEST_FILES) $(AUTO_TEST_FILES) $(MANUAL_TEST_FILES)
+
 AM_LDFLAGS = -avoid-version -rpath /whereever
 
-tests_libtest_la_SOURCES = tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_libtest_la_SOURCES = tests/library.c tests/test_types.h $(TEST_FILES)
 tests_libtest_la_CFLAGS = $(AM_CFLAGS) -g
 
 check_LTLIBRARIES = tests/libtest.la
@@ -132,11 +136,11 @@ tests_nsbtest_library_SOURCES = tests/main.c
 tests_nsbtest_library_LDADD = tests/libtest.la -lpthread
 tests_nsbtest_library_CFLAGS = $(AM_CFLAGS) -g
 
-tests_nsbtest_static_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_nsbtest_static_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TEST_FILES)
 tests_nsbtest_static_LDADD = -lpthread
 tests_nsbtest_static_CFLAGS = $(AM_CFLAGS) -g
 
-tests_nsbtest_shared_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TESTS_LIST)
+tests_nsbtest_shared_SOURCES = tests/main.c tests/library.c tests/test_types.h $(TEST_FILES)
 tests_nsbtest_shared_LDADD = -lpthread
 tests_nsbtest_shared_CFLAGS = $(AM_CFLAGS) -g -fpic -pie
 
@@ -149,50 +153,43 @@ tests/nsb_test_types.py$(EXEEXT):  tests/convert_test_types.py
 
 check_SCRIPTS = tests/nsb_test_types.py
 
-COMMON_TEST_FILES = tests/global_func.c
-COMMON_TEST_FILES += tests/ext_global_func.c
-COMMON_TEST_FILES += tests/global_func_cb.c
-COMMON_TEST_FILES += tests/global_func_p.c
-COMMON_TEST_FILES += tests/global_var.c
-COMMON_TEST_FILES += tests/global_var_addr.c
-COMMON_TEST_FILES += tests/const_var.c
+#########################
+# Tests
+########################
 
-MANUAL_TEST_FILES = $(COMMON_TEST_FILES)
-MANUAL_TEST_FILES += tests/static_func_manual.c
-MANUAL_TEST_FILES += tests/static_var_manual.c
+# "Manual"-mode tests
 
-MANUAL_LIBRARY_TESTS = $(MANUAL_TEST_FILES:.c=__manual__library.py)
+MANUAL_TESTS_LIST = $(COMMON_TEST_FILES) $(MANUAL_TEST_FILES)
 
-MANUAL_STATIC_TESTS = $(MANUAL_TEST_FILES:.c=__manual__static.py)
+MANUAL_LIBRARY_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__library.py)
+MANUAL_LIBRARY_XFAIL_TESTS =
+
+MANUAL_STATIC_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__static.py)
 MANUAL_STATIC_XFAIL_TESTS =
 
-MANUAL_SHARED_TESTS = $(MANUAL_TEST_FILES:.c=__manual__shared.py)
+MANUAL_SHARED_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__shared.py)
 MANUAL_SHARED_XFAIL_TESTS =
 
 MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TESTS)
 MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
 
-AUTO_TEST_FILES = $(COMMON_TEST_FILES)
-AUTO_TEST_FILES += tests/static_func_auto.c
-AUTO_TEST_FILES += tests/static_var_auto.c
+# "Auto"-mode tests
 
-AUTO_LIBRARY_TESTS = $(AUTO_TEST_FILES:.c=__auto__library.py)
+AUTO_TESTS_LIST = $(COMMON_TEST_FILES) $(AUTO_TEST_FILES)
 
-AUTO_STATIC_XFAIL_FILES =
+AUTO_LIBRARY_TESTS = $(AUTO_TESTS_LIST:.c=__auto__library.py)
+AUTO_LIBRARY_XFAIL_FILES =
 
-AUTO_STATIC_TESTS = $(AUTO_TEST_FILES:.c=__auto__static.py)
-AUTO_STATIC_XFAIL_TESTS = $(AUTO_STATIC_XFAIL_FILES:.c=__auto__static.py)
+AUTO_STATIC_TESTS = $(AUTO_TESTS_LIST:.c=__auto__static.py)
+AUTO_STATIC_XFAIL_TESTS =
 
-AUTO_SHARED_XFAIL_FILES =
-
-AUTO_SHARED_TESTS = $(AUTO_TEST_FILES:.c=__auto__shared.py)
-AUTO_SHARED_XFAIL_TESTS = $(AUTO_SHARED_XFAIL_FILES:.c=__auto__shared.py)
+AUTO_SHARED_TESTS = $(AUTO_TESTS_LIST:.c=__auto__shared.py)
+AUTO_SHARED_XFAIL_TESTS =
 
 AUTO_TESTS = $(AUTO_LIBRARY_TESTS) $(AUTO_STATIC_TESTS) $(AUTO_SHARED_TESTS)
 AUTO_XFAIL_TESTS = $(AUTO_LIBRARY_XFAIL_TESTS) $(AUTO_STATIC_XFAIL_TESTS)  $(AUTO_SHARED_XFAIL_TESTS)
 
 TESTS = $(MANUAL_TESTS) $(AUTO_TESTS)
-
 XFAIL_TESTS = $(MANUAL_XFAIL_TESTS) $(AUTO_XFAIL_TESTS)
 
 $(TESTS): $(NSB_TESTS)/testgen.py
@@ -244,3 +241,5 @@ SUFFIXES += __auto__static.o
 check_DATA = $(TESTS_PATCHES)
 
 .SECONDARY: $(TESTS_PATCHES:.patch=.o)
+
+CLEANFILES += $(TESTS_PATCHES)
