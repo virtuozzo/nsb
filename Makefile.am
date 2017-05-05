@@ -15,7 +15,7 @@ LIBS =
 # But how to set them for tests generation?
 export NSB_GENERATOR=$(top_srcdir)/generator/nsbgen.py
 export NSB_PATCHER=$(top_srcdir)/nsb
-export TESTS_DIR=$(top_srcdir)/tests
+export NSB_TESTS=$(top_srcdir)/tests
 
 generator_PYTHON =					\
 			generator/binfile.py		\
@@ -148,8 +148,8 @@ TESTS = $(MANUAL_TESTS) $(AUTO_TESTS)
 
 XFAIL_TESTS = $(MANUAL_XFAIL_TESTS) $(AUTO_XFAIL_TESTS)
 
-$(TESTS): $(TESTS_DIR)/testgen.py
-	$(AM_V_GEN) python $(TESTS_DIR)/testgen.py $@
+$(TESTS): $(NSB_TESTS)/testgen.py
+	$(AM_V_GEN) python $(NSB_TESTS)/testgen.py $@
 
 
 TEST_EXTENSIONS = .py
