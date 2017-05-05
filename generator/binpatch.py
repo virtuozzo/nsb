@@ -126,7 +126,7 @@ class BinPatch:
 		if self.patchfile:
 			filename = self.patchfile
 		else:
-			filename = "./" + os.path.basename(self.bf_old.filename) + ".patchinfo"
+			filename = self.bf_new.filename + ".patchinfo"
 
 		pfile = os.open(filename, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
 
