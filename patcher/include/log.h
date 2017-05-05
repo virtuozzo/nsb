@@ -54,7 +54,7 @@ extern unsigned int log_get_loglevel(void);
 
 #define pr_err(fmt, ...)						\
 	print_on_level(LOG_ERROR,					\
-		       "Error (%s:%d): " LOG_PREFIX fmt,		\
+		       "Error (%s +%d): " LOG_PREFIX fmt,		\
 		       __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define pr_err_once(fmt, ...)						\
@@ -62,7 +62,7 @@ extern unsigned int log_get_loglevel(void);
 
 #define pr_warn(fmt, ...)						\
 	print_on_level(LOG_WARN,					\
-		       "Warn  (%s:%d): " LOG_PREFIX fmt,		\
+		       "Warn  (%s +%d): " LOG_PREFIX fmt,		\
 		       __FILE__, __LINE__, ##__VA_ARGS__)
 
 #define pr_warn_once(fmt, ...)						\
