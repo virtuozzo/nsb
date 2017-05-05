@@ -197,6 +197,11 @@ class LivePatchTest:
 	__metaclass__ = ABCMeta
 
 	def __init__(self, source, target, target_obj, test_type, patch_mode):
+		try:
+			self.tests_dir = os.environ['NSB_TESTS'] + '/'
+		except:
+			self.tests_dir = os.getcwd() + '/tests/'
+
 		self.test_bin = self.test_binary(source)
 		self.src_elf = self.source_elf(source)
 		self.tgt_elf = self.target_elf(target)
@@ -311,20 +316,20 @@ class LivePatchTest:
 	def source_elf(self, path): pass
 
 	def target_elf(self, path):
-		return os.getcwd() + "/tests/" + path
+		return self.tests_dir + path
 
 
 class LibraryLivePatchTest(LivePatchTest):
 	def test_binary(self, path):
-		return os.getcwd() + "/tests/.libs/" + path
+		return self.tests_dir + ".libs/" + path
 
 	def source_elf(self, path):
-		return os.getcwd() + "/tests/.libs/libtest.so"
+		return self.tests_dir + ".libs/libtest.so"
 
 
 class ExecutableLivePatchTest(LivePatchTest):
 	def test_binary(self, path):
-		return os.getcwd() + "/tests/" + path
+		return self.tests_dir + path
 
 	def source_elf(self, path):
-		return os.getcwd() + "/tests/" + path
+		return self.tests_dir + path
