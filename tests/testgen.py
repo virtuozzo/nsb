@@ -47,24 +47,35 @@ target = test_name + ".patch"
 target_obj = test_name + ".o"
 test_type = get_test_type(test_name)
 
-code =	"#!/usr/bin/env python2\n" +						\
-	"import os\n" +								\
-	"import testrunner\n\n" +						\
-	"try:\n"								\
-	"\tos.environ['NSB_GENERATOR']\n"					\
-	"except:\n"								\
-	"\tos.environ['NSB_GENERATOR'] = os.getcwd() + '/generator/nsbgen.py'\n"\
-	"try:\n"								\
-	"\tos.environ['NSB_PATCHER']\n"						\
-	"except:\n"								\
-	"\tos.environ['NSB_PATCHER'] = os.getcwd() + '/nsb'\n"			\
-	"try:\n"								\
-	"\tos.environ['LD_LIBRARY_PATH']\n"					\
-	"except:\n"								\
-	"\tos.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/.libs'\n"		\
-	"os.environ['PYTHONPATH'] = os.getcwd() + \"/protobuf\"\n" +		\
-	"exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())\n" %	\
-	(test_class, source, target, target_obj, test_type, patch_mode)
+code = """
+#!/usr/bin/env python2
+import os
+import testrunner
+
+try:
+	os.environ['NSB_GENERATOR']
+except:
+	os.environ['NSB_GENERATOR'] = os.getcwd() + '/generator/nsbgen.py'
+
+try:
+	os.environ['NSB_PATCHER']
+except:
+	os.environ['NSB_PATCHER'] = os.getcwd() + '/nsb'
+
+try:
+	os.environ['NSB_TESTS']
+except:
+	os.environ['NSB_TESTS'] = os.getcwd() + '/tests'
+
+try:
+	os.environ['LD_LIBRARY_PATH']
+except:
+	os.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/.libs'
+
+os.environ['PYTHONPATH'] = os.getcwd() + '/protobuf'
+
+exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())
+""" % (test_class, source, target, target_obj, test_type, patch_mode)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)
