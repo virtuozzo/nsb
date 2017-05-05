@@ -7,6 +7,8 @@
 
 #include "test_types.h"
 
+#include <stdlib.h>
+
 long ext_global_func(int type)
 {
 	if (atoi("3") == 3)
