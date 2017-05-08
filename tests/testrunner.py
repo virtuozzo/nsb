@@ -121,7 +121,15 @@ class Test:
 		return 0
 
 	def get_map_path(self, bid):
-		return map_by_build_id(self.p.pid, bid)
+		tries = 50
+		while --tries:
+			try:
+				return map_by_build_id(self.p.pid, bid)
+			except IOError as e:
+				import time
+				time.sleep(1 / 1000000)
+				continue
+		raise
 
 
 class BinPatch:
