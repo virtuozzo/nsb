@@ -125,10 +125,9 @@ AUTO_TEST_FILES = 					\
 
 TEST_FILES = $(COMMON_TEST_FILES) $(AUTO_TEST_FILES) $(MANUAL_TEST_FILES)
 
-AM_LDFLAGS = -avoid-version -rpath /whereever
-
 tests_libtest_la_SOURCES = tests/library.c tests/test_types.h $(TEST_FILES)
 tests_libtest_la_CFLAGS = $(AM_CFLAGS) -g
+tests_libtest_la_LDFLAGS = -avoid-version -rpath /whereever
 
 check_LTLIBRARIES = tests/libtest.la
 
