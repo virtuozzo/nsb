@@ -8,6 +8,7 @@ Schaffhausen, Switzerland.
 from collections import defaultdict
 
 from elftools.elf import enums
+from elftools.elf import descriptions
 
 import debuginfo
 from consts import *
@@ -15,6 +16,7 @@ from consts import *
 set_const_str(enums.ENUM_SH_TYPE)
 set_const_str(enums.ENUM_ST_SHNDX)
 set_const_raw(enums.ENUM_RELOC_TYPE_x64)
+set_const_str(descriptions._DESCR_ST_INFO_BIND)
 
 INT_TYPES = (int, long)
 
@@ -122,20 +124,24 @@ def process_obj(elf, di=None):
 			rel_size = RELOC_SIZES[rel_type]
 
 			sym = symtab.get_symbol(rel.entry.r_info_sym)
+			sym_bind = sym.entry.st_info.bind
 			target_sec_idx = sym.entry.st_shndx
-			if target_sec_idx in [STR.SHN_COMMON, STR.SHN_UNDEF]:
-				target_sec_name = target_sec_idx
+			target_sec = elf.get_section(target_sec_idx) \
+				 if isinstance(target_sec_idx, INT_TYPES) else None
+			target_sec_name = target_sec.name if target_sec else target_sec_idx
+
+			if sym_bind == STR.STB_GLOBAL:
 				key = key_repr = sym.name
-			else:
-				target_sec = elf.get_section(target_sec_idx)
+			elif sym_bind == STR.STB_LOCAL:
 				if not should_resolve(target_sec):
 					key = None
 					append_rel()
 					continue
 
-				target_sec_name = target_sec.name
 				key = get_di_key(target_sec_idx)
 				key_repr = debuginfo.format_di_key(key)
+			else:
+				assert 0
 
 			append_rel()
 			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
