@@ -221,19 +221,16 @@ def resolve(old_elf, new_elf, obj_seq):
 
 		next_offset = 0
 		for offset, (x_new, x_obj) in enumerate(zip(func_new_code, func_obj_code)):
+			skip = reloc_map.get(offset)
+			if skip:
+				next_offset = offset + skip
 			if offset < next_offset:
 				continue
 
 			if x_new != x_obj:
-				skip = reloc_map.get(offset)
-			else:
-				skip = 0
-
-			if skip is None:
 				raise Exception("Code mismatch for function {} at offset {}".format(
 					debuginfo.format_di_key(func_di_key), offset))
 
-			next_offset = offset + skip
 
 	result = []
 	modulo = 1 << 64
