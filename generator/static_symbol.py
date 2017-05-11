@@ -16,6 +16,8 @@ set_const_str(enums.ENUM_SH_TYPE)
 set_const_str(enums.ENUM_ST_SHNDX)
 set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 
+INT_TYPES = (int, long)
+
 class DebugInfoReloc(object):
 	def __init__(self, elf):
 		self.elf = elf
