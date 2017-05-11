@@ -18,6 +18,19 @@ set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 
 INT_TYPES = (int, long)
 
+RELOC_SIZES = {
+	RAW.R_X86_64_PC32:		4,
+	RAW.R_X86_64_PC64:		8,
+	RAW.R_X86_64_GOTOFF64:		8,
+	RAW.R_X86_64_PLT32:		4,
+	RAW.R_X86_64_GOTPCREL:		4,
+}
+RELOC_PIC_TYPES = [
+	RAW.R_X86_64_PC32,
+	RAW.R_X86_64_PC64,
+	RAW.R_X86_64_GOTOFF64,
+]
+
 class DebugInfoReloc(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -85,14 +98,6 @@ def process_obj(elf, di=None):
 		return di_key_set.pop()
 
 	result = {}
-	rel_type2size = {
-		RAW.R_X86_64_PC32:		4,
-		RAW.R_X86_64_PC64:		8,
-		RAW.R_X86_64_GOTOFF64:		8,
-		RAW.R_X86_64_PLT32:		4,
-		RAW.R_X86_64_GOTPCREL:		4,
-	}
-	pic_rel_types = [RAW.R_X86_64_PC32, RAW.R_X86_64_PC64, RAW.R_X86_64_GOTOFF64]
 
 	def append_rel():
 		reloc_list.append((rel_size, rel.entry.r_offset, key))
@@ -114,8 +119,8 @@ def process_obj(elf, di=None):
 
 		for rel in sec.iter_relocations():
 			rel_type = rel.entry.r_info_type
-			rel_size = rel_type2size[rel_type]
-			if rel_type not in pic_rel_types:
+			rel_size = RELOC_SIZES[rel_type]
+			if rel_type not in RELOC_PIC_TYPES:
 				key = None
 				append_rel()
 				continue
