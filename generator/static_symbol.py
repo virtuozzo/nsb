@@ -100,7 +100,7 @@ def process_obj(elf, di=None):
 	result = {}
 
 	def append_rel():
-		reloc_list.append((rel_size, rel.entry.r_offset, key))
+		reloc_list.append((rel_type, rel.entry.r_offset, key))
 
 	for sec in elf.iter_sections():
 		if not sec.name.startswith('.rela.text'):
@@ -120,10 +120,6 @@ def process_obj(elf, di=None):
 		for rel in sec.iter_relocations():
 			rel_type = rel.entry.r_info_type
 			rel_size = RELOC_SIZES[rel_type]
-			if rel_type not in RELOC_PIC_TYPES:
-				key = None
-				append_rel()
-				continue
 
 			sym = symtab.get_symbol(rel.entry.r_info_sym)
 			target_sec_idx = sym.entry.st_shndx
@@ -219,8 +215,8 @@ def resolve(old_elf, new_elf, obj_seq):
 		func_size = func_new_size
 
 		reloc_map = {}
-		for rel_size, rel_offset, key in relocs:
-			reloc_map[rel_offset] = rel_size
+		for rel_type, rel_offset, key in relocs:
+			reloc_map[rel_offset] = RELOC_SIZES[rel_type]
 		assert len(reloc_map) == len(relocs)
 
 		func_new_code = read(new_text_sec, func_new_addr, func_size)
@@ -253,7 +249,9 @@ def resolve(old_elf, new_elf, obj_seq):
 
 			cmp_func()
 
-			for rel_size, rel_offset, key in relocs:
+			for rel_type, rel_offset, key in relocs:
+				if rel_type not in RELOC_PIC_TYPES:
+					continue
 				if key is None:
 					continue
 
@@ -264,6 +262,7 @@ def resolve(old_elf, new_elf, obj_seq):
 					print "!! {} is absent in old ELF".format(format_key())
 					continue
 
+				rel_size = RELOC_SIZES[rel_type]
 				rel_value = read_num(new_text_sec, patch_address, rel_size)
 				if rel_size < 8:
 					rel_value = sign_extend(rel_value, 8*rel_size, 64)
