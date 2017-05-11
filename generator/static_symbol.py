@@ -6,6 +6,7 @@ Schaffhausen, Switzerland.
 '''
 
 from collections import defaultdict
+from weakref import WeakKeyDictionary
 
 from elftools.elf import enums
 from elftools.elf import descriptions
@@ -76,10 +77,11 @@ def should_resolve(sec):
 		return False
 	return True
 
-def process_obj(elf, di=None):
-	di = di or debuginfo.DebugInfo(elf)
-	di_reloc = DebugInfoReloc(elf)
-	symtab = di_reloc.symtab
+class ObjectFile(object):
+	def __init__(self, elf, di=None):
+		self.elf = elf
+		self.di = di or debuginfo.DebugInfo(elf)
+		self.di_reloc = DebugInfoReloc(elf)
 
 	# It is supposed that object files are compiled with options
 	# -fdata-sections -ffunction-sections
@@ -88,10 +90,10 @@ def process_obj(elf, di=None):
 	# section => relocations for .debug_info that refer this section 
 	# => DIEs that are patched by this relocations.
 	# From that DIEs, we derive key which uniquely identifies object.
-	@debuginfo.memoize(dict)
-	def get_di_key(sec_idx):
-		di_offsets = di_reloc.get_offsets(sec_idx)
-		di_keys = [di.get_dio_by_pos(offset).get_key() for offset in di_offsets]
+	@debuginfo.memoize(WeakKeyDictionary, dict)
+	def get_di_key(self, sec_idx):
+		di_offsets = self.di_reloc.get_offsets(sec_idx)
+		di_keys = [self.di.get_dio_by_pos(offset).get_key() for offset in di_offsets]
 		di_key_set = set(filter(None, di_keys))
 		if len(di_key_set) != 1:
 			for offs, key in zip(di_offsets, di_keys):
@@ -99,55 +101,60 @@ def process_obj(elf, di=None):
 			raise Exception("Got {} DIE keys for section {}".format(len(di_keys), sec_idx))
 		return di_key_set.pop()
 
-	result = {}
+	def get_relocs(self):
+		elf = self.elf
+		di_reloc = self.di_reloc
+		symtab = di_reloc.symtab
+		get_di_key = self.get_di_key
+		result = {}
 
-	def append_rel():
-		reloc_list.append((rel_type, rel.entry.r_offset, key))
+		def append_rel():
+			reloc_list.append((rel_type, rel.entry.r_offset, key))
 
-	for sec in elf.iter_sections():
-		if not sec.name.startswith('.rela.text'):
-			continue
-		if sec.header.sh_link != di_reloc.sym_sec_idx:
-			raise Exception("Symbol table mismatch")
+		for sec in elf.iter_sections():
+			if not sec.name.startswith('.rela.text'):
+				continue
+			if sec.header.sh_link != di_reloc.sym_sec_idx:
+				raise Exception("Symbol table mismatch")
 
-		print "== Processing", sec.name,
-		text_sec_idx = sec.header.sh_info
-		text_sec = elf.get_section(text_sec_idx)
-		print "=>", text_sec.name
+			print "== Processing", sec.name,
+			text_sec_idx = sec.header.sh_info
+			text_sec = elf.get_section(text_sec_idx)
+			print "=>", text_sec.name
 
-		func_di_key = get_di_key(text_sec_idx)
-		reloc_list = []
-		result[func_di_key] = (text_sec, reloc_list)
+			func_di_key = get_di_key(text_sec_idx)
+			reloc_list = []
+			result[func_di_key] = (text_sec, reloc_list)
 
-		for rel in sec.iter_relocations():
-			rel_type = rel.entry.r_info_type
-			rel_size = RELOC_SIZES[rel_type]
+			for rel in sec.iter_relocations():
+				rel_type = rel.entry.r_info_type
+				rel_size = RELOC_SIZES[rel_type]
 
-			sym = symtab.get_symbol(rel.entry.r_info_sym)
-			sym_bind = sym.entry.st_info.bind
-			target_sec_idx = sym.entry.st_shndx
-			target_sec = elf.get_section(target_sec_idx) \
-				 if isinstance(target_sec_idx, INT_TYPES) else None
-			target_sec_name = target_sec.name if target_sec else target_sec_idx
+				sym = symtab.get_symbol(rel.entry.r_info_sym)
+				sym_bind = sym.entry.st_info.bind
+				target_sec_idx = sym.entry.st_shndx
+				target_sec = elf.get_section(target_sec_idx) \
+					 if isinstance(target_sec_idx, INT_TYPES) else None
+				target_sec_name = target_sec.name if target_sec else target_sec_idx
 
-			if sym_bind == STR.STB_GLOBAL:
-				key = key_repr = sym.name
-			elif sym_bind == STR.STB_LOCAL:
-				if not should_resolve(target_sec):
-					key = None
-					append_rel()
-					continue
+				if sym_bind == STR.STB_GLOBAL:
+					key = key_repr = sym.name
+				elif sym_bind == STR.STB_LOCAL:
+					if not should_resolve(target_sec):
+						key = None
+						append_rel()
+						continue
 
-				key = get_di_key(target_sec_idx)
-				key_repr = debuginfo.format_di_key(key)
-			else:
-				assert 0
+					key = get_di_key(target_sec_idx)
+					key_repr = debuginfo.format_di_key(key)
+				else:
+					assert 0
 
-			append_rel()
-			print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
-					target_sec_name, key_repr)
+				append_rel()
+				print "  +{:<5d} {:40s} {}".format(rel.entry.r_offset,
+						target_sec_name, key_repr)
 
-	return result
+		return result
 
 def resolve(old_elf, new_elf, obj_seq):
 	get_debug_info = debuginfo.memoize(dict)(debuginfo.DebugInfo)
@@ -246,7 +253,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	for obj in obj_seq:
 		obj_di = get_debug_info(obj)
-		for func_di_key, (obj_text_sec, relocs) in process_obj(obj, obj_di).iteritems():
+		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj, obj_di).get_relocs().iteritems():
 			func_new_dio = new_elf_di.get_dio_by_key(func_di_key)
 			func_obj_dio = obj_di.get_dio_by_key(func_di_key)
 
