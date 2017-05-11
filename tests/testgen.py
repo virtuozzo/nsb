@@ -48,8 +48,7 @@ target = test_name + ".patch"
 target_obj = test_name + ".o"
 test_type = get_test_type(test_flavour)
 
-code = """
-#!/usr/bin/env python2
+code = """#!/usr/bin/env python2
 import os
 
 try:
