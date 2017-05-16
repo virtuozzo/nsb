@@ -270,12 +270,9 @@ class DebugInfo(object):
 		cu_name, die_type = key[0]
 		assert die_type == STR.DW_TAG_compile_unit
 		cu = self._cu_names[cu_name]
-		die_pos, die_parent_pos = _read_CU(cu)
 
 		dio = None
-		# Skip sentinel at position zero
-		for pos in itertools.islice(die_pos, 1, None):
-			curr_dio = self.get_dio_by_pos(pos)
+		for curr_dio in self._iter_cu_dios(cu):
 			if curr_dio.get_key() != key:
 				continue
 
@@ -284,5 +281,11 @@ class DebugInfo(object):
 			dio = curr_dio
 
 		return dio
+
+	def _iter_cu_dios(self, cu):
+		die_pos, die_parent_pos = _read_CU(cu)
+		# Skip sentinel at position zero
+		for pos in itertools.islice(die_pos, 1, None):
+			yield self.get_dio_by_pos(pos)
 			
 
