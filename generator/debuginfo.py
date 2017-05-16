@@ -215,6 +215,7 @@ class DebugInfo(object):
 		for cu in dwi.iter_CUs():
 			cu_pos.append((-cu.cu_offset, cu))
 			cu_name = get_die_name(_iter_DIEs(cu).next())
+			assert cu_name not in self._cu_names
 			self._cu_names[cu_name] = cu
 
 		cu_pos.append((1, None, None))
