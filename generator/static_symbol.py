@@ -65,6 +65,44 @@ class SymTab(object):
 		if not self.sec:
 			raise Exception("No symbol table")
 		self._masked_addrs = set()
+
+		# Symbols can be:
+		# 1. visible only within file
+		# 2. visible outside file, interposable
+		# 3. visible outside file, non-interposable
+		# Here we want to mask types 1,2
+		dyn_symtab = elf.get_section_by_name('.dynsym')
+		for dio in get_debug_info(elf).iter_dios():
+			if dio.tag != STR.DW_TAG_variable:
+				continue
+
+			# skip variables not in file scope
+			if dio.get_parent().tag != STR.DW_TAG_compile_unit:
+				continue
+
+			# skip non-defining declarations
+			if STR.DW_AT_declaration in dio.attributes:
+				continue
+
+			# Symbol is visible outside file
+			if STR.DW_AT_external in dio.attributes:
+				sym_name = dio.attributes[STR.DW_AT_name].value
+				dym_sym_list = dyn_symtab.get_symbol_by_name(sym_name)
+				assert len(dym_sym_list) < 2
+
+				if dym_sym_list:
+					dyn_sym = dym_sym_list[0]
+					visibility = dyn_sym.entry.st_other.visibility
+				else:
+					# STV_HIDDEN or STV_INTERNAL visibility
+					visibility = None
+
+				# Symbol is non-interposable
+				if visibility in [None, STR.STV_PROTECTED]:
+					continue 
+
+			# 'dio' here represents file-scope non-global ("static") variable
+			self._masked_addrs.add(dio.get_addr())
 	
 	def get_sym(self, name):
 		sym_list = [sym for sym in self.sec.get_symbol_by_name(name)
