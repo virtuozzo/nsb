@@ -288,4 +288,9 @@ class DebugInfo(object):
 		for pos in itertools.islice(die_pos, 1, None):
 			yield self.get_dio_by_pos(pos)
 			
+	def iter_dios(self):
+		# Skip sentinel (1, None) at position zero
+		for cu_pos, cu in itertools.islice(reversed(self._cu_pos), 1, None):
+			for dio in self._iter_cu_dios(cu):
+				yield dio
 
