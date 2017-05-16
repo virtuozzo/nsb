@@ -218,7 +218,7 @@ class DebugInfo(object):
 			assert cu_name not in self._cu_names
 			self._cu_names[cu_name] = cu
 
-		cu_pos.append((1, None, None))
+		cu_pos.append((1, None))
 		cu_pos.sort()
 
 	def get_cu_names(self):
@@ -236,7 +236,7 @@ class DebugInfo(object):
 		# bisect_right(P) == index(Y) + 1
 		# So we use A[bisect_right(pos) - 1] to lookup DIEs.
 		# When looking up CUs, situation is a bit different, since we store
-		# 3-tuples in the array. To make comparisons possible, we should use 1-tuple as a key.
+		# 2-tuples in the array. To make comparisons possible, we should use 1-tuple as a key.
 		# When position to look up matches CU offset, key tuple will be less than element tuple.
 		# So subtracting one will give wrong result. To overcome this, we use negated offsets.
 		# In such case, we want to select the right end, so to lookup CUs we use
