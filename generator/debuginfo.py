@@ -142,6 +142,8 @@ class DebugInfoObject(object):
 	def __init__(self, debug_info, die, parent_die_pos):
 		self.debug_info		= debug_info
 		self.die		= die
+		self.tag		= die.tag
+		self.attributes		= die.attributes
 		self.parent_die_pos	= parent_die_pos
 		self._str		= None
 
