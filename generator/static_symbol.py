@@ -56,6 +56,8 @@ class DebugInfoReloc(object):
 	def get_offsets(self, sec_idx):
 		return self._sec_idx2offset[sec_idx]
 
+get_debug_info = debuginfo.memoize(WeakKeyDictionary)(debuginfo.DebugInfo)
+
 class SymTab(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -78,9 +80,9 @@ def should_resolve(sec):
 	return True
 
 class ObjectFile(object):
-	def __init__(self, elf, di=None):
+	def __init__(self, elf):
 		self.elf = elf
-		self.di = di or debuginfo.DebugInfo(elf)
+		self.di = debuginfo.DebugInfo(elf)
 		self.di_reloc = DebugInfoReloc(elf)
 
 	# It is supposed that object files are compiled with options
@@ -157,7 +159,7 @@ class ObjectFile(object):
 		return result
 
 def resolve(old_elf, new_elf, obj_seq):
-	get_debug_info = debuginfo.memoize(dict)(debuginfo.DebugInfo)
+	obj_seq = list(obj_seq)
 	get_symtab = debuginfo.memoize(dict)(SymTab)
 
 	old_elf_di = get_debug_info(old_elf)
@@ -253,7 +255,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	for obj in obj_seq:
 		obj_di = get_debug_info(obj)
-		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj, obj_di).get_relocs().iteritems():
+		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj).get_relocs().iteritems():
 			func_new_dio = new_elf_di.get_dio_by_key(func_di_key)
 			func_obj_dio = obj_di.get_dio_by_key(func_di_key)
 
