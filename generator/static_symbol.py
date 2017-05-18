@@ -88,7 +88,7 @@ class SymTab(object):
 			if STR.DW_AT_external in dio.attributes:
 				sym_name = dio.attributes[STR.DW_AT_name].value
 				dym_sym_list = dyn_symtab.get_symbol_by_name(sym_name)
-				assert len(dym_sym_list) < 2
+				assert dym_sym_list is None or len(dym_sym_list) == 1
 
 				if dym_sym_list:
 					dyn_sym = dym_sym_list[0]
