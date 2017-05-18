@@ -101,7 +101,6 @@ class SymTab(object):
 				if visibility in [None, STR.STV_PROTECTED]:
 					continue 
 
-			# 'dio' here represents file-scope non-global ("static") variable
 			self._masked_addrs.add(dio.get_addr())
 	
 	def get_sym(self, name):
