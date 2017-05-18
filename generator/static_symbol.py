@@ -18,6 +18,7 @@ set_const_str(enums.ENUM_SH_TYPE)
 set_const_str(enums.ENUM_ST_SHNDX)
 set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 set_const_str(descriptions._DESCR_ST_INFO_BIND)
+set_const_str(descriptions._DESCR_ST_INFO_TYPE)
 
 INT_TYPES = (int, long)
 
@@ -102,6 +103,12 @@ class SymTab(object):
 					continue 
 
 			self._masked_addrs.add(dio.get_addr())
+
+		sym_types = [STR.STT_OBJECT, STR.STT_FUNC]
+		self.module_sym_names = set(sym.name for sym in self.sec.iter_symbols() if
+				sym.entry.st_shndx != STR.SHN_UNDEF and
+				sym.entry.st_info.type in sym_types and
+				sym.entry.st_value not in self._masked_addrs)
 	
 	def get_sym(self, name):
 		sym_list = [sym for sym in self.sec.get_symbol_by_name(name)
