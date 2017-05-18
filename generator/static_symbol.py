@@ -7,6 +7,7 @@ Schaffhausen, Switzerland.
 
 from collections import defaultdict
 from weakref import WeakKeyDictionary
+import functools
 
 from elftools.elf import enums
 from elftools.elf import descriptions
@@ -125,6 +126,21 @@ def should_resolve(sec):
 		return False
 	return True
 
+def check_interposable(module_sym_names, rel, sym):
+	if rel.entry.r_info_type in RELOC_PIC_TYPES:
+		return
+
+	# If symbol has no name (for example, it has STT_SECTION type), then it must
+	# be local. Local symbols should be represented by PIC relocations (listed in
+	# RELOC_PIC_TYPES). Compiler may do otherwise, but this is silly and should be
+	# considered a bug. Thus, symbols corresponding to non-PIC relocation should
+	# have name, and should be non-local. We verify this. Finally, we check that
+	# symbol name is interposable. That ensures that all non-interposable symbols
+	# are represented by PIC relocations. Thus, all such symbols are resolved.
+	assert sym.entry.st_info.bind == STR.STB_GLOBAL
+	assert sym.name
+	assert sym.name not in module_sym_names
+
 class ObjectFile(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -149,7 +165,7 @@ class ObjectFile(object):
 			raise Exception("Got {} DIE keys for section {}".format(len(di_keys), sec_idx))
 		return di_key_set.pop()
 
-	def get_relocs(self):
+	def get_relocs(self, check_symbol=None):
 		elf = self.elf
 		di_reloc = self.di_reloc
 		symtab = di_reloc.symtab
@@ -179,6 +195,7 @@ class ObjectFile(object):
 				rel_size = RELOC_SIZES[rel_type]
 
 				sym = symtab.get_symbol(rel.entry.r_info_sym)
+				check_symbol and check_symbol(rel, sym)
 				sym_bind = sym.entry.st_info.bind
 				target_sec_idx = sym.entry.st_shndx
 				target_sec = elf.get_section(target_sec_idx) \
@@ -299,9 +316,10 @@ def resolve(old_elf, new_elf, obj_seq):
 	result = []
 	modulo = 1 << 64
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
+	check_sym = functools.partial(check_interposable, get_symtab(new_elf).module_sym_names)
 	for obj in obj_seq:
 		obj_di = get_debug_info(obj)
-		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj).get_relocs().iteritems():
+		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj).get_relocs(check_sym).iteritems():
 			func_new_dio = new_elf_di.get_dio_by_key(func_di_key)
 			func_obj_dio = obj_di.get_dio_by_key(func_di_key)
 
