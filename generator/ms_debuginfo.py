@@ -85,6 +85,9 @@ def read(elf, sym_names=None,
 		if DW_AT_abstract_origin in die.attributes:
 			return False
 
+		if DW_AT_declaration in die.attributes:
+			return False
+
 		if sym_names is None:
 			return True
 
