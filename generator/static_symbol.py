@@ -20,6 +20,7 @@ set_const_str(enums.ENUM_ST_SHNDX)
 set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 set_const_str(descriptions._DESCR_ST_INFO_BIND)
 set_const_str(descriptions._DESCR_ST_INFO_TYPE)
+set_const_str(descriptions._DESCR_ST_VISIBILITY)
 
 INT_TYPES = (int, long)
 
