@@ -42,6 +42,8 @@ def get_die_name(die):
 def get_die_key(die, demangler):
 	result = []
 	while die:
+		if die.tag == DW_TAG_lexical_block:
+			return
 		sym_name = demangler(get_die_name(die))
 		result.append((sym_name, die.tag))
 		die = die.get_parent()
@@ -80,23 +82,24 @@ def read(elf, sym_names=None,
 
 	def should_process(die):
 		if die.tag not in sym_tags:
-			return False
+			return
 
 		if DW_AT_abstract_origin in die.attributes:
-			return False
+			return
 
 		if DW_AT_declaration in die.attributes:
-			return False
+			return
 
+		die_key = get_die_key(die, demangler)
 		if sym_names is None:
-			return True
+			return die_key
 
 		name = get_die_name(die)
-		return demangler(name) in sym_names
+		return die_key if demangler(name) in sym_names else None
 
 	def walk(die):
-		if should_process(die):
-			die_key = get_die_key(die, demangler)
+		die_key = should_process(die)
+		if die_key:
 			assert die_key not in result
 
 			sym_addr = get_addr(die, cu.structs)
