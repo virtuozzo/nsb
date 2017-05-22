@@ -76,7 +76,7 @@ class SymTab(object):
 		# Here we want to mask types 1,2
 		dyn_symtab = elf.get_section_by_name('.dynsym')
 		for dio in get_debug_info(elf).iter_dios():
-			if dio.tag != STR.DW_TAG_variable:
+			if dio.tag not in [STR.DW_TAG_variable, STR.DW_TAG_subprogram]:
 				continue
 
 			# skip variables not in file scope
@@ -104,7 +104,10 @@ class SymTab(object):
 				if visibility in [None, STR.STV_PROTECTED]:
 					continue 
 
-			self._masked_addrs.add(dio.get_addr())
+			addr = dio.get_addr()
+			if addr is None:
+				continue
+			self._masked_addrs.add(addr)
 
 		sym_types = [STR.STT_OBJECT, STR.STT_FUNC]
 		self.module_sym_names = set(sym.name for sym in self.sec.iter_symbols() if
