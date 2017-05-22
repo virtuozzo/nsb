@@ -9,8 +9,6 @@ import re
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
-from elftools.elf.enums import ENUM_ST_INFO_BIND
-
 import ms_debuginfo
 
 def reverse_mapping(d):
@@ -28,8 +26,6 @@ def single(objects):
 
 class SymResolver:
 	__metaclass__ = ABCMeta
-
-	ELF64_R_INFO = lambda s, t: (s << 32) | t
 
 	def __init__(self, t_elf, p_elf):
 		self.t_elf = t_elf
