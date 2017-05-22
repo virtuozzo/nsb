@@ -306,10 +306,8 @@ class DebugInfo(object):
 		return dio
 
 	def _iter_cu_dios(self, cu):
-		die_pos, die_parent_pos = _read_CU(cu)
-		# Skip sentinel at position zero
-		for pos in itertools.islice(die_pos, 1, None):
-			yield self.get_dio_by_pos(pos)
+		for die, parent_pos in _iter_DIEs(cu):
+			yield DebugInfoObject(self, die, parent_pos)
 			
 	def iter_dios(self):
 		# Skip sentinel (1, None) at position zero
