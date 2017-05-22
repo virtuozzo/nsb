@@ -88,8 +88,7 @@ class SymResolver:
 			o_di2addr = ms_debuginfo.read(self.t_elf.elf, selected)
 
 			print("== Reading debuginfo for new ELF")
-			p_di2addr = ms_debuginfo.read(self.p_elf.elf, selected,
-					lambda n: self.demangle(n) if self.match(n) else n)
+			p_di2addr = ms_debuginfo.read(self.p_elf.elf, selected, self.demangle)
 
 			p_addr2di = reverse_mapping(p_di2addr)
 			lookup = lambda name, addr: o_di2addr[p_addr2di[addr]]
