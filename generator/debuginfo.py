@@ -129,6 +129,8 @@ def memoize(*dict_classes):
 def _iter_DIEs(cu):
 	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
 	die_offset = cu.cu_die_offset
+	# See CompileUnit._unflatten_tree()
+	parent_stack = [-1]
 
 	while die_offset < cu_boundary:
 		die = DIE(
@@ -136,26 +138,26 @@ def _iter_DIEs(cu):
 			stream=cu.dwarfinfo.debug_info_sec.stream,
 			offset=die_offset)
 
-		yield die
-		die_offset += die.size
-
-@memoize(WeakKeyDictionary)
-def _read_CU(cu):
-	die_pos        = array.array('l', [-1])
-	die_parent_pos = array.array('l', [-1])
-
-	# See CompileUnit._unflatten_tree()
-	parent_stack = [-1]
-	for die in _iter_DIEs(cu):
 		if not die.is_null():
-			die_pos.append(die.offset)
-			die_parent_pos.append(parent_stack[-1])
+			yield die, parent_stack[-1]
 			if die.has_children:
 				parent_stack.append(die.offset)
 		elif parent_stack:
 			parent_stack.pop()
 
-	return die_pos, die_parent_pos
+		die_offset += die.size
+
+
+@memoize(WeakKeyDictionary)
+def _read_CU(cu):
+	pos_arr        = array.array('l', [-1])
+	parent_pos_arr = array.array('l', [-1])
+
+	for die, parent_pos in _iter_DIEs(cu):
+		pos_arr.append(die.offset)
+		parent_pos_arr.append(parent_pos)
+
+	return pos_arr, parent_pos_arr
 
 class DebugInfoObject(object):
 	def __init__(self, debug_info, die, parent_die_pos):
@@ -235,7 +237,7 @@ class DebugInfo(object):
 
 		for cu in dwi.iter_CUs():
 			cu_pos.append((-cu.cu_offset, cu))
-			cu_name = get_die_name(_iter_DIEs(cu).next())
+			cu_name = get_die_name(_iter_DIEs(cu).next()[0])
 			assert cu_name not in self._cu_names
 			self._cu_names[cu_name] = cu
 
