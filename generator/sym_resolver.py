@@ -7,15 +7,24 @@ Schaffhausen, Switzerland.
 
 import re
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 
 from elftools.elf.enums import ENUM_ST_INFO_BIND
 
 import ms_debuginfo
 
 def reverse_mapping(d):
-	result = dict((v,k) for k, v in d.iteritems())
-	assert len(result) == len(d)
-	return result
+	result = defaultdict(list)
+	for k, v in d.iteritems():
+		result[v].append(k)
+	return dict(result)
+
+def single(objects):
+	obj_set = set(objects)
+	if len(obj_set) != 1:
+		print obj_set
+		raise Exception("Multiple objects")
+	return obj_set.pop()
 
 class SymResolver:
 	__metaclass__ = ABCMeta
@@ -90,8 +99,9 @@ class SymResolver:
 			print("== Reading debuginfo for new ELF")
 			p_di2addr = ms_debuginfo.read(self.p_elf.elf, selected, self.demangle)
 
-			p_addr2di = reverse_mapping(p_di2addr)
-			lookup = lambda name, addr: t_di2addr[p_addr2di[addr]]
+			p_addr2di_list = reverse_mapping(p_di2addr)
+			lookup = lambda name, addr: single([t_di2addr[di]
+					for di in p_addr2di_list[addr]])
 
 		return lookup
 
