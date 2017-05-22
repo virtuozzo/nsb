@@ -55,7 +55,9 @@ def get_die_addr(die):
 		if STR.DW_AT_entry_pc in die.attributes:
 			raise Exception("DW_AT_entry_pc is not supported")
 
-		attr = die.attributes[STR.DW_AT_low_pc]
+		attr = die.attributes.get(STR.DW_AT_low_pc)
+		if attr is None:
+			return "no DW_AT_low_pc attribute"
 		assert attr.form == STR.DW_FORM_addr, attr.form
 		return attr.value
 
