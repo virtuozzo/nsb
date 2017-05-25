@@ -85,7 +85,7 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 {
 	int err;
 	uint64_t base;
-	char buf[] = "/proc/XXXXXXXXXX/map_files";
+	char buf[PATH_MAX] = "/proc/XXXXXXXXXX/map_files";
 	char path[PATH_MAX];
 	char dentry[256];
 	ssize_t res;
