@@ -553,7 +553,7 @@ int create_patch_by_dlm(struct process_ctx_s *ctx, const struct dl_map *dlm,
 	if (err)
 		goto free_patch;
 
-	if (p->target_dlm) {
+	if (p->target_dlm && p->patch_dlm->exec_vma) {
 		err = tune_patch_func_jumps(p);
 		if (err)
 			goto free_patch;
