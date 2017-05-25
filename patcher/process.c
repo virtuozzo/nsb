@@ -760,7 +760,7 @@ int process_inject_service(struct process_ctx_s *ctx)
 
 	handle = process_call_dlopen(ctx, dlopen_addr, ctx->service.name);
 	if (handle <= 0) {
-		pr_err("failed to inject nsb service service\n");
+		pr_err("failed to inject nsb service\n");
 		return -EFAULT;
 	}
 
