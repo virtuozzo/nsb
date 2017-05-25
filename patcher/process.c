@@ -653,6 +653,7 @@ int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 		void *code, size_t code_size)
 {
 	int err;
+	int64_t ret;
 	user_regs_struct_t regs;
 
 	err = process_write_data(ctx, addr, code, round_up(code_size, 8));
@@ -667,7 +668,10 @@ int64_t process_exec_code(struct process_ctx_s *ctx, uint64_t addr,
 		return err;
 	}
 
-	return get_user_reg(&regs, ax);
+	ret = get_user_reg(&regs, ax);
+	if (ret < 0)
+		pr_err("code execution returned error: %ld\n", ret);
+	return ret;
 }
 
 int process_suspend(struct process_ctx_s *ctx, const char *target_bid)
