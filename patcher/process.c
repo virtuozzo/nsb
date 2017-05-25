@@ -746,7 +746,7 @@ static int64_t process_call_dlopen(struct process_ctx_s *ctx,
 	return process_exec_code(ctx, code_addr, dlopen_code, size);
 }
 
-int process_inject_service(struct process_ctx_s *ctx)
+static int __process_do_inject_service(struct process_ctx_s *ctx)
 {
 	int err;
 	uint64_t dlopen_addr = 0;
@@ -775,6 +775,11 @@ int process_inject_service(struct process_ctx_s *ctx)
 		return err;
 
 	return 0;
+}
+
+int process_inject_service(struct process_ctx_s *ctx)
+{
+	return __process_do_inject_service(ctx);
 }
 
 static int64_t process_call_dlclose(struct process_ctx_s *ctx,
