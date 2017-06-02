@@ -6,7 +6,7 @@
 #endif
 
 #ifndef VZP_SECTION
-#define VZP_SECTION 				"VZP"
+#define VZP_SECTION 				"vzp_meta"
 #endif
 
 #ifndef VZP_ALLOW_STATIC
@@ -17,10 +17,14 @@
 #define VZP_STATIC_ALT_LINKAGE			extern
 #endif
 
-#define VZP_VIS_STATIC				1
-#define VZP_VIS_INTERNAL			2
-#define VZP_VIS_HIDDEN				3
-#define VZP_VIS_PROTECTED			4
+#define VZP_TAG_FILE				1
+#define VZP_TAG_SYMBOL				2
+#define VZP_TAG_ALIAS				3
+
+#define VZP_VIS_INTERNAL			1
+#define VZP_VIS_HIDDEN				2
+#define VZP_VIS_PROTECTED			3
+#define VZP_VIS_STATIC				100
 
 #define VZP_X_PASTE(prefix, middle, suffix)				\
 	prefix ## middle ## suffix
@@ -31,12 +35,28 @@
 #define VZP_X_JOIN_2(prefix, suffix)					\
 	VZP_X_PASTE(prefix, , suffix)
 
+#define VZP_X_HEADER_T							\
+	VZP_X_JOIN(VZP_PREFIX, header, _t)
+
+typedef struct {
+	char tag;
+	char *filename;
+	unsigned int line;
+} VZP_X_HEADER_T;
+
+#define VZP_X_HEADER(_tag)						\
+	{								\
+		.tag				= _tag,			\
+		.filename			= __FILE__,		\
+		.line				= __LINE__		\
+	}
+
 #define VZP_X_FILE_T							\
 	VZP_X_JOIN(VZP_PREFIX, file, _t)
 
 typedef struct {
-	char *filename;
-	unsigned int line;
+	VZP_X_HEADER_T header;
+
 	char *target_filename;
 } VZP_X_FILE_T;
 
@@ -44,8 +64,8 @@ typedef struct {
 	VZP_X_JOIN(VZP_PREFIX, symbol, _t)
 
 typedef struct {
-	char *filename;
-	unsigned int line;
+	VZP_X_HEADER_T header;
+
 	char *target_filename;
 	char *symbol;
 	int visibility;
@@ -55,6 +75,8 @@ typedef struct {
 	VZP_X_JOIN(VZP_PREFIX, alias, _t)
 
 typedef struct {
+	VZP_X_HEADER_T header;
+
 	char *patch_symbol;
 	char *target_symbol;
 } VZP_X_ALIAS_T;
@@ -72,7 +94,7 @@ typedef struct {
 	VZP_X_CREATE_ID(file_, VZP_X_NEXT_NUM)
 
 #define VZP_X_SYMBOL_ID							\
-	VZP_X_CREATE_ID(sym_, VZP_X_NEXT_NUM)
+	VZP_X_CREATE_ID(symbol_, VZP_X_NEXT_NUM)
 
 #define VZP_X_ALIAS_ID							\
 	VZP_X_CREATE_ID(alias_, VZP_X_NEXT_NUM)
@@ -118,8 +140,7 @@ typedef struct {
 
 #define VZP_X_SYM_FILENAME(vis, name, fn)				\
 	static const VZP_X_SYMBOL_T VZP_X_SYMBOL_ID VZP_X_ATTRS = {	\
-		.filename		= __FILE__,			\
-		.line			= __LINE__,			\
+		.header			= VZP_X_HEADER(VZP_TAG_SYMBOL), \
 		.target_filename	= fn,				\
 		.symbol			= #name,			\
 		.visibility		= vis				\
@@ -154,13 +175,13 @@ typedef struct {
 
 #define VZP_FILE(name)							\
 	static const VZP_X_FILE_T VZP_X_FILE_ID VZP_X_ATTRS = {		\
-		.filename		= __FILE__,			\
-		.line			= __LINE__,			\
-		.target_filename =	name				\
+		.header			= VZP_X_HEADER(VZP_TAG_FILE),	\
+		.target_filename	=	name			\
 	};
 
 #define VZP_STATIC_SYM_ALIAS(patch_sym, target_sym)			\
 	static const VZP_X_ALIAS_T VZP_X_ALIAS_ID VZP_X_ATTRS = { 	\
+		.header			= VZP_X_HEADER(VZP_TAG_ALIAS),	\
 		.patch_symbol		= #patch_sym,			\
 		.target_symbol		= #target_sym			\
 	};
