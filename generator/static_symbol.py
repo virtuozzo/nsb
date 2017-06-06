@@ -143,7 +143,7 @@ def check_interposable(module_sym_names, rel, sym):
 class ObjectFile(object):
 	def __init__(self, elf):
 		self.elf = elf
-		self.di = debuginfo.DebugInfo(elf)
+		self.di = get_debug_info(elf)
 		self.di_reloc = DebugInfoReloc(elf)
 
 	# It is supposed that object files are compiled with options
