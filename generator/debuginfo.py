@@ -275,3 +275,5 @@ class DebugInfo(object):
 			for dio in self._iter_cu_dios(cu):
 				yield dio
 
+get_debug_info = memoize(WeakKeyDictionary)(DebugInfo)
+

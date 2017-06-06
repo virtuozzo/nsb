@@ -54,8 +54,6 @@ class DebugInfoReloc(object):
 	def get_offsets(self, sec_idx):
 		return self._sec_idx2offset[sec_idx]
 
-get_debug_info = debuginfo.memoize(WeakKeyDictionary)(debuginfo.DebugInfo)
-
 class SymTab(object):
 	def __init__(self, elf):
 		self.elf = elf
@@ -70,7 +68,7 @@ class SymTab(object):
 		# 3. visible outside file, non-interposable
 		# Here we want to mask types 1,2
 		dyn_symtab = elf.get_section_by_name('.dynsym')
-		for dio in get_debug_info(elf).iter_dios():
+		for dio in debuginfo.get_debug_info(elf).iter_dios():
 			if dio.tag not in [STR.DW_TAG_variable, STR.DW_TAG_subprogram]:
 				continue
 
@@ -143,7 +141,7 @@ def check_interposable(module_sym_names, rel, sym):
 class ObjectFile(object):
 	def __init__(self, elf):
 		self.elf = elf
-		self.di = get_debug_info(elf)
+		self.di = debuginfo.get_debug_info(elf)
 		self.di_reloc = DebugInfoReloc(elf)
 
 	# It is supposed that object files are compiled with options
@@ -224,10 +222,10 @@ def resolve(old_elf, new_elf, obj_seq):
 	obj_seq = list(obj_seq)
 	get_symtab = debuginfo.memoize(dict)(SymTab)
 
-	old_elf_di = get_debug_info(old_elf)
+	old_elf_di = debuginfo.get_debug_info(old_elf)
 	old_elf_cus = set(old_elf_di.get_cu_names())
 
-	new_elf_di = get_debug_info(new_elf)
+	new_elf_di = debuginfo.get_debug_info(new_elf)
 	new_elf_cus = set(new_elf_di.get_cu_names())
 
 	if not (new_elf_cus <= old_elf_cus):
@@ -237,7 +235,7 @@ def resolve(old_elf, new_elf, obj_seq):
 
 	obj_cus = set()
 	for obj in obj_seq:
-		obj_di = get_debug_info(obj)
+		obj_di = debuginfo.get_debug_info(obj)
 		obj_cus.update(obj_di.get_cu_names())
 
 	if new_elf_cus != obj_cus:
@@ -280,7 +278,7 @@ def resolve(old_elf, new_elf, obj_seq):
 			sym = symtab.get_sym(key)
 			return sym.entry.st_value
 		else:
-			di = get_debug_info(elf)
+			di = debuginfo.get_debug_info(elf)
 			return di.get_dio_by_key(key).get_addr()
 
 	def cmp_func():
@@ -317,7 +315,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
 	check_sym = functools.partial(check_interposable, get_symtab(new_elf).module_sym_names)
 	for obj in obj_seq:
-		obj_di = get_debug_info(obj)
+		obj_di = debuginfo.get_debug_info(obj)
 		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj).get_relocs(check_sym).iteritems():
 			func_new_dio = new_elf_di.get_dio_by_key(func_di_key)
 			func_obj_dio = obj_di.get_dio_by_key(func_di_key)
