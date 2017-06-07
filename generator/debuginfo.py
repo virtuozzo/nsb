@@ -5,17 +5,18 @@ import bisect
 from weakref import WeakKeyDictionary
 import itertools
 
-from elftools.dwarf import enums, dwarf_expr
+from elftools.dwarf import enums, dwarf_expr, descriptions
+from elftools.dwarf import constants as dwarf_const
 from elftools.dwarf.die import DIE
-from elftools.dwarf import descriptions
 
 from consts import *
-from util import memoize
+from util import memoize, rtoi
 
 set_const_str(enums.ENUM_DW_TAG)
 set_const_str(enums.ENUM_DW_AT)
 set_const_str(enums.ENUM_DW_FORM)
 set_const_str(dwarf_expr.DW_OP_name2opcode)
+set_const_raw(dwarf_const.__dict__, 'DW_ATE_')
 
 def format_di_key(di_key):
 	get_suffix = lambda tag: '()' if tag == STR.DW_TAG_subprogram else ''
@@ -182,6 +183,14 @@ class DebugInfoObject(object):
 		assert isinstance(addr, (int, long))
 		return addr
 
+	def get_type(self):
+		type_ref_forms = [STR.DW_FORM_ref1, STR.DW_FORM_ref2, STR.DW_FORM_ref4, STR.DW_FORM_ref8]
+		type_attr = self.attributes[STR.DW_AT_type]
+		if type_attr.form not in type_ref_forms:
+			raise Exception("Unknown attr form {}".format(type_attr.form))
+		type_pos = self.die.cu.cu_offset + type_attr.value
+		return TypeObject(self.debug_info.get_dio_by_pos(type_pos))
+
 	def get_size(self):
 		return get_die_size(self.die)
 
@@ -288,4 +297,138 @@ class DebugInfo(object):
 				yield dio
 
 get_debug_info = memoize(WeakKeyDictionary)(DebugInfo)
+
+class Struct(object):
+	def __init__(self, **kwargs):
+		for name, value in kwargs.iteritems():
+			setattr(self, name, value)
+
+	def __repr__(self):
+		data = ["%s = %r" % (name, value)
+				for name, value in self.__dict__.iteritems()
+					if not name.startswith("__")]
+		data.sort()
+		return "Struct(%s)" % ", ".join(data)
+
+	__str__ = __repr__
+
+class TypeObject(object):
+	def __init__(self, dio):
+		self.dio = dio
+
+		get_attr = lambda attr: dio.attributes[attr].value
+
+		parent   = None
+		is_base  = False
+		size     = None
+		signed   = None
+		encoding = None
+		members  = None
+		name     = None
+		offset   = None
+
+		if dio.tag == STR.DW_TAG_pointer_type:
+			size = get_attr(STR.DW_AT_byte_size)
+			signed = False
+			read_ptr = self._read_int
+
+			parent = dio.get_type()
+			if parent.is_base and parent.encoding in [
+				RAW.DW_ATE_unsigned_char, RAW.DW_ATE_signed_char]:
+				read = lambda stream: self._read_ptr_char(
+							read_ptr(stream), stream)
+			else:
+				read = read_ptr 
+
+		elif dio.tag in [STR.DW_TAG_typedef, STR.DW_TAG_const_type]:
+			parent = dio.get_type()
+			read = parent.read
+
+		elif dio.tag == STR.DW_TAG_structure_type:
+			size = get_attr(STR.DW_AT_byte_size)
+
+			members = []
+			for child_dio in dio.iter_children():
+				assert child_dio.tag == STR.DW_TAG_member
+				members.append(TypeObject(child_dio))
+
+			read = self._read_struct
+
+		elif dio.tag == STR.DW_TAG_member:
+			name = get_attr(STR.DW_AT_name)
+			offset = get_attr(STR.DW_AT_data_member_location)
+			parent = dio.get_type()
+			read = parent.read
+
+		elif dio.tag == STR.DW_TAG_base_type:
+			is_base = True
+			name = get_attr(STR.DW_AT_name)
+			size = get_attr(STR.DW_AT_byte_size)
+
+			encoding = get_attr(STR.DW_AT_encoding)
+			if encoding in [RAW.DW_ATE_unsigned, RAW.DW_ATE_unsigned_char]:
+				signed = False
+			elif encoding in [RAW.DW_ATE_signed, RAW.DW_ATE_signed_char]:
+				signed = True
+			else:
+				assert 0
+
+			read = self._read_int
+
+		else:
+			assert 0
+
+		self.parent   = parent
+		self.is_base  = is_base
+		self.size     = size
+		self.signed   = signed
+		self.encoding = encoding
+		self.members  = members
+		self.name     = name
+		self.offset   = offset
+
+		self.read = read
+
+	def __str__(self):
+		die = self.dio.die
+		loc = "<{:x}>".format(die.offset)
+		return "TYPE<{} {}>".format(die.tag, loc)
+
+	__repr__ = __str__
+
+	def _read_int(self, stream):
+		data = stream.read(self.size)
+		return rtoi(data, self.signed)
+
+	def _read_ptr_char(self, ptr, stream):
+		if not ptr:
+			return None
+
+		saved_pos = stream.tell()
+		stream.seek(ptr)
+
+		null = "\x00"
+		chunks = []
+		scan = True
+		while scan:
+			data = stream.read(1<<10, allow_short=True)
+			null_idx = data.find(null)
+			if null_idx >= 0:
+				data = data[:null_idx]
+				scan = False
+			chunks.append(data)
+
+		stream.seek(saved_pos)
+		return "".join(chunks)
+
+	def _read_struct(self, stream):
+		data = {}
+		pos = stream.tell()
+
+		for member in self.members:
+			stream.seek(pos + member.offset)
+			data[member.name] = member.read(stream)
+
+		stream.seek(pos + self.size)
+		return Struct(**data)
 
