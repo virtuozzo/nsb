@@ -86,9 +86,9 @@ def get_die_size(die):
 	else:
 		assert 0
 
-def _iter_DIEs(cu):
+def _iter_DIEs(cu, offset=None):
 	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
-	die_offset = cu.cu_die_offset
+	die_offset = cu.cu_die_offset if offset is None else offset
 	# See CompileUnit._unflatten_tree()
 	parent_stack = [-1]
 
@@ -102,8 +102,12 @@ def _iter_DIEs(cu):
 			yield die, parent_stack[-1]
 			if die.has_children:
 				parent_stack.append(die.offset)
-		elif parent_stack:
+
+		else:
 			parent_stack.pop()
+
+		if parent_stack[-1] == -1:
+			return
 
 		die_offset += die.size
 
@@ -131,6 +135,15 @@ class DebugInfoObject(object):
 	def get_parent(self):
 		pos = self.parent_die_pos
 		return self.debug_info.get_dio_by_pos(pos) if pos >= 0 else None
+
+	def iter_children(self, immediate=True):
+		debug_info = self.debug_info
+		pos = self.die.offset
+
+		# islice() to skip self
+		for die, parent_pos in itertools.islice(_iter_DIEs(self.die.cu, pos), 1, None):
+			if not immediate or parent_pos == pos:
+				yield DebugInfoObject(debug_info, die, parent_pos)
 
 	def get_key(self):
 		die = self.die
