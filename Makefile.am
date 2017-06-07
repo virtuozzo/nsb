@@ -152,6 +152,9 @@ tests/nsb_test_types.py$(EXEEXT):  tests/convert_test_types.py
 
 check_SCRIPTS = tests/nsb_test_types.py
 
+otherincludedir = $(includedir)/@PACKAGE@
+otherinclude_HEADERS = include/vzp.h
+
 #########################
 # Tests
 ########################
