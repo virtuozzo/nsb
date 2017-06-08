@@ -33,3 +33,21 @@ def memoize(*dict_classes):
 
 	return fix_dict_class
 
+def rtoi(data, signed):
+	"""
+	'raw' to int
+	"""
+	result = 0
+	shift = 0
+
+	for byte in data:
+		byte_value = ord(byte) 
+		byte_sign = byte_value & 0x80
+		result += byte_value << shift
+		shift += 8
+
+	if signed and byte_sign:
+		result -= 1 << shift
+
+	return result
+
