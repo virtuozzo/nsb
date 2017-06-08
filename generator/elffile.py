@@ -1,10 +1,15 @@
 from collections import namedtuple
 import sys
+import bisect
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.elffile import SymbolTableSection
 from elftools.elf.descriptions import describe_p_flags, describe_reloc_type
-from elftools.elf.constants import P_FLAGS
+from elftools.elf.constants import P_FLAGS, SH_FLAGS
+
+from consts import *
+
+set_const_raw(SH_FLAGS.__dict__)
 
 ElfHeader = namedtuple("ElfHeader", "type machine")
 ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
@@ -99,3 +104,26 @@ class ElfFile:
 		except AttributeError:
 			print "ELF file doesn't have %s section" % section
 		return None
+
+
+class AddressSpace(object):
+	def __init__(self, elf):
+		# See comment from get_dio_by_pos() on how lookup is done
+		self._sec_info = sec_info = [(-sec.header.sh_addr, sec)
+			for sec in elf.iter_sections()
+				if sec.header.sh_flags & RAW.SHF_ALLOC]
+
+		sec_info.append((1, None))
+		sec_info.sort()
+
+	def get_section(self, addr):
+		key = (-addr,)
+		idx = bisect.bisect(self._sec_info, key)
+		_, sec = self._sec_info[idx]
+		if not sec:
+			return
+
+		if addr - sec.header.sh_addr >= sec.header.sh_size:
+			return
+		return sec
+
