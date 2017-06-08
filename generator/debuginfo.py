@@ -225,7 +225,7 @@ class DebugInfo(object):
 		# In such case, we want to select the right end, so to lookup CUs we use
 		# A[bisect_right(key)]
 		# bisect_right() is the same as bisect()
-		cu_key =(-pos,)
+		cu_key = (-pos,)
 		cu_idx = bisect.bisect(self._cu_pos, cu_key)
 		_, cu = self._cu_pos[cu_idx]
 		if not cu:
