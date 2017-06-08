@@ -176,11 +176,10 @@ class DebugInfoObject(object):
 		if self._str:
 			return self._str
 
-		die = self.die
+		loc = "<{:x}>".format(self.die.offset)
 		key = self.get_key()
-		self._str = "DIO<{}>".format(
-			format_di_key(key) if key else
-			"{}@{:x}".format(die.tag, die.offset))
+		self._str = "DIO<{} {}>".format(
+			format_di_key(key) if key else self.die.tag, loc)
 		return self._str
 	
 	__repr__ = __str__
