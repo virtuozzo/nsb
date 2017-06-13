@@ -140,6 +140,11 @@ class GlobalSymResolver(SymResolver):
 	def match(self, sym):
 		return sym.bind == 'STB_GLOBAL'
 
+	def skip_symbol(self, sym):
+		if sym.bind != 'STB_GLOBAL':
+			return True
+		return SymResolver.skip_symbol(self, sym)
+
 	def resolve_symbol(self, sym, lookup):
 		try:
 			return lookup(sym.name, sym.value)
