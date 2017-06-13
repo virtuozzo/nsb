@@ -213,13 +213,13 @@ SUFFIXES += __manual__shared.o
 SUFFIXES += __manual__static.o
 
 .c__manual__library.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
 
 .c__manual__shared.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
 
 .c__manual__static.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
 
 SUFFIXES += __auto__library.o
 SUFFIXES += __auto__shared.o
