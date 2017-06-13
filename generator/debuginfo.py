@@ -23,6 +23,9 @@ def format_di_key(di_key):
 	get_suffix = lambda tag: '()' if tag == STR.DW_TAG_subprogram else ''
 	return '::'.join(name + get_suffix(tag) for name, tag in di_key)
 
+class ExprException(Exception):
+	pass
+
 class ExprVisitor(dwarf_expr.GenericExprVisitor):
 	def __init__(self, structs):
 		super(ExprVisitor, self).__init__(structs)
@@ -30,7 +33,7 @@ class ExprVisitor(dwarf_expr.GenericExprVisitor):
 
 	def _after_visit(self, opcode, opcode_name, args):
 		if opcode_name != STR.DW_OP_addr:
-			raise Exception("Unsupported opcode {0}".format(opcode_name))
+			raise ExprException("Unsupported opcode {0}".format(opcode_name))
 
 		self.__value = args[0]
 
