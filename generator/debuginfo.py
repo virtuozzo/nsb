@@ -11,6 +11,7 @@ from elftools.dwarf.die import DIE
 
 from consts import *
 from util import memoize, rtoi
+from elffile import MemoryStream
 
 set_const_str(enums.ENUM_DW_TAG)
 set_const_str(enums.ENUM_DW_AT)
@@ -190,6 +191,19 @@ class DebugInfoObject(object):
 			raise Exception("Unknown attr form {}".format(type_attr.form))
 		type_pos = self.die.cu.cu_offset + type_attr.value
 		return get_type_obj(self.debug_info.elf, type_pos)
+
+	def get_value(self):
+		assert self.tag == STR.DW_TAG_variable
+
+		elf = self.debug_info.elf
+
+		addr = self.get_addr()
+		if addr is None:
+			raise Exception("Can't get object address")
+
+		stream = MemoryStream(elf)
+		stream.seek(addr)
+		return self.get_type().read(stream)
 
 	def get_size(self):
 		return get_die_size(self.die)
