@@ -1,6 +1,7 @@
 from collections import namedtuple
 import sys
 import bisect
+from weakref import WeakKeyDictionary
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.elffile import SymbolTableSection
@@ -8,6 +9,7 @@ from elftools.elf.descriptions import describe_p_flags, describe_reloc_type
 from elftools.elf.constants import P_FLAGS, SH_FLAGS
 
 from consts import *
+from util import memoize
 
 set_const_raw(SH_FLAGS.__dict__)
 
@@ -126,4 +128,6 @@ class AddressSpace(object):
 		if addr - sec.header.sh_addr >= sec.header.sh_size:
 			return
 		return sec
+
+get_address_space = memoize(WeakKeyDictionary)(AddressSpace)
 
