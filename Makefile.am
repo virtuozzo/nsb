@@ -166,13 +166,18 @@ otherinclude_HEADERS = include/vzp.h
 MANUAL_TESTS_LIST = $(COMMON_TEST_FILES) $(MANUAL_TEST_FILES)
 
 MANUAL_LIBRARY_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__library.py)
-MANUAL_LIBRARY_XFAIL_TESTS =
+MANUAL_LIBRARY_XFAIL_TESTS =						\
+			tests/static_func_manual_v2__manual__library.py
 
 MANUAL_STATIC_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__static.py)
-MANUAL_STATIC_XFAIL_TESTS =
+MANUAL_STATIC_XFAIL_TESTS =						\
+			tests/static_func_manual_v2__manual__static.py
+
 
 MANUAL_SHARED_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__shared.py)
-MANUAL_SHARED_XFAIL_TESTS =
+MANUAL_SHARED_XFAIL_TESTS =						\
+			tests/static_func_manual_v2__manual__shared.py
+
 
 MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TESTS)
 MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
