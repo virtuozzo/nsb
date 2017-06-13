@@ -66,10 +66,13 @@ try:
 except:
 	os.environ['NSB_TESTS'] = os.getcwd() + '/tests'
 
+ld_library_path = ""
 try:
-	os.environ['LD_LIBRARY_PATH']
+	ld_library_path = os.environ['LD_LIBRARY_PATH']
 except:
-	os.environ['LD_LIBRARY_PATH'] = os.getcwd() + '/.libs'
+	pass
+
+os.environ['LD_LIBRARY_PATH'] = ld_library_path + ":" + os.getcwd() + '/.libs'
 
 os.environ['PYTHONPATH'] = os.getcwd() + '/protobuf'
 
