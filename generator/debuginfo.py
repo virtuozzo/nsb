@@ -189,7 +189,7 @@ class DebugInfoObject(object):
 		if type_attr.form not in type_ref_forms:
 			raise Exception("Unknown attr form {}".format(type_attr.form))
 		type_pos = self.die.cu.cu_offset + type_attr.value
-		return TypeObject(self.debug_info.get_dio_by_pos(type_pos))
+		return get_type_obj(self.debug_info.elf, type_pos)
 
 	def get_size(self):
 		return get_die_size(self.die)
@@ -431,4 +431,10 @@ class TypeObject(object):
 
 		stream.seek(pos + self.size)
 		return Struct(**data)
+
+@memoize(WeakKeyDictionary, dict)
+def get_type_obj(elf, pos):
+	debug_info = get_debug_info(elf)
+	dio = debug_info.get_dio_by_pos(pos)
+	return TypeObject(dio)
 
