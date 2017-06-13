@@ -119,7 +119,8 @@ MANUAL_TEST_FILES = 					\
 		tests/static_func_manual.c	\
 		tests/static_var_manual.c	\
 						\
-		tests/static_func_manual_v2.c
+		tests/static_func_manual_v2.c	\
+		tests/static_var_manual_v2.c
 
 AUTO_TEST_FILES = 					\
 		tests/static_func_auto.c	\
