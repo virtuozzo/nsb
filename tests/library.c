@@ -23,6 +23,8 @@ extern long test_const_var(int type);
 extern long test_static_func_manual(int type);
 extern long test_static_var_manual(int type);
 
+extern long test_static_func_manual_v2(int type);
+
 extern long test_static_func_auto(int type);
 extern long test_static_var_auto(int type);
 
@@ -65,6 +67,10 @@ struct test_info_s {
 	},
 	[TEST_TYPE_STATIC_VAR_MANUAL] = {
 		.actor = test_static_var_manual,
+		.match = true,
+	},
+	[TEST_TYPE_STATIC_FUNC_MANUAL_V2] = {
+		.actor = test_static_func_manual_v2,
 		.match = true,
 	},
 	/* "Auto"-specific tests */
