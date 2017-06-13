@@ -166,22 +166,18 @@ otherinclude_HEADERS = include/vzp.h
 
 MANUAL_TESTS_LIST = $(COMMON_TEST_FILES) $(MANUAL_TEST_FILES)
 
+MANUAL_XFAIL_LIST =							\
+			tests/static_func_manual_v2.c			\
+			tests/static_var_manual_v2.c
+
 MANUAL_LIBRARY_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__library.py)
-MANUAL_LIBRARY_XFAIL_TESTS =						\
-			tests/static_func_manual_v2__manual__library.py	\
-			tests/static_var_manual_v2__manual__library.py
+MANUAL_LIBRARY_XFAIL_TESTS = $(MANUAL_XFAIL_LIST:.c=__manual__library.py)
 
 MANUAL_STATIC_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__static.py)
-MANUAL_STATIC_XFAIL_TESTS =						\
-			tests/static_func_manual_v2__manual__static.py	\
-			tests/static_var_manual_v2__manual__static.py
-
+MANUAL_STATIC_XFAIL_TESTS = $(MANUAL_XFAIL_LIST:.c=__manual__static.py)
 
 MANUAL_SHARED_TESTS = $(MANUAL_TESTS_LIST:.c=__manual__shared.py)
-MANUAL_SHARED_XFAIL_TESTS =						\
-			tests/static_func_manual_v2__manual__shared.py	\
-			tests/static_var_manual_v2__manual__shared.py
-
+MANUAL_SHARED_XFAIL_TESTS = $(MANUAL_XFAIL_LIST:.c=__manual__shared.py)
 
 MANUAL_TESTS = $(MANUAL_LIBRARY_TESTS) $(MANUAL_STATIC_TESTS) $(MANUAL_SHARED_TESTS)
 MANUAL_XFAIL_TESTS = $(MANUAL_LIBRARY_XFAIL_TESTS) $(MANUAL_STATIC_XFAIL_TESTS)  $(MANUAL_SHARED_XFAIL_TESTS)
