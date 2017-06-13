@@ -96,6 +96,11 @@ int run_test(int tt, int print)
 	if (!ti)
 		return TEST_ERROR;
 
+	if (!ti->actor) {
+		printf("test without actor: %d\n", tt);
+		return TEST_ERROR;
+	}
+
 	if (ti->match)
 		failed = ti->actor(tt) != original_result(tt);
 	else
