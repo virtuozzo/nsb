@@ -155,12 +155,16 @@ static int resolve_symbol(const struct process_ctx_s *ctx, struct extern_symbol 
 	int64_t value;
 
 	value = find_dyn_sym(ctx, es);
-	if (value < 0)
+	if (value < 0) {
+		pr_err("failed to find dynamic symbol %s\n", es->name);
 		return value;
+	}
 
 	err = elf_reloc_sym(es, value);
-	if (err < 0)
+	if (err < 0) {
+		pr_err("failed to relocate dynamic symbol %s\n", es->name);
 		return err;
+	}
 
 	return 0;
 }

@@ -208,7 +208,7 @@ TESTS_PATCHES = $(TESTS:.py=.patch)
 
 TESTS_CFLAGS = -c -g -fpic
 
-MANUAL_TESTS_CFLAGS = ${TESTS_CFLAGS}
+MANUAL_TESTS_CFLAGS = ${TESTS_CFLAGS} -I.
 
 %.o: tests/test_types.h
 
