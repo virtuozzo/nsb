@@ -206,6 +206,10 @@ CLEANFILES = $(TESTS) $(TESTS:.py=.binpatch)
 
 TESTS_PATCHES = $(TESTS:.py=.patch)
 
+TESTS_CFLAGS = -c -g -fpic
+
+MANUAL_TESTS_CFLAGS = ${TESTS_CFLAGS}
+
 %.o: tests/test_types.h
 
 SUFFIXES = __manual__library.o
@@ -213,26 +217,28 @@ SUFFIXES += __manual__shared.o
 SUFFIXES += __manual__static.o
 
 .c__manual__library.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${MANUAL_TESTS_CFLAGS} $^ -o $@
 
 .c__manual__shared.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${MANUAL_TESTS_CFLAGS} $^ -o $@
 
 .c__manual__static.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${MANUAL_TESTS_CFLAGS} $^ -o $@
+
+AUTO_TESTS_CFLAGS = ${TESTS_CFLAGS} -ffunction-sections -fdata-sections
 
 SUFFIXES += __auto__library.o
 SUFFIXES += __auto__shared.o
 SUFFIXES += __auto__static.o
 
 .c__auto__library.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${AUTO_TESTS_CFLAGS} $^ -o $@
 
 .c__auto__shared.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${AUTO_TESTS_CFLAGS} $^ -o $@
 
 .c__auto__static.o: tests/test_types.h
-	$(AM_V_CC) $(CC) -DPATCH -c -g -fpic -ffunction-sections -fdata-sections $^ -o $@
+	$(AM_V_CC) $(CC) -DPATCH ${AUTO_TESTS_CFLAGS} $^ -o $@
 
 .o.patch:
 	$(AM_V_CC) $(CC) -g -shared -fpic $^ -o $@
