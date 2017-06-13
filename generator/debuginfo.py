@@ -65,11 +65,19 @@ def get_die_addr(die):
 			return "is optimized out, has constant value 0x{:x}".format(
 				const_value_attr.value)
 
-		attr = die.attributes[STR.DW_AT_location]
+		if STR.DW_AT_declaration in die.attributes:
+			return "is declaration"
+
+		attr = die.attributes.get(STR.DW_AT_location)
+		if attr is None:
+			return "is optimized out"
 		assert attr.form == STR.DW_FORM_exprloc, attr.form
 
 		expr_visitor = ExprVisitor(structs)
-		return expr_visitor.get_addr(attr.value)
+		try:
+			return expr_visitor.get_addr(attr.value)
+		except ExprException:
+			return "has no constant address"
 
 	else:
 		assert 0
