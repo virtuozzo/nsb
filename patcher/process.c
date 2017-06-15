@@ -846,6 +846,14 @@ static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
 	return 0;
 }
 
+static ssize_t process_needed_list(struct process_ctx_s *ctx, uint64_t **needed_array)
+{
+	if (ctx->service.loaded)
+		return service_needed_array(ctx, &ctx->service, needed_array);
+
+	return -ENOTSUP;
+}
+
 int process_collect_needed(struct process_ctx_s *ctx)
 {
 	int err = -ENOENT;
@@ -854,9 +862,11 @@ int process_collect_needed(struct process_ctx_s *ctx)
 
 	pr_debug("= Process soname search list:\n");
 
-	nr = service_needed_array(ctx, &ctx->service, &needed_array);
-	if (nr < 0)
+	nr = process_needed_list(ctx, &needed_array);
+	if (nr < 0) {
+		pr_err("Failed to get process dependences list\n");
 		return err;
+	}
 
 	for (i = 0; i < nr; i++) {
 		const struct dl_map *dlm;
