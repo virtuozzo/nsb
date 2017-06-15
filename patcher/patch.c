@@ -752,9 +752,11 @@ int patch_process(pid_t pid, const char *patchfile, int dry_run, int no_plugin)
 	if (ret)
 		goto resume;
 
-	ret = process_inject_service(ctx);
-	if (ret)
-		goto resume;
+	if (!no_plugin) {
+		ret = process_inject_service(ctx);
+		if (ret)
+			goto resume;
+	}
 
 	ret = process_collect_needed(ctx);
 	if (ret)
