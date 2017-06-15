@@ -729,7 +729,7 @@ resume:
 	return ret ? ret : err;
 }
 
-int patch_process(pid_t pid, const char *patchfile, int dry_run)
+int patch_process(pid_t pid, const char *patchfile, int dry_run, int no_plugin)
 {
 	int ret, err;
 	struct process_ctx_s *ctx = &process_context;

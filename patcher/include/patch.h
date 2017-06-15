@@ -15,7 +15,7 @@
 struct backtrace_s;
 struct process_ctx_s;
 
-int patch_process(pid_t pid, const char *patchfile, int dry_run);
+int patch_process(pid_t pid, const char *patchfile, int dry_run, int no_plugin);
 int check_process(pid_t pid, const char *patchfile);
 int list_process_patches(pid_t pid);
 int unpatch_process(pid_t pid, const char *patchfile, int dry_run);

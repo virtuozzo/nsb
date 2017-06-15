@@ -24,6 +24,7 @@ struct options {
 	int		verbosity;
 	int		(*handler)(const struct options *o);
 	int		dry_run;
+	int		no_plugin;
 };
 
 void print_usage(void)
@@ -43,6 +44,7 @@ void print_usage(void)
 		"  -p, --pid       - Process PID\n"
 		"  -f, --filename  - Patch file path\n"
 		"      --dry-run   - Do not perform any actual changes to process\n"
+		"      --no-plugin - Don't use plugin injection\n"
 		"  -v, --verbosity - Log level verbosity\n"
 		"                      0 - Silent (default)\n"
 		"                      1 - Error messages only\n"
@@ -86,7 +88,7 @@ static int cmd_patch_process(const struct options *o)
 		pr_msg("Error: patch file has to be provided\n");
 		return 1;
 	}
-	return patch_process(o->pid, o->patch_path, o->dry_run);
+	return patch_process(o->pid, o->patch_path, o->dry_run, o->no_plugin);
 }
 
 static int cmd_check_process(const struct options *o)
@@ -131,6 +133,7 @@ static int parse_options(int argc, char **argv, struct options *o)
 		{ "verbosity",		required_argument,	0, 'v'	},
 		{ "filename",		required_argument,	0, 'f'	},
 		{ "dry-run",		no_argument,		0, 1000	},
+		{ "no-plugin",		no_argument,		0, 1001	},
 		{ },
 	};
 	int opt, idx = -1;
@@ -159,6 +162,9 @@ static int parse_options(int argc, char **argv, struct options *o)
 			break;
 		case 1000:
 			o->dry_run = 1;
+			break;
+		case 1001:
+			o->no_plugin = 1;
 			break;
 		case '?':
 		default:
