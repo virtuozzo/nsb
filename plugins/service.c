@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <link.h>
+#include <gelf.h>
 
 #include <compel/asm/sigframe.h>
 
@@ -219,9 +220,9 @@ unmap:
 	return err;
 }
 
-static int64_t nsb_service_dynamic_tag_val(const ElfW(Dyn) *l_ld, uint32_t d_tag)
+static int64_t nsb_service_dynamic_tag_val(const GElf_Dyn *l_ld, uint32_t d_tag)
 {
-	const ElfW(Dyn) *d;
+	const GElf_Dyn *d;
 
 	for (d = l_ld; d->d_tag != DT_NULL; ++d) {
 		if (d->d_tag == d_tag)
