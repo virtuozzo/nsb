@@ -67,6 +67,7 @@ nsb_SOURCES =						\
 			patcher/include/relocations.h	\
 			patcher/include/service.h	\
 			patcher/include/dl_map.h	\
+			patcher/include/rtld.h		\
 							\
 			common/scm.h			\
 			common/scm.c			\
@@ -83,6 +84,7 @@ nsb_SOURCES =						\
 			patcher/relocations.c		\
 			patcher/service.c		\
 			patcher/dl_map.c		\
+			patcher/rtld.c		\
 			patcher/patch.c
 
 
