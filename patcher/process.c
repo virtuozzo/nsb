@@ -26,6 +26,7 @@
 #include "include/x86_64.h"
 #include "include/service.h"
 #include "include/dl_map.h"
+#include "include/rtld.h"
 
 struct patch_place_s {
 	struct list_head	list;
@@ -848,10 +849,17 @@ static int collect_needed(struct process_ctx_s *ctx, struct list_head *head,
 
 static ssize_t process_needed_list(struct process_ctx_s *ctx, uint64_t **needed_array)
 {
+	int err;
+	uint64_t _r_debug_addr;
+
 	if (ctx->service.loaded)
 		return service_needed_array(ctx, &ctx->service, needed_array);
 
-	return -ENOTSUP;
+	err = process_find_sym(ctx, "_r_debug", &_r_debug_addr);
+	if (err)
+		return err;
+
+	return rtld_needed_array(ctx, _r_debug_addr, needed_array);
 }
 
 int process_collect_needed(struct process_ctx_s *ctx)
