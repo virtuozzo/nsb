@@ -8,6 +8,7 @@ Schaffhausen, Switzerland.
 import argparse
 import os
 import re
+import random
 
 def get_test_type(test_name):
 	from nsb_test_types import NSB_TEST_TYPES
@@ -80,8 +81,9 @@ import sys
 sys.path.append(os.path.dirname(os.environ['NSB_GENERATOR']))
 
 import testrunner
-exit(testrunner.%s('%s', '%s', '%s', %d, '%s').run())
-""" % (test_class, source, target, target_obj, test_type, patch_mode)
+exit(testrunner.%s('%s', '%s', %s, '%s', %d, '%s').run())
+""" % (test_class, source, target, bool(random.getrandbits(1)),
+       target_obj, test_type, patch_mode)
 
 f = os.open(outfile, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
 os.write(f, code)

@@ -135,9 +135,10 @@ class Test:
 class BinPatch:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, source, target):
+	def __init__(self, source, target, no_plugin):
 		self.source = source
 		self.target = target
+		self.no_plugin = no_plugin
 
 		self.generator = os.environ.get('NSB_GENERATOR')
 		if not self.generator:
@@ -171,7 +172,10 @@ class BinPatch:
 	def generate_patch(self): pass
 
 	def apply_patch(self, test):
-		return self.exec_cmd("%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
+		cmd = "%s patch -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid)
+		if self.no_plugin:
+			cmd += " --no-plugin"
+		return self.exec_cmd(cmd)
 
 	def check_patch(self, test):
 		return self.exec_cmd("%s check -v 4 -f %s -p %d" % (self.patcher, self.target, test.p.pid))
@@ -190,8 +194,8 @@ class ManualBinPatch(BinPatch):
 
 
 class AutoBinPatch(BinPatch):
-	def __init__(self, source, target, target_obj):
-		BinPatch.__init__(self, source, target)
+	def __init__(self, source, target, no_plugin, target_obj):
+		BinPatch.__init__(self, source, target, no_plugin)
 		self.target_obj = target_obj
 
 	def generate_patch(self):
@@ -203,7 +207,7 @@ class AutoBinPatch(BinPatch):
 class LivePatchTest:
 	__metaclass__ = ABCMeta
 
-	def __init__(self, source, target, target_obj, test_type, patch_mode):
+	def __init__(self, source, target, no_plugin, target_obj, test_type, patch_mode):
 		try:
 			self.tests_dir = os.environ['NSB_TESTS'] + '/'
 		except:
@@ -215,6 +219,7 @@ class LivePatchTest:
 		self.target_obj = self.target_elf(target_obj)
 		self.test_type = test_type
 		self.patch_mode = patch_mode
+		self.no_plugin = no_plugin
 
 	def __do_apply_patch_test__(self, patch, test):
 		res = patch.check_patch(test)
@@ -275,9 +280,9 @@ class LivePatchTest:
 		print "Test map by Build-ID: %s" % source
 
 		if self.patch_mode == "manual":
-			patch = ManualBinPatch(source, self.tgt_elf)
+			patch = ManualBinPatch(source, self.tgt_elf, self.no_plugin)
 		elif self.patch_mode == "auto":
-			patch = AutoBinPatch(source, self.tgt_elf, self.target_obj)
+			patch = AutoBinPatch(source, self.tgt_elf, self.no_plugin, self.target_obj)
 		else:
 			print "Unknown patch mode: %s" % self.patch_mode
 			raise
