@@ -1,4 +1,5 @@
 import functools
+from collections import defaultdict
 
 def memoize(*dict_classes):
 	first_class  = dict_classes[0]
@@ -50,4 +51,10 @@ def rtoi(data, signed):
 		result -= 1 << shift
 
 	return result
+
+def reverse_mapping(d):
+	result = defaultdict(list)
+	for k, v in d.iteritems():
+		result[v].append(k)
+	return dict(result)
 

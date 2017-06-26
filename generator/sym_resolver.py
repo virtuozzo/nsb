@@ -1,14 +1,8 @@
 import re
 from abc import ABCMeta, abstractmethod
-from collections import defaultdict
 
 import ms_debuginfo
-
-def reverse_mapping(d):
-	result = defaultdict(list)
-	for k, v in d.iteritems():
-		result[v].append(k)
-	return dict(result)
+from util import reverse_mapping
 
 def single(objects):
 	obj_set = set(objects)
