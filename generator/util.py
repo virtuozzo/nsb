@@ -52,9 +52,15 @@ def rtoi(data, signed):
 
 	return result
 
-def reverse_mapping(d):
+def reverse_mapping(d, single=True):
 	result = defaultdict(list)
 	for k, v in d.iteritems():
 		result[v].append(k)
+
+	if single:
+		assert len(result) == len(d)
+		for rk in result.keys():
+			result[rk] = result[rk][0]
+
 	return dict(result)
 
