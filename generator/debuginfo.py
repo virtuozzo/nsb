@@ -186,6 +186,9 @@ class DebugInfoObject(object):
 		key.reverse()
 		return tuple(key)
 
+	def get_name(self):
+		return get_die_name(self.die)
+
 	def get_addr(self):
 		addr = get_die_addr(self.die)
 		if isinstance(addr, basestring):
