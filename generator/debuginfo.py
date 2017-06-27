@@ -136,6 +136,10 @@ def _read_CU(cu):
 
 	return pos_arr, parent_pos_arr
 
+@memoize(WeakKeyDictionary)
+def _get_line_program(cu):
+	return cu.dwarfinfo.line_program_for_CU(cu)
+
 class DebugInfoObject(object):
 	def __init__(self, debug_info, die, parent_die_pos):
 		self.debug_info		= debug_info
@@ -188,6 +192,14 @@ class DebugInfoObject(object):
 
 	def get_name(self):
 		return get_die_name(self.die)
+
+	def get_src_location(self):
+		file_num = self.attributes[STR.DW_AT_decl_file].value
+		line_num = self.attributes[STR.DW_AT_decl_line].value
+
+		lp = _get_line_program(self.die.cu)
+		file_name = lp.header.file_entry[file_num - 1].name
+		return file_name, line_num
 
 	def get_addr(self):
 		addr = get_die_addr(self.die)
