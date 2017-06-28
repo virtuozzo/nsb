@@ -140,6 +140,13 @@ def _read_CU(cu):
 def _get_line_program(cu):
 	return cu.dwarfinfo.line_program_for_CU(cu)
 
+@memoize(WeakKeyDictionary)
+def get_CU_name(cu):
+	cu_die, _ = _iter_DIEs(cu).next()
+	if cu_die.tag != STR.DW_TAG_compile_unit:
+		raise Exception("Unknown CU DIE tag {}".format(cu_die.tag))
+	return get_die_name(cu_die)
+
 class DebugInfoObject(object):
 	def __init__(self, debug_info, die, parent_die_pos):
 		self.debug_info		= debug_info
@@ -258,7 +265,7 @@ class DebugInfo(object):
 
 		for cu in dwi.iter_CUs():
 			cu_pos.append((-cu.cu_offset, cu))
-			cu_name = get_die_name(_iter_DIEs(cu).next()[0])
+			cu_name = get_CU_name(cu)
 			assert cu_name not in self._cu_names
 			self._cu_names[cu_name] = cu
 
