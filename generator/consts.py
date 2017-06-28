@@ -1,3 +1,15 @@
+META_SECTION		= "vzp_meta"
+
+META_TAG_FILE		= 1
+META_TAG_SYMBOL		= 2
+META_TAG_ALIAS		= 3
+
+VIS_EXTERNAL		= 0
+VIS_INTERNAL		= 1
+VIS_HIDDEN		= 2
+VIS_PROTECTED		= 3
+VIS_STATIC		= 100
+
 class RAW(object):
 	pass
 
