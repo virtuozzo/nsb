@@ -4,6 +4,7 @@ import functools
 
 from elftools.elf import enums
 from elftools.elf import descriptions
+from elftools.dwarf import enums as dwarf_enums
 
 import debuginfo
 from consts import *
@@ -14,6 +15,7 @@ set_const_raw(enums.ENUM_RELOC_TYPE_x64)
 set_const_str(descriptions._DESCR_ST_INFO_BIND)
 set_const_str(descriptions._DESCR_ST_INFO_TYPE)
 set_const_str(descriptions._DESCR_ST_VISIBILITY)
+set_const_str(dwarf_enums.ENUM_DW_AT)
 
 INT_TYPES = (int, long)
 
