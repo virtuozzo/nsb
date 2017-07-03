@@ -153,6 +153,7 @@ class DebugInfoObject(object):
 		self.die		= die
 		self.tag		= die.tag
 		self.attributes		= die.attributes
+		self.die_pos		= die.offset
 		self.parent_die_pos	= parent_die_pos
 		self._str		= None
 
