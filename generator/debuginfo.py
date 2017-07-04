@@ -19,6 +19,8 @@ set_const_str(enums.ENUM_DW_FORM)
 set_const_str(dwarf_expr.DW_OP_name2opcode)
 set_const_raw(dwarf_const.__dict__, 'DW_ATE_')
 
+DI_ROOT = -1
+
 def format_di_key(di_key):
 	get_suffix = lambda tag: '()' if tag == STR.DW_TAG_subprogram else ''
 	return '::'.join(name + get_suffix(tag) for name, tag in di_key)
@@ -103,7 +105,7 @@ def _iter_DIEs(cu, offset=None):
 	cu_boundary = cu.cu_offset + cu['unit_length'] + cu.structs.initial_length_field_size()
 	die_offset = cu.cu_die_offset if offset is None else offset
 	# See CompileUnit._unflatten_tree()
-	parent_stack = [-1]
+	parent_stack = [DI_ROOT]
 
 	while die_offset < cu_boundary:
 		die = DIE(
@@ -119,7 +121,7 @@ def _iter_DIEs(cu, offset=None):
 		else:
 			parent_stack.pop()
 
-		if parent_stack[-1] == -1:
+		if parent_stack[-1] == DI_ROOT:
 			return
 
 		die_offset += die.size
