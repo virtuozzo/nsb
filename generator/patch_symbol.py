@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import bisect
 import itertools
+import collections
 
 from elftools.elf import enums as elf_enums
 from elftools.dwarf import enums as dwarf_enums
@@ -358,5 +359,63 @@ def read_patch(elf):
 			filename=None, line=None)
 				for name in undef_sym_names)
 
+	process_meta(meta, symbols)
 	return symbols
 
+def process_meta(meta, symbols):
+	verify_lines(meta, symbols)
+
+def verify_lines(meta, symbols):
+	# Each line has associated state machine to verify that
+	# each meta object is on its own line
+	#
+	# States:
+	#   I: initial state
+	#   R: regular object is defined
+	#   M: meta object is defined
+	#   X: error state
+	#
+	# Actions:
+	#   r: definition of regular object
+	#   m: defintion of meta object
+	#
+	# State transitions:
+	#  I, r -> R
+	#  I, m -> M
+	#
+	#  R, r -> R
+	#  R, m -> X
+	#
+	#  M, r -> X
+	#  M, m -> X
+
+	ST_I = 0
+	ST_R = 1
+	ST_M = 2
+
+	ACT_R = 1
+	ACT_M = 2
+
+	line_state_table = {
+		(ST_I, ACT_R):		ST_R,
+		(ST_I, ACT_M):		ST_M,
+		(ST_R, ACT_R):		ST_R,
+	}
+
+	# file name -> { line num -> line state }
+	line_states  = collections.defaultdict(dict)
+	def next_line_state(filename, line, action):
+		st_old = line_states[filename].setdefault(line, ST_I)
+		st_new = line_state_table.get((st_old, action))
+		if st_new is None:
+			raise Exception("Meta data should be defined on a separate line "
+						"at {}:{}".format(filename, line))
+		line_states[filename][line] = st_new
+
+	for sym in symbols:
+		if sym.kind != SYM_DEF:
+			continue
+		next_line_state(sym.filename, sym.line, ACT_R)
+
+	for md in meta:
+		next_line_state(md.header.filename, md.header.line, ACT_M)
