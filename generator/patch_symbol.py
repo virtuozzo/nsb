@@ -365,6 +365,31 @@ def read_patch(elf):
 def process_meta(meta, symbols):
 	verify_lines(meta, symbols)
 
+	cu_file_scopes_md = collections.defaultdict(list)
+	for md in meta:
+		if md.header.tag != META_TAG_FILE:
+			continue
+		cu_file_scopes_md[md.header.filename].append(md)
+
+	file_scopes = {}
+	get_sort_key = lambda md: md.header.line
+	for cu_name, md_list in cu_file_scopes_md.iteritems():
+		md_list.sort(key=get_sort_key)
+		file_scopes[cu_name] = [(md.header.line, md) for md in md_list]
+
+	# cu_name -> { patch_sym -> target_sym }
+	aliases = collections.defaultdict(dict)
+	for md in meta:
+		if md.header.tag != META_TAG_ALIAS:
+			continue
+		if md.patch_symbol in aliases[md.header.filename]:
+			raise Exception("Alias already defined for symbol '{}' at "
+				"{}:{}".format(md.patch_symbol,
+					md.header.filename, md.header.line))
+		aliases[md.header.filename][md.patch_symbol] = md
+
+	resolve_file_scopes(file_scopes, aliases, symbols)
+
 def verify_lines(meta, symbols):
 	# Each line has associated state machine to verify that
 	# each meta object is on its own line
@@ -419,3 +444,47 @@ def verify_lines(meta, symbols):
 
 	for md in meta:
 		next_line_state(md.header.filename, md.header.line, ACT_M)
+
+def resolve_file_scopes(file_scopes, aliases, symbols):
+	# In each file scope, there should not be several static objects
+	# with the same name. This can happen when patch DSO consists of
+	# multiple compile units with VZP_FILE macros in them pointing to the
+	# same target file.
+	aliases = dict(aliases)
+	defined = set()
+
+	for sym in symbols:
+		if sym.visibility != VIS_STATIC:
+			continue
+
+		alias_md = aliases.get(sym.filename, {}).pop(sym.name, None)
+		sym.target_name = alias_md.target_symbol if alias_md else sym.name
+
+		if sym.kind == SYM_REF and sym.parent and sym.target_filename:
+			raise Exception("Target filename can not be specified in non-top-level "
+						"reference at {}:{}".format(sym.filename, sym.line))
+
+		cu_file_scopes = None if sym.target_filename else file_scopes.get(sym.filename)
+		if cu_file_scopes and sym.line > cu_file_scopes[0][0]:
+			idx = bisect.bisect(cu_file_scopes, (sym.line,)) - 1
+			assert idx >= 0
+			sym.target_filename = cu_file_scopes[idx][1].target_filename
+
+		if sym.kind != SYM_DEF:
+			continue
+
+		target_sym_loc = (sym.target_filename, sym.target_name)
+		if target_sym_loc in defined:
+			alias_loc = ", aliased at {}:{}".format(
+				alias_md.header.filename, alias_md.header.line) if alias_md else ""
+			raise Exception("Static symbol {}:'{}' is already defined at "
+				"{}:{}{}".format(sym.target_filename, sym.target_name,
+					sym.filename, sym.line, alias_loc))
+		defined.add(target_sym_loc)
+
+	for cu_aliases in aliases.itervalues():
+		for alias_md in cu_aliases.itervalues():
+			raise Exception("Alias for nonexistent symbol '{}' at "
+				"{}:{}".format(alias_md.patch_symbol,
+				alias_md.header.filename, alias_md.header.line))
+
