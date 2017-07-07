@@ -105,6 +105,24 @@ class ExternalSymbol(Symbol):
 	def __init__(self, parent, elf_sym, filename, line):
 		Symbol.__init__(self, parent, elf_sym, VIS_EXTERNAL, filename, line)
 
+	def resolve(self, elf):
+		st = get_symtab(elf)
+		sym_list = st.get_symbol_by_name(self.name)
+		if not sym_list:
+			return
+
+		global_sym_list = [s for s in sym_list if
+			s.entry.st_shndx != STR.SHN_UNDEF and
+			s.entry.st_info.bind == STR.STB_GLOBAL and
+			s.entry.st_other.visibility == STR.STV_DEFAULT]
+		if not global_sym_list:
+			return
+
+		if len(global_sym_list) > 1:
+			raise Exception("Multiple symbols found")
+		return global_sym_list[0].entry.st_value
+	
+
 class ExternalSymbolRef(ExternalSymbol):
 	kind = SYM_REF
 
