@@ -3,6 +3,7 @@ from __future__ import print_function
 import bisect
 import itertools
 import collections
+from weakref import WeakKeyDictionary
 
 from elftools.elf import enums as elf_enums
 from elftools.dwarf import enums as dwarf_enums
@@ -27,6 +28,13 @@ SYM_REF			= 2
 
 ELF_TAB_REG		= 1
 ELF_TAB_DYN		= 2
+
+@debuginfo.memoize(WeakKeyDictionary)
+def get_symtab(elf):
+	sec = elf.get_section_by_name(".symtab")
+	if sec is None:
+		raise Exception("No symbol table")
+	return sec
 
 class Symbol(object):
 	kind = None
