@@ -11,6 +11,7 @@ from elftools.dwarf import enums as dwarf_enums
 from consts import *
 import debuginfo
 from util import reverse_mapping
+import static_symbol
 
 set_const_str(elf_enums.ENUM_ST_INFO_TYPE)
 set_const_str(elf_enums.ENUM_ST_SHNDX)
@@ -38,6 +39,14 @@ def get_symtab(elf):
 
 class Symbol(object):
 	kind = None
+
+	vis_names = {
+			VIS_EXTERNAL:		'EXTERNAL',
+			VIS_STATIC:		'STATIC',
+			VIS_INTERNAL:		'INTERNAL',
+			VIS_HIDDEN:		'HIDDEN',
+			VIS_PROTECTED:		'PROTECTED',
+	}
 
 	def __init__(self, parent, elf_sym, visibility, filename, line):
 		assert parent is None or isinstance(parent, Symbol)
@@ -129,9 +138,15 @@ class ExternalSymbolRef(ExternalSymbol):
 class ExternalSymbolDef(ExternalSymbol):
 	kind = SYM_DEF
 
-class InternalSymbol(Symbol):
+class ModuleSymbol(Symbol):
+	def resolve(self, elf):
+		mod_st = static_symbol.ModuleSymTab(elf)
+		sym = mod_st.get_sym(self.name, True)
+		return sym.entry.st_value if sym else None
+
+class InternalSymbol(ModuleSymbol):
 	def __init__(self, parent, elf_sym, filename, line):
-		Symbol.__init__(self, parent, elf_sym, VIS_INTERNAL, filename, line)
+		ModuleSymbol.__init__(self, parent, elf_sym, VIS_INTERNAL, filename, line)
 
 class InternalSymbolRef(InternalSymbol):
 	kind = SYM_REF
@@ -139,9 +154,9 @@ class InternalSymbolRef(InternalSymbol):
 class InternalSymbolDef(InternalSymbol):
 	kind = SYM_DEF
 
-class HiddenSymbol(Symbol):
+class HiddenSymbol(ModuleSymbol):
 	def __init__(self, parent, elf_sym, filename, line):
-		Symbol.__init__(self, parent, elf_sym, VIS_HIDDEN, filename, line)
+		ModuleSymbol.__init__(self, parent, elf_sym, VIS_HIDDEN, filename, line)
 
 class HiddenSymbolRef(HiddenSymbol):
 	kind = SYM_REF
@@ -149,9 +164,9 @@ class HiddenSymbolRef(HiddenSymbol):
 class HiddenSymbolDef(HiddenSymbol):
 	kind = SYM_DEF
 
-class ProtectedSymbol(Symbol):
+class ProtectedSymbol(ModuleSymbol):
 	def __init__(self, parent, elf_sym, filename, line):
-		Symbol.__init__(self, parent, elf_sym, VIS_PROTECTED, filename, line)
+		ModuleSymbol.__init__(self, parent, elf_sym, VIS_PROTECTED, filename, line)
 
 class ProtectedSymbolRef(ProtectedSymbol):
 	kind = SYM_REF
