@@ -56,7 +56,7 @@ class DebugInfoReloc(object):
 	def get_offsets(self, sec_idx):
 		return self._sec_idx2offset[sec_idx]
 
-class SymTab(object):
+class ModuleSymTab(object):
 	def __init__(self, elf):
 		self.elf = elf
 		self.sec = elf.get_section_by_name('.symtab')
@@ -117,6 +117,8 @@ class SymTab(object):
 			raise Exception("Found {} symbols with name {}".format(
 				len(sym_list), name))
 		return sym_list[0]
+
+get_module_symtab = debuginfo.memoize(dict)(ModuleSymTab)
 
 def should_resolve(sec):
 	if sec.name.startswith(".rodata"):
@@ -222,7 +224,6 @@ class ObjectFile(object):
 
 def resolve(old_elf, new_elf, obj_seq):
 	obj_seq = list(obj_seq)
-	get_symtab = debuginfo.memoize(dict)(SymTab)
 
 	old_elf_di = debuginfo.get_debug_info(old_elf)
 	old_elf_cus = set(old_elf_di.get_cu_names())
@@ -276,7 +277,7 @@ def resolve(old_elf, new_elf, obj_seq):
 
 	def get_addr(elf, key):
 		if isinstance(key, basestring):
-			symtab = get_symtab(elf)
+			symtab = get_module_symtab(elf)
 			sym = symtab.get_sym(key)
 			return sym.entry.st_value
 		else:
@@ -315,7 +316,7 @@ def resolve(old_elf, new_elf, obj_seq):
 	result = []
 	modulo = 1 << 64
 	format_key = lambda: key if isinstance(key, basestring) else debuginfo.format_di_key(key)
-	check_sym = functools.partial(check_interposable, get_symtab(new_elf).module_sym_names)
+	check_sym = functools.partial(check_interposable, get_module_symtab(new_elf).module_sym_names)
 	for obj in obj_seq:
 		obj_di = debuginfo.get_debug_info(obj)
 		for func_di_key, (obj_text_sec, relocs) in ObjectFile(obj).get_relocs(check_sym).iteritems():
