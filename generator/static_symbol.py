@@ -110,13 +110,17 @@ class ModuleSymTab(object):
 				sym.entry.st_info.type in sym_types and
 				sym.entry.st_value not in self._masked_addrs)
 	
-	def get_sym(self, name):
+	def get_sym(self, name, missing_ok=False):
 		sym_list = [sym for sym in self.sec.get_symbol_by_name(name)
 				if sym.entry.st_value not in self._masked_addrs]
-		if len(sym_list) != 1:
-			raise Exception("Found {} symbols with name {}".format(
+		if len(sym_list) > 1:
+			raise Exception("Found {} symbols with name '{}'".format(
 				len(sym_list), name))
-		return sym_list[0]
+		if len(sym_list) == 1:
+			return sym_list[0]
+		if missing_ok:
+			return
+		raise Exception("No symbol found with name '{}'".format(name))
 
 get_module_symtab = debuginfo.memoize(dict)(ModuleSymTab)
 
