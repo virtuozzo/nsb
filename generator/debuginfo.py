@@ -43,8 +43,13 @@ class ExprVisitor(dwarf_expr.GenericExprVisitor):
 		self.process_expr(expr)
 		return self.__value
 
-def get_die_name(die):
-	attr = die.attributes[STR.DW_AT_name]
+def get_die_name(die, empty_ok=False):
+	attr = die.attributes.get(STR.DW_AT_name)
+	if attr is None:
+		if empty_ok:
+			return
+		raise Exception("DIE has no name")
+
 	assert attr.form in [STR.DW_FORM_string, STR.DW_FORM_strp], attr.form
 	return attr.value
 
@@ -201,8 +206,8 @@ class DebugInfoObject(object):
 		key.reverse()
 		return tuple(key)
 
-	def get_name(self):
-		return get_die_name(self.die)
+	def get_name(self, empty_ok=False):
+		return get_die_name(self.die, empty_ok)
 
 	def get_src_location(self):
 		file_num = self.attributes[STR.DW_AT_decl_file].value
