@@ -64,7 +64,7 @@ def get_die_addr(die):
 	elif die.tag == STR.DW_TAG_variable:
 		const_value_attr = die.attributes.get(STR.DW_AT_const_value)
 		if const_value_attr:
-			return "is optimized out, has constant value 0x{:x}".format(
+			return "is optimized out, has constant value {}".format(
 				const_value_attr.value)
 
 		if STR.DW_AT_declaration in die.attributes:
@@ -73,7 +73,8 @@ def get_die_addr(die):
 		attr = die.attributes.get(STR.DW_AT_location)
 		if attr is None:
 			return "is optimized out"
-		assert attr.form == STR.DW_FORM_exprloc, attr.form
+		if attr.form != STR.DW_FORM_exprloc:
+			return "location is not defined by DWARF expression"
 
 		expr_visitor = ExprVisitor(structs)
 		try:
