@@ -130,6 +130,8 @@ class Symbol(object):
 		return get_dio(elf, self.resolve(), self.group or [self])
 
 class StaticSymbol(Symbol):
+	interposable = False
+
 	def __init__(self, parent, elf_sym, filename, line):
 		assert filename
 		assert line
@@ -183,6 +185,8 @@ class StaticSymbolDef(StaticSymbol):
 	kind = SYM_DEF
 
 class ExternalSymbol(Symbol):
+	interposable = True
+
 	def __init__(self, parent, elf_sym, filename, line):
 		Symbol.__init__(self, parent, elf_sym, VIS_EXTERNAL, filename, line)
 
@@ -211,6 +215,8 @@ class ExternalSymbolDef(ExternalSymbol):
 	kind = SYM_DEF
 
 class ModuleSymbol(Symbol):
+	interposable = False
+
 	def resolve(self, elf):
 		mod_st = static_symbol.ModuleSymTab(elf)
 		sym = mod_st.get_sym(self.name, True)
