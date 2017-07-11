@@ -353,6 +353,10 @@ class DebugInfo(object):
 			for dio in self._iter_cu_dios(cu):
 				yield dio
 
+	def lookup(self, cu_name):
+		cu = self._cu_names.get(cu_name)
+		return DebugInfoObject(self, cu.get_top_DIE(), DI_ROOT) if cu else None
+
 get_debug_info = memoize(WeakKeyDictionary)(DebugInfo)
 
 class Struct(object):
