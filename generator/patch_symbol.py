@@ -13,6 +13,8 @@ import debuginfo
 from util import reverse_mapping
 import static_symbol
 
+import binpatch_pb2
+
 set_const_str(elf_enums.ENUM_ST_INFO_TYPE)
 set_const_str(elf_enums.ENUM_ST_SHNDX)
 set_const_str(elf_enums.ENUM_ST_INFO_BIND)
@@ -647,4 +649,51 @@ class DefSymTab(object):
 			raise Exception("Multiple section indices for symbol "
 					"at address {}".format(addr))
 		return sec_idx_set.pop()
+		
+
+def resolve(target_elf, patch_elf):
+	patch_syms = read_patch(patch_elf)
+	target_symtab = DefSymTab(target_elf)
+	bp = binpatch_pb2.BinPatch()
+
+	for sym in patch_syms:
+		addr = sym.resolve(target_elf)
+
+		if sym.kind == SYM_DEF:
+			assert sym.elf_sym.entry.st_info.type == STR.STT_FUNC
+
+			if addr is None:
+				print("{} is not defined in target, skipping".format(sym))
+				continue
+
+			bp.func_jumps.add(
+				name		= sym.target_name,
+				func_value	= addr,
+				func_size	= target_symtab.get_size(addr),
+				shndx		= target_symtab.get_sec_idx(addr),
+				patch_value	= sym.elf_sym.entry.st_value,
+			)
+
+		elif sym.kind == SYM_REF:
+			assert sym.elf_sym.tab == ELF_TAB_DYN
+
+			if addr is None:
+				if sym.visibility != VIS_EXTERNAL:
+					raise Exception("{} is not found in target".format(sym))
+				continue
+
+			if sym.interposable:
+				add = bp.global_symbols.add
+			else:
+				add = bp.manual_symbols.add
+
+			add(
+				addr		= addr,
+				idx		= sym.elf_sym.idx,
+			)
+
+		else:
+			assert 0
+
+	return bp if bp.func_jumps else None
 
