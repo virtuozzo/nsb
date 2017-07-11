@@ -37,6 +37,40 @@ def get_symtab(elf):
 		raise Exception("No symbol table")
 	return sec
 
+@debuginfo.memoize(WeakKeyDictionary)
+def _get_dio_map(elf):
+	return collections.defaultdict(dict)
+
+def get_dio(elf, sym_addr, sym_group):
+	dio_map = _get_dio_map(elf)
+	dio = dio_map.get(sym_addr)
+	if dio:
+		return dio
+
+	names = [s.target_name for s in sym_group]
+	names.sort()
+	def is_prefix(n):
+		# check whether 'n' is prefix of some symbol name
+		idx = bisect.bisect_left(names, n)
+		return idx < len(names) and names[idx].startswith(n)
+
+	di = debuginfo.get_debug_info(elf)
+	for dio in di.iter_dios():
+		dio_name = dio.get_name(True)
+		if not dio_name:
+			continue
+
+		if not is_prefix(dio_name):
+			continue
+
+		addr = dio.get_addr()
+		if addr is None:
+			continue
+
+		dio_map.setdefault(addr, dio)
+
+	return dio_map[sym_addr]
+
 class Symbol(object):
 	kind = None
 
@@ -47,6 +81,8 @@ class Symbol(object):
 			VIS_HIDDEN:		'HIDDEN',
 			VIS_PROTECTED:		'PROTECTED',
 	}
+
+	group = None
 
 	def __init__(self, parent, elf_sym, visibility, filename, line):
 		assert parent is None or isinstance(parent, Symbol)
@@ -88,6 +124,11 @@ class Symbol(object):
 
 	__repr__ = __str__
 
+	def get_dio(self, elf):
+		# .resolve() should not call .get_dio(). This is not so for
+		# StaticSymbol class, but .get_dio() is redefined there.
+		return get_dio(elf, self.resolve(), self.group or [self])
+
 class StaticSymbol(Symbol):
 	def __init__(self, parent, elf_sym, filename, line):
 		assert filename
@@ -97,6 +138,37 @@ class StaticSymbol(Symbol):
 		# If None, these attrs will be set again when resolving file scopes
 		self.target_filename = None
 		self.target_name = None
+
+	def _get_dio(self, elf):
+		if self.parent:
+			parent_dio = self.parent.get_dio(elf)
+		elif self.target_filename:
+			parent_dio = debuginfo.get_debug_info(elf).lookup(self.target_filename)
+		else:
+			st = get_symtab(elf)
+			sym_list = st.get_symbol_by_name(self.target_name)
+			if not sym_list:
+				print("No symbol with name '{}' in target".format(self.target_name))
+				return
+			if len(sym_list) > 1:
+				print("Multiple symbols with name '{}' in target".format(self.target_name))
+				return
+			sym = sym_list[0]
+			return get_dio(elf, sym.entry.st_value, self.group or [self])
+
+		assert self.target_name
+		return parent_dio.lookup(self.target_name) if parent_dio else None
+
+	def get_dio(self, elf):
+		dio = self._get_dio(elf)
+		cu_external = STR.DW_AT_external in dio.attributes
+		if cu_external:
+			raise Exception("Symbol '{}' in target is not static".format(self))
+		return dio
+
+	def resolve(self, elf):
+		dio = self.get_dio(elf)
+		return dio.get_addr() if dio else None
 
 class StaticSymbolRef(StaticSymbol):
 	kind = SYM_REF
@@ -260,6 +332,10 @@ def read_patch(elf):
 		return idx < len(def_sym_names) and def_sym_names[idx].startswith(n)
 
 	symbols = []
+	def collect_symbol(s):
+		s.group = symbols
+		symbols.append(s)
+
 	meta = []
 
 	sym_ref_name2vis = {}
@@ -296,7 +372,7 @@ def read_patch(elf):
 			return
 
 		undef_sym_names.remove(md.symbol)
-		symbols.append(get_symbol(SYM_REF, md.visibility,
+		collect_symbol(get_symbol(SYM_REF, md.visibility,
 			parent=parent_sym, elf_sym=get_dyn_elf_sym(md.symbol),
 			filename=filename, line=line,
 				**(dict(target_filename=md.target_filename)
@@ -386,7 +462,7 @@ def read_patch(elf):
 			sym = get_symbol(SYM_DEF, get_visibility(),
 				parent=parent_sym, elf_sym=elf_sym,
 				filename=filename, line=line)
-			symbols.append(sym)
+			collect_symbol(sym)
 			die_pos_map[dio.die_pos] = sym
 
 	if def_elf_addr2sym:
@@ -395,10 +471,10 @@ def read_patch(elf):
 				for s in def_elf_addr2sym.itervalues() ))
 		raise Exception("Can't match symtab entries with debuginfo objects")
 
-	symbols.extend(get_symbol(SYM_REF, VIS_EXTERNAL,
+	for name in undef_sym_names:
+		collect_symbol(get_symbol(SYM_REF, VIS_EXTERNAL,
 			parent=None, elf_sym=get_dyn_elf_sym(name),
-			filename=None, line=None)
-				for name in undef_sym_names)
+			filename=None, line=None))
 
 	process_meta(meta, symbols)
 	return symbols
