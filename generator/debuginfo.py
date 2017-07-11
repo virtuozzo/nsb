@@ -178,6 +178,20 @@ class DebugInfoObject(object):
 			if not immediate or parent_pos == pos:
 				yield DebugInfoObject(debug_info, die, parent_pos)
 
+	def lookup(self, name):
+		result = None
+		for dio in self.iter_children():
+			dio_name = dio.get_name(True)
+			if not dio_name or dio_name != name:
+				continue
+
+			if result:
+				raise Exception("Duplicate DIO name {}".format(name))
+			result = dio
+
+		return result
+
+
 	def get_key(self):
 		die = self.die
 
