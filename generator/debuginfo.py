@@ -275,7 +275,8 @@ class DebugInfo(object):
 		for cu in dwi.iter_CUs():
 			cu_pos.append((-cu.cu_offset, cu))
 			cu_name = get_CU_name(cu)
-			assert cu_name not in self._cu_names
+			if cu_name in self._cu_names:
+				self._cu_names[cu_name] = None
 			self._cu_names[cu_name] = cu
 
 		cu_pos.append((1, None))
