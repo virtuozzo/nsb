@@ -611,3 +611,40 @@ def resolve_file_scopes(file_scopes, aliases, symbols):
 				"{}:{}".format(alias_md.patch_symbol,
 				alias_md.header.filename, alias_md.header.line))
 
+class DefSymTab(object):
+	# symbols defined in ELF
+
+	def __init__(self, elf):
+		symtab = elf.get_section_by_name(".symtab")
+		if symtab is None:
+			raise Exception("No symbol table")
+
+		self._sym_map = sym_map = collections.defaultdict(list)
+		for sym in symtab.iter_symbols():
+			if sym.entry.st_info.type not in [STR.STT_OBJECT, STR.STT_FUNC]:
+				continue
+			if sym.entry.st_shndx == STR.SHN_UNDEF:
+				continue
+
+			addr = sym.entry.st_value
+			if not addr:
+				continue
+
+			sym_map[addr].append(sym)
+
+	def get_size(self, addr):
+		sym_list = self._sym_map[addr]
+		size_set = set(sym.entry.st_size for sym in sym_list)
+		if len(size_set) > 1:
+			raise Exception("Multiple sizes for symbol at address "
+					"{)".format(addr))
+		return size_set.pop()
+
+	def get_sec_idx(self, addr):
+		sym_list = self._sym_map[addr]
+		sec_idx_set = set(sym.entry.st_shndx for sym in sym_list)
+		if len(sec_idx_set) > 1:
+			raise Exception("Multiple section indices for symbol "
+					"at address {}".format(addr))
+		return sec_idx_set.pop()
+
