@@ -22,11 +22,6 @@ class BinFile:
 		self.debug_filename = debug_filename
 		self.keep_merged = keep_merged
 
-		self.functions = {}
-		self.objects = {}
-		self.elf_data = None
-		self.sections = None
-		self.symbols = None
 		self.__parse__()
 
 	def __exec__(self, cmd):
@@ -35,13 +30,6 @@ class BinFile:
 				     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
 		return out
-
-	def __add_function__(self, func):
-		if func.size:
-			self.functions[func.name] = func
-
-	def __add_object__(self, obj):
-		self.objects[obj.name] = obj
 
 	def __parse__(self):
 		elf = ElfFile(open(self.filename, 'rb'))
@@ -68,22 +56,6 @@ class BinFile:
 				os.unlink(merge_filename)
 		else:
 			self.elf = elf
-
-		self.symbols = elf.get_symbols()
-		self.sections = elf.get_sections()
-
-		if self.symbols is None:
-			print "  No symbols found. Perhaps this ELF has been stripped?"
-			sys.exit(1)
-
-		for k, s in self.symbols.iteritems():
-			if s.name is None:
-				continue
-
-			if s.type == "STT_FUNC":
-				self.__add_function__(s)
-			elif s.type == "STT_OBJECT":
-				self.__add_object__(s)
 
 	def add_section(self, sname, filename):
 		cmd = "objcopy --remove-section=%s %s" % (sname, self.filename)
