@@ -2,17 +2,18 @@ import bisect
 from weakref import WeakKeyDictionary
 
 from elftools.elf.constants import SH_FLAGS
-from elftools.elf.enums import ENUM_SH_TYPE
+from elftools.elf.enums import ENUM_SH_TYPE, ENUM_NOTE_N_TYPE
 
 from consts import *
 from util import memoize
 
 set_const_raw(SH_FLAGS.__dict__)
 set_const_str(ENUM_SH_TYPE)
+set_const_str(ENUM_NOTE_N_TYPE)
 
 def get_build_id(elf):
 	section_name = '.note.gnu.build-id'
-	n_type = 'NT_GNU_BUILD_ID'
+	n_type = STR.NT_GNU_BUILD_ID
 
 	sec = elf.get_section_by_name(section_name)
 	if sec is None:
