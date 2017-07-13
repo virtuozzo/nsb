@@ -1,6 +1,30 @@
 import os
 import argparse
-from build_id import get_build_id
+
+from elftools.elf.elffile import ELFFile
+from elftools.common.exceptions import ELFError
+
+import elffile
+
+def get_build_id(path):
+	with open(path, 'rb') as stream:
+		build_id = None
+		try:
+			build_id = elffile.get_build_id(ELFFile(stream))
+		except ELFError:
+			print "%s is not an ELF file" % path
+		return build_id
+
+def print_build_id(args):
+	try:
+		build_id = get_build_id(args.file)
+	except IOError as e:
+		print e
+		return 1
+
+	if build_id:
+		print build_id
+	return 0
 
 def check_build_id(bid):
 	if len(bid) != 40:

@@ -2,8 +2,7 @@ import sys
 import argparse
 
 from generate import gen_patch
-from build_id import print_build_id
-from check import check_pid, check_build_id, make_check, check_mode
+from check import print_build_id, check_pid, check_build_id, make_check, check_mode
 
 parser = argparse.ArgumentParser()
 sp = parser.add_subparsers(help = "Use --help for list of actions")
