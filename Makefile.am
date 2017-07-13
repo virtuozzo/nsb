@@ -25,7 +25,6 @@ generator_PYTHON =					\
 			generator/static_symbol.py	\
 			generator/debuginfo.py		\
 			generator/check.py		\
-			generator/build_id.py		\
 			generator/generate.py		\
 			generator/nsbgen.py		\
 			generator/consts.py		\
