@@ -1,12 +1,7 @@
-from collections import namedtuple
-import sys
 import bisect
 from weakref import WeakKeyDictionary
 
-from elftools.elf.elffile import ELFFile
-from elftools.elf.elffile import SymbolTableSection
-from elftools.elf.descriptions import describe_p_flags, describe_reloc_type
-from elftools.elf.constants import P_FLAGS, SH_FLAGS
+from elftools.elf.constants import SH_FLAGS
 from elftools.elf.enums import ENUM_SH_TYPE
 
 from consts import *
