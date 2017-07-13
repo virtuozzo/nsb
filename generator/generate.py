@@ -22,11 +22,6 @@ def gen_patch(args):
 		print "Only ET_DYN patch creation is supported"
 
 	binpatch = BinPatch(bfa, bfb, args.obj_files, args.outfile, args.mode)
-
-	if not binpatch.applicable():
-		print "Can't apply patch"
-		sys.exit(1)
-
 	binpatch.write()
 
 	print "SUCCESS"
