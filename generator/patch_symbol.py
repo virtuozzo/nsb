@@ -362,7 +362,6 @@ def read_patch(elf):
 
 	def handle_meta(md):
 		assert filename == md.header.filename
-		assert line == md.header.line
 
 		if md.header.tag == META_TAG_FILE and dio.get_parent().tag != STR.DW_TAG_compile_unit:
 			raise Exception("VZP_FILE at {}:{} should be "
