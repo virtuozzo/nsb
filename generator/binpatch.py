@@ -1,9 +1,8 @@
 import os
 
-from elftools.elf import elffile
+from elftools.elf.elffile import ELFFile
 
 from elffile import get_build_id
-
 import static_symbol
 import patch_symbol
 
@@ -17,7 +16,7 @@ class BinPatch:
 		self.bf_old = bf_old
 		self.bf_new = bf_new
 
-		self.obj_files = [elffile.ELFFile(open(fn)) for fn in obj_files] 
+		self.obj_files = [ELFFile(open(fn)) for fn in obj_files] 
 		self.patchfile = patchfile
 		self.mode = mode
 
