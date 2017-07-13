@@ -4,6 +4,7 @@ import bisect
 import itertools
 import collections
 from weakref import WeakKeyDictionary
+import re
 
 from elftools.elf import enums as elf_enums
 from elftools.dwarf import enums as dwarf_enums
@@ -22,9 +23,7 @@ set_const_str(elf_enums.ENUM_ST_VISIBILITY)
 set_const_str(dwarf_enums.ENUM_DW_TAG)
 set_const_str(dwarf_enums.ENUM_DW_AT)
 
-IGNORED_SYMS = set([
-	"completed.6344",
-])
+IGNORED_SYM_RE = re.compile(r"^completed\.\d+$")
 
 SYM_DEF			= 1
 SYM_REF			= 2
@@ -299,7 +298,7 @@ def read_patch(elf):
 
 		if elf_sym.entry.st_info.bind == STR.STB_WEAK:
 			continue
-		if elf_sym.name in IGNORED_SYMS:
+		if IGNORED_SYM_RE.match(elf_sym.name):
 			continue
 
 		if elf_sym.entry.st_shndx == STR.SHN_UNDEF:
