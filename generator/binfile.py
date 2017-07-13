@@ -4,7 +4,9 @@ import os
 import re
 import tempfile
 
-from elffile import get_build_id, ElfFile
+from elftools.elf.elffile import ELFFile
+
+from elffile import get_build_id
 
 class BinFile:
 	def __init__(self, filename, debug_filename=None, keep_merged=False):
@@ -30,12 +32,12 @@ class BinFile:
 		return out
 
 	def __parse__(self):
-		elf = ElfFile(open(self.filename, 'rb'))
+		elf = ELFFile(open(self.filename, 'rb'))
 		if self.debug_filename:
-			bid = get_build_id(elf.elf)
+			bid = get_build_id(elf)
 
 			with open(self.debug_filename, 'rb') as debug_stream:
-				debug_bid = get_build_id(ElfFile(debug_stream).elf)
+				debug_bid = get_build_id(ELFFile(debug_stream))
 
 			if bid != debug_bid:
 				print "Build ID mismatch between input ELFs"
@@ -49,7 +51,7 @@ class BinFile:
 					self.filename, self.debug_filename)
 			self.__exec__(cmd)
 
-			self.elf = elf = ElfFile(open(merge_filename, 'rb'))
+			self.elf = ELFFile(open(merge_filename, 'rb'))
 			if not self.keep_merged:
 				os.unlink(merge_filename)
 		else:

@@ -18,7 +18,7 @@ def gen_patch(args):
 	if args.outfile:
 		print "Out file: %s" % args.outfile
 
-	if bfa.elf.elf.header.e_type != 'ET_DYN':
+	if bfa.elf.header.e_type != 'ET_DYN':
 		print "Only ET_DYN patch creation is supported"
 
 	binpatch = BinPatch(bfa, bfb, args.obj_files, args.outfile, args.mode)
