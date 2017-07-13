@@ -29,7 +29,6 @@ generator_PYTHON =					\
 			generator/generate.py		\
 			generator/nsbgen.py		\
 			generator/consts.py		\
-			generator/ms_debuginfo.py	\
 			generator/patch_symbol.py	\
 							\
 			protobuf/binpatch_pb2.py	\
