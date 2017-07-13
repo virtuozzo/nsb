@@ -69,7 +69,6 @@ class BinFile:
 		else:
 			self.elf = elf
 
-		self.header = elf.get_header()
 		self.symbols = elf.get_symbols()
 		self.sections = elf.get_sections()
 

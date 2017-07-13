@@ -12,8 +12,9 @@ class BinPatch:
 	__metaclass__ = ABCMeta
 
 	def __init__(self, bf_old, bf_new, obj_files, patchfile, mode):
-		if bf_new.header.type != 'ET_DYN':
-			print "Wrong object file type: %s" % bf_new.header.type
+		bf_new_type = bf_new.elf.elf.header.e_type 
+		if bf_new_type != 'ET_DYN':
+			print "Wrong object file type: %s" % bf_new_type
 			raise Exception("Only shared object patches are supported")
 
 		self.bf_old = bf_old
