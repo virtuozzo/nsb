@@ -36,11 +36,6 @@ def get_build_id(elf):
 	print ("ELF section %s doesn't have %s descriptor" %
 			(section, n_type))
 
-class ElfFile:
-	def __init__(self, stream):
-		self.stream = stream
-		self.elf = ELFFile(self.stream)
-
 class AddressSpace(object):
 	def __init__(self, elf):
 		# See comment from get_dio_by_pos() on how lookup is done
