@@ -15,12 +15,6 @@ from util import memoize
 set_const_raw(SH_FLAGS.__dict__)
 set_const_str(ENUM_SH_TYPE)
 
-ElfHeader = namedtuple("ElfHeader", "type machine")
-ElfSym = namedtuple("ElfSym", "num value size type bind vis ndx name")
-ElfSection = namedtuple("ElfSection", "offset addr size")
-ElfSegment = namedtuple("ElfSegment", "type offset vaddr paddr mem_sz flags align file_sz")
-ElfRelaPlt = namedtuple("ElfRelaPlt", "offset info_type addend")
-
 def get_build_id(elf):
 	section_name = '.note.gnu.build-id'
 	n_type = 'NT_GNU_BUILD_ID'
