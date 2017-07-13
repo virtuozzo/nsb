@@ -1,5 +1,4 @@
 import os
-from abc import ABCMeta, abstractmethod
 
 from elftools.elf import elffile
 
@@ -9,8 +8,6 @@ import static_symbol
 import patch_symbol
 
 class BinPatch:
-	__metaclass__ = ABCMeta
-
 	def __init__(self, bf_old, bf_new, obj_files, patchfile, mode):
 		bf_new_type = bf_new.elf.header.e_type 
 		if bf_new_type != 'ET_DYN':
