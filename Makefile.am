@@ -21,7 +21,6 @@ generator_PYTHON =					\
 			generator/binfile.py		\
 			generator/binpatch.py		\
 			generator/elffile.py		\
-			generator/funcjump.py		\
 			generator/static_symbol.py	\
 			generator/debuginfo.py		\
 			generator/check.py		\
