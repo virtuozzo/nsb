@@ -21,9 +21,9 @@ class BinFile:
 		self.debug_filename = debug_filename
 		self.keep_merged = keep_merged
 
-		self.__parse__()
+		self._merge_debuginfo()
 
-	def __parse__(self):
+	def _merge_debuginfo(self):
 		elf = ELFFile(open(self.filename, 'rb'))
 		if self.debug_filename:
 			bid = get_build_id(elf)
