@@ -1,5 +1,3 @@
-import sys
-
 from binfile import BinFile
 from binpatch import BinPatch
 
