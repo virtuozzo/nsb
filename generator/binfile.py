@@ -1,7 +1,5 @@
-from collections import namedtuple
 import sys
 import os
-import re
 import tempfile
 
 from elftools.elf.elffile import ELFFile
