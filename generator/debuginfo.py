@@ -228,7 +228,35 @@ class DebugInfoObject(object):
 		line_num = self.attributes[STR.DW_AT_decl_line].value
 
 		lp = _get_line_program(self.die.cu)
-		file_name = lp.header.file_entry[file_num - 1].name
+		file_info = lp.header.file_entry[file_num - 1]
+		file_name = file_info.name
+
+		# DWARF standard v4 says:
+		# ---
+		# 12. file_names (sequence of file entries)
+		# Entries in this sequence describe source files that contribute to the line number information
+		# for this compilation unit or is used in other contexts, such as in a declaration coordinate or a
+		# macro file inclusion. Each entry consists of the following values:
+		# * A null-terminated string containing the full or relative path name of a source file. If the
+		# entry contains a file name or relative path name, the file is located relative to either the
+		# compilation directory (as specified by the DW_AT_comp_dir attribute given in the
+		# compilation unit) or one of the directories listed in the include_directories section.
+		# . . .
+		# The directory index represents an entry in the include_directories section. The index is 0
+		# if the file was found in the current directory of the compilation, 1 if it was found in the first
+		# directory in the include_directories section, and so on. The directory index is ignored for
+		# file names that represent full path names.
+		# The primary source file is described by an entry whose path name exactly matches that given
+		# in the DW_AT_name attribute in the compilation unit, and whose directory is understood to
+		# be given by the implicit entry with index 0.
+		# ---
+		# So by this wording, it seems like for primary source file CU's DW_AT_name should be equal to
+		# path name. However, in practice it equals path name with prepended directory name.
+
+		dir_info = lp.header.include_directory[file_info.dir_index -1] if file_info.dir_index else None
+		if dir_info is not None and not file_name.startswith('/'):
+			file_name = dir_info + '/' + file_name
+
 		return file_name, line_num
 
 	def get_addr(self):
