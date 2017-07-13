@@ -7,8 +7,7 @@ import signal
 import multiprocessing
 from collections import namedtuple
 from abc import ABCMeta, abstractmethod
-from check import map_by_build_id
-from build_id import get_build_id
+from check import map_by_build_id, get_build_id
 import traceback
 
 
