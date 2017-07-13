@@ -6,8 +6,6 @@ import tempfile
 
 from elffile import get_build_id, ElfFile
 
-FuncInfo = namedtuple("FuncInfo", "start lenght")
-
 class BinFile:
 	def __init__(self, filename, debug_filename=None, keep_merged=False):
 		fn_list = [filename]
