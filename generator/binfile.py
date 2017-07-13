@@ -5,6 +5,7 @@ import tempfile
 from elftools.elf.elffile import ELFFile
 
 from elffile import get_build_id
+import util
 
 class BinFile:
 	def __init__(self, filename, debug_filename=None, keep_merged=False):
@@ -21,13 +22,6 @@ class BinFile:
 		self.keep_merged = keep_merged
 
 		self.__parse__()
-
-	def __exec__(self, cmd):
-		import subprocess
-		p = subprocess.Popen(cmd.split(),
-				     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		out, err = p.communicate()
-		return out
 
 	def __parse__(self):
 		elf = ELFFile(open(self.filename, 'rb'))
@@ -47,7 +41,7 @@ class BinFile:
 				print "Merged ELF:", merge_filename
 			cmd = 'eu-unstrip -o %s %s %s' % (merge_filename,
 					self.filename, self.debug_filename)
-			self.__exec__(cmd)
+			util.system_exc(cmd)
 
 			self.elf = ELFFile(open(merge_filename, 'rb'))
 			if not self.keep_merged:
@@ -57,8 +51,8 @@ class BinFile:
 
 	def add_section(self, sname, filename):
 		cmd = "objcopy --remove-section=%s %s" % (sname, self.filename)
-		self.__exec__(cmd)
+		util.system_exc(cmd)
 		print "Removed old \"%s\" ELF section from %s" % (sname, self.filename)
 		cmd = "objcopy --add-section %s=%s %s" % (sname, filename, self.filename)
-		self.__exec__(cmd)
+		util.system_exc(cmd)
 		print "Added %s as ELF section \"%s\" to %s" % (filename, sname, self.filename)

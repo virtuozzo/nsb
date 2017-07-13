@@ -1,5 +1,6 @@
 import functools
 from collections import defaultdict
+import subprocess
 
 def memoize(*dict_classes):
 	first_class  = dict_classes[0]
@@ -63,4 +64,18 @@ def reverse_mapping(d, single=True):
 			result[rk] = result[rk][0]
 
 	return dict(result)
+
+def _exec(cmd, **kw):
+	print("== CMD: {!r}".format(cmd)) 
+	p = subprocess.Popen(cmd, shell=isinstance(cmd, basestring), **kw)
+	out, err = p.communicate()
+	return p.wait(), out, err
+
+def _check_ret(ret):
+	if ret:
+		raise Exception("Command failed with code {}".format(ret))
+
+def system_exc(cmd):
+	ret, out, err = _exec(cmd)
+	_check_ret(ret)
 
