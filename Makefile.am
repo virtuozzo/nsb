@@ -30,7 +30,6 @@ generator_PYTHON =					\
 			generator/nsbgen.py		\
 			generator/consts.py		\
 			generator/ms_debuginfo.py	\
-			generator/sym_resolver.py	\
 			generator/patch_symbol.py	\
 							\
 			protobuf/binpatch_pb2.py	\
