@@ -4,7 +4,7 @@ import os
 import re
 import tempfile
 
-import elffile
+from elffile import get_build_id, ElfFile
 
 FuncInfo = namedtuple("FuncInfo", "start lenght")
 
@@ -44,12 +44,12 @@ class BinFile:
 		self.objects[obj.name] = obj
 
 	def __parse__(self):
-		elf = elffile.ElfFile(open(self.filename, 'rb'))
+		elf = ElfFile(open(self.filename, 'rb'))
 		if self.debug_filename:
-			bid = elf.build_id()
+			bid = get_build_id(elf.elf)
 
 			with open(self.debug_filename, 'rb') as debug_stream:
-				debug_bid = elffile.ElfFile(debug_stream).build_id()
+				debug_bid = get_build_id(ElfFile(debug_stream).elf)
 
 			if bid != debug_bid:
 				print "Build ID mismatch between input ELFs"
@@ -63,7 +63,7 @@ class BinFile:
 					self.filename, self.debug_filename)
 			self.__exec__(cmd)
 
-			self.elf = elf = elffile.ElfFile(open(merge_filename, 'rb'))
+			self.elf = elf = ElfFile(open(merge_filename, 'rb'))
 			if not self.keep_merged:
 				os.unlink(merge_filename)
 		else:

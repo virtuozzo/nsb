@@ -3,7 +3,8 @@ from abc import ABCMeta, abstractmethod
 
 from elftools.elf import elffile
 
-from build_id import get_build_id
+from elffile import get_build_id
+
 import static_symbol
 import patch_symbol
 
@@ -39,8 +40,8 @@ class BinPatch:
 		print "***************** Patch info ********************"
 		print "*************************************************\n"
 
-		pi.old_bid = get_build_id(self.bf_old.filename)
-		pi.new_bid = get_build_id(self.bf_new.filename)
+		pi.old_bid = get_build_id(self.bf_old.elf.elf)
+		pi.new_bid = get_build_id(self.bf_new.elf.elf)
 
 		print "Header:"
 		print "  Target BuildId: %s" % pi.old_bid

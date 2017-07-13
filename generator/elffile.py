@@ -21,6 +21,20 @@ ElfSection = namedtuple("ElfSection", "offset addr size")
 ElfSegment = namedtuple("ElfSegment", "type offset vaddr paddr mem_sz flags align file_sz")
 ElfRelaPlt = namedtuple("ElfRelaPlt", "offset info_type addend")
 
+def get_build_id(elf):
+	section_name = '.note.gnu.build-id'
+	n_type = 'NT_GNU_BUILD_ID'
+
+	sec = elf.get_section_by_name(section_name)
+	if sec is None:
+		return
+	
+	for note in sec.iter_notes():
+		if note['n_type'] == n_type:
+			return note['n_desc']
+
+	print ("ELF section %s doesn't have %s descriptor" %
+			(section, n_type))
 
 class ElfFile:
 	def __init__(self, stream):
