@@ -1,10 +1,3 @@
-/*
- * Copyright (c) 2016-2017, Parallels International GmbH
- *
- * Our contact details: Parallels International GmbH, Vordergasse 59, 8200
- * Schaffhausen, Switzerland.
- */
-
 #ifndef __PATCHER_VMA_H__
 #define __PATCHER_VMA_H__
 

@@ -1,10 +1,3 @@
-'''
-Copyright (c) 2016-2017, Parallels International GmbH
-
-Our contact details: Parallels International GmbH, Vordergasse 59, 8200
-Schaffhausen, Switzerland.
-'''
-
 from collections import defaultdict
 from weakref import WeakKeyDictionary
 import functools
