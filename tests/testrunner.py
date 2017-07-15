@@ -115,12 +115,13 @@ class Test:
 
 	def get_map_path(self, bid):
 		tries = 50
-		while --tries:
+		while tries:
 			try:
 				return map_by_build_id(self.p.pid, bid)
 			except IOError as e:
 				import time
 				time.sleep(1 / 1000000)
+				tries -= 1
 				continue
 		raise
 
