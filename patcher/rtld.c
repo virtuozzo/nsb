@@ -66,11 +66,11 @@ int rtld_needed_array(struct process_ctx_s *ctx, uint64_t _r_debug_addr,
 		if (dt_symtab_addr == -ENOENT)
 			return dt_symtab_addr;
 
-		/* Check dt_symtab_addr for non-negative value.
-		 * This is diferent in VDSO, which has negative addresses
-		 * (offsets from base)?
+		/* Check dt_symtab_addr for being above link addr.
+		 * This is diferent in VDSO, which has negative or small
+		 * address which is offsets from base.
 		 */
-		if (dt_symtab_addr >= 0) {
+		if (dt_symtab_addr >= lm->l_addr) {
 			if ((nr % step) == 0) {
 				arr = xrealloc(arr, step * sizeof(uint64_t));
 				if (!arr)

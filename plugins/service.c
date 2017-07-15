@@ -255,11 +255,11 @@ static int nsb_service_cmd_needed_list(const void *data, size_t size,
 			return -ENOENT;
 		}
 
-		/* Check dt_symtab_addr for non-negative value.
-		 * This is diferent in VDSO, which has negative addresses
-		 * (offsets from base)?
+		/* Check dt_symtab_addr for being above link addr.
+		 * This is diferent in VDSO, which has negative or small
+		 * address which is offsets from base.
 		 */
-		if (dt_symtab_addr >= 0) {
+		if (dt_symtab_addr >= lm->l_addr) {
 			nl->address[nr] = dt_symtab_addr;
 			rd->used += sizeof(nl->address);
 			nr++;

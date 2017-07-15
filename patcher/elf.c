@@ -623,7 +623,7 @@ static int elf_create_scn(struct elf_info_s *ei,
 
 	scn = elf_get_section_by_name(ei, sname);
 	if (!scn) {
-		pr_err("failed to find \"%s\" section\n", sname);
+		pr_err("failed to find \"%s\" section in \"%s\"\n", sname, ei->path);
 		return -ENOENT;
 	}
 
