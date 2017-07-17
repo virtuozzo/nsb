@@ -70,7 +70,7 @@ int rtld_needed_array(struct process_ctx_s *ctx, uint64_t _r_debug_addr,
 		 * This is diferent in VDSO, which has negative or small
 		 * address which is offsets from base.
 		 */
-		if (dt_symtab_addr >= lm->l_addr) {
+		if (dt_symtab_addr >= (int64_t)lm->l_addr) {
 			if ((nr % step) == 0) {
 				arr = xrealloc(arr, step * sizeof(uint64_t));
 				if (!arr)

@@ -259,7 +259,7 @@ static int nsb_service_cmd_needed_list(const void *data, size_t size,
 		 * This is diferent in VDSO, which has negative or small
 		 * address which is offsets from base.
 		 */
-		if (dt_symtab_addr >= lm->l_addr) {
+		if (dt_symtab_addr >= (int64_t)lm->l_addr) {
 			nl->address[nr] = dt_symtab_addr;
 			rd->used += sizeof(nl->address);
 			nr++;
