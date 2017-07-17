@@ -283,7 +283,7 @@ def read_patch(elf):
 
 	sec_name2idx = reverse_mapping(dict((n, sec.name)
 		for n, sec in enumerate(elf.iter_sections()) ))
-	vzp_sec_idx = sec_name2idx[META_SECTION]
+	meta_sec_idx = sec_name2idx.get(META_SECTION)
 
 	undef_sym_names = set()
 	def_sym_types = [STR.STT_OBJECT, STR.STT_FUNC]
@@ -436,7 +436,7 @@ def read_patch(elf):
 
 		sym_name = elf_sym.name
 		sym_sec_idx = elf_sym.entry.st_shndx 
-		if sym_sec_idx != vzp_sec_idx and sym_name != dio.get_name():
+		if sym_sec_idx != meta_sec_idx and sym_name != dio.get_name():
 			raise Exception("Symbol name '{}' is mangled".format(sym_name))
 
 		sym_type = elf_sym.entry.st_info.type 
@@ -445,7 +445,7 @@ def read_patch(elf):
 
 		filename, line = dio.get_src_location()
 		# Only functions may be defined in patch
-		if sym_type == STR.STT_OBJECT and sym_sec_idx != vzp_sec_idx:
+		if sym_type == STR.STT_OBJECT and sym_sec_idx != meta_sec_idx:
 			raise Exception("Data symbol '{}' is defined in patch at "
 				"{}:{}".format(sym_name, filename, line))
 
@@ -462,7 +462,7 @@ def read_patch(elf):
 		else:
 			parent_sym = None
 
-		if sym_sec_idx == vzp_sec_idx:
+		if sym_sec_idx == meta_sec_idx:
 			handle_meta(dio.get_value())
 		else:
 			sym = get_symbol(SYM_DEF, get_visibility(),
