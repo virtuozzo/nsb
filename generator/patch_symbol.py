@@ -323,6 +323,10 @@ def read_patch(elf):
 			if s.entry.st_shndx == STR.SHN_UNDEF ))
 
 	def get_dyn_elf_sym(name):
+		ver_idx = name.find("@")
+		cut_idx = ver_idx if ver_idx >= 0 else None
+		name = name[:cut_idx]
+
 		idx = dyn_sym_name2idx.get(name)
 		if idx is None:
 			raise Exception("Symbol '{}' is not found".format(name))
