@@ -2,11 +2,13 @@
 
 #ifdef PATCH
 
-extern long vzpatch_static_var_manual;
+#include <include/vzp.h>
+
+VZP_STATIC_VAR_REF(long, static_var_manual)
 
 long test_static_var_manual(int type)
 {
-	return vzpatch_static_var_manual;
+	return static_var_manual;
 }
 
 #else
