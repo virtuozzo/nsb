@@ -697,5 +697,5 @@ def resolve(target_elf, patch_elf):
 		else:
 			assert 0
 
-	return bp if bp.func_jumps else None
+	return bp
 
