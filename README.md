@@ -118,3 +118,14 @@ The following limitations cannot be discovered while applying a patch (strict li
 ## Heatbleed demo
 Here is the link to live pathing demo of famous "Heartbleed" expoit (https://en.wikipedia.org/wiki/Heartbleed):
 https://youtu.be/lxP1zLvlczA
+
+## Build dependences
+C:
+- libprotobuf-c
+- libunwind
+- libcompel (part of CRIU: https://github.com/xemul/criu)
+- libelf
+
+Python (2.7):
+- pyelftools
+- protobuf
