@@ -114,3 +114,7 @@ The following limitations can be discovered automatically while applying a patch
 
 The following limitations cannot be discovered while applying a patch (strict limitations that must be observed by system administrator):
 - use of coroutines by the process.
+
+## Heatbleed demo
+Here is the link to live pathing demo of famous "Heartbleed" expoit (https://en.wikipedia.org/wiki/Heartbleed):
+https://youtu.be/lxP1zLvlczA
