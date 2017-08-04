@@ -63,7 +63,9 @@ To create a manual patch, the developer needs to provide to the generator the fo
 Such patches are created manually as follows:
 - The possibility to create a live patch from the diff is evaluated.
 - The changed code (functions) is copied to a separate file.
-- All links to static variables and functions required by changed functions. (More info on this to be added soon)
+- All links to static variables and functions required by changed functions.
+
+Detailed description can be found in ["Manual Patching Overview"](docs/manual-mode.md) document.
 
 ### Creating Auto Patches
 
