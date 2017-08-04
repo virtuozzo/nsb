@@ -135,3 +135,6 @@ C:
 Python (2.7):
 - pyelftools
 - protobuf
+
+## See also
+- [Manual Patching Overview](docs/manual-mode.md)
