@@ -76,6 +76,10 @@ To create an auto patch, the developer needs to provide to the generator the fol
 - the patch built as a shared library, and
 - the list of all object files the patch is built from; all these object files must be built with the options "-g -ffunction-sections -fdata-sections".
 
+**_NOTE_**: This mode is currently broken because of changes, introduced to support all the notations of *Manual mode*.
+Hovewer old implementation was working only in simple cases anyway.
+Proper support of Auto mode with detailed description is going to be added later.
+
 ## Applying Patches to Processes
 
 The procedure of applying a patch includes the following steps:
