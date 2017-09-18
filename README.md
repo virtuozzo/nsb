@@ -126,15 +126,23 @@ Here is the link to live pathing demo of famous "Heartbleed" expoit (https://en.
 https://youtu.be/lxP1zLvlczA
 
 ## Build dependences
+Generic:
+- libtool
+- automake
+- gcc
+- make
+
 C:
 - libprotobuf-c
 - libunwind
 - libcompel (part of CRIU: https://github.com/xemul/criu)
 - libelf
+- protobuf-c-compiler
 
 Python (2.7):
-- pyelftools
+- pyelftools (>=0.24)
 - protobuf
+- protobuf-compiler
 
 ## See also
 - [Manual Patching Overview](docs/manual-mode.md)
