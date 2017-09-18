@@ -136,7 +136,7 @@ int64_t process_map_vma(struct process_ctx_s *ctx, int fd,
 {
 	int64_t addr;
 
-	process_print_munmap(vma);
+	process_print_mmap(vma);
 
 	if (ctx->service.loaded) {
 		pr_err("service is loaded\n");
