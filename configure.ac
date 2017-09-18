@@ -26,6 +26,11 @@ if test x"$PROTOC_CHECK" != x"yes" ; then
 	AC_MSG_ERROR([protobuf-compiler is required.])
 fi
 
+AC_CHECK_PROG(PROTOC_C_CHECK, protoc-c, yes)
+if test x"$PROTOC_C_CHECK" != x"yes" ; then
+	AC_MSG_ERROR([protobuf-c-compiler is required.])
+fi
+
 AC_CHECK_LIB(
 		[protobuf-c],
 		[protobuf_c_message_get_packed_size],
