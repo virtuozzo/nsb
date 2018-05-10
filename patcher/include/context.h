@@ -9,6 +9,35 @@
 #include "service.h"
 #include "vma.h"
 
+struct arch_cb
+{
+	uint64_t(*jump_min_address)(uint64_t address);
+	uint64_t(*jump_max_address)(uint64_t address);
+	ssize_t (*call)(uint64_t call, uint64_t where,
+			uint64_t arg0, uint64_t arg1, uint64_t arg2,
+			uint64_t arg3, uint64_t arg4, uint64_t arg5,
+			void **code);
+	ssize_t (*dlopen)(uint64_t dlopen_addr, uint64_t name_addr,
+			  uint64_t where,
+			  void **code);
+	ssize_t (*dlclose)(uint64_t dlopen_addr, uint64_t handle,
+			   uint64_t where,
+			   void **code);
+	int (*process_write_data)(const struct process_ctx_s *ctx,
+				 uint64_t addr, const void *data, size_t size);
+	int (*process_read_data)(const struct process_ctx_s *ctx,
+				uint64_t addr, void *data, size_t size);
+	int (*rtld_needed_array)(struct process_ctx_s *ctx, uint64_t _r_debug_addr,
+				     uint64_t **needed_array);
+	int (*process_unmap_vma)(struct process_ctx_s *ctx, const struct vma_area *vma);
+	int64_t (*process_map_vma)(struct process_ctx_s *ctx, int fd,
+		const struct vma_area *vma);
+	int (*process_close_file)(struct process_ctx_s *ctx, int fd);
+	int (*process_do_open_file)(struct process_ctx_s *ctx,
+				const char *path, int flags, mode_t mode);
+
+};
+
 struct static_sym_s {
 	uint32_t		patch_size;
 	uint64_t		patch_address;
@@ -46,6 +75,8 @@ struct patch_info_s {
 
 	size_t			n_static_syms;
 	struct static_sym_s	**static_syms;
+
+	char			*patch_arch_type;
 };
 
 struct patch_s {
@@ -84,6 +115,7 @@ struct process_ctx_s {
 	struct list_head	needed_list;
 	struct list_head	threads;
 	struct patch_s		*patch;
+	const struct arch_cb        *arch_callback;
 };
 
 #define P(ctx)			ctx->patch

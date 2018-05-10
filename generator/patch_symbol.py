@@ -23,7 +23,7 @@ set_const_str(elf_enums.ENUM_ST_VISIBILITY)
 set_const_str(dwarf_enums.ENUM_DW_TAG)
 set_const_str(dwarf_enums.ENUM_DW_AT)
 
-IGNORED_SYM_RE = re.compile(r"^completed\.\d+$")
+IGNORED_SYM_RE = re.compile(r"^completed\.\d+$|__x86.get_pc_thunk.bx")
 
 SYM_DEF			= 1
 SYM_REF			= 2

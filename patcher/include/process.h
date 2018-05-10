@@ -6,8 +6,6 @@
 
 struct process_ctx_s;
 
-int process_write_data(const struct process_ctx_s *ctx, uint64_t addr, const void *data, size_t size);
-int process_read_data(const struct process_ctx_s *ctx, uint64_t addr, void *data, size_t size);
 long process_get_place(struct process_ctx_s *ctx, unsigned long hint, size_t size);
 int process_unlink(struct process_ctx_s *ctx);
 int process_cure(struct process_ctx_s *ctx);
@@ -15,13 +13,9 @@ int process_link(struct process_ctx_s *ctx);
 int process_infect(struct process_ctx_s *ctx);
 
 struct vma_area;
-int process_unmap_vma(struct process_ctx_s *ctx, const struct vma_area *vma);
-int64_t process_map_vma(struct process_ctx_s *ctx, int fd,
-			const struct vma_area *vma);
 
 int process_open_file(struct process_ctx_s *ctx, const char *path,
 			int flags, mode_t mode);
-int process_close_file(struct process_ctx_s *ctx, int fd);
 
 int process_suspend(struct process_ctx_s *ctx, const char *target_bid);
 

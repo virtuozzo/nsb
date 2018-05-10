@@ -84,7 +84,7 @@ static int service_collect_vmas(struct process_ctx_s *ctx, struct service *servi
 	ssize_t res;
 	LIST_HEAD(service_vmas);
 
-	err = process_read_data(ctx, service->handle, &base, sizeof(base));
+	err = ctx->arch_callback->process_read_data(ctx, service->handle, &base, sizeof(base));
 	if (err)
 		return err;
 
@@ -196,7 +196,7 @@ static int service_remote_accept(struct process_ctx_s *ctx, struct service *serv
 	if (address <= 0)
 		return address;
 
-	size = x86_64_call(address, code_addr, 0, 0, 0, 0, 0, 0, &code);
+	size = ctx->arch_callback->call(address, code_addr, 0, 0, 0, 0, 0, 0, &code);
 	if (size < 0) {
 		pr_err("failed to construct %s call\n", symbol);
 		return size;
@@ -214,9 +214,9 @@ static int __service_do(struct process_ctx_s *ctx, uint64_t address,
 	ssize_t size;
 	void *code;
 
-	size = x86_64_call(address, code_addr,
-			   arg1, arg2, arg3, arg4, arg5, arg6,
-			   &code);
+	size = ctx->arch_callback->call(address, code_addr,
+					arg1, arg2, arg3, arg4, arg5, arg6,
+					&code);
 	if (size < 0) {
 		pr_err("failed to construct service call\n");
 		return size;

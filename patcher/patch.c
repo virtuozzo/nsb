@@ -47,7 +47,7 @@ static int write_func_code(struct process_ctx_s *ctx, struct func_jump_s *fj)
 	pr_info("  - Restoring code in \"%s\":\n", fj->name);
 	pr_info("      old address: %#lx\n", fj->func_addr);
 
-	return process_write_data(ctx, fj->func_addr,
+	return ctx->arch_callback->process_write_data(ctx, fj->func_addr,
 				  fj->code, sizeof(fj->code));
 }
 
@@ -66,7 +66,7 @@ static int write_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	if (ctx->dry_run)
 		return 0;
 
-	return process_write_data(ctx, fj->func_addr,
+	return ctx->arch_callback->process_write_data(ctx, fj->func_addr,
 				  fj->func_jump, sizeof(fj->func_jump));
 }
 
@@ -165,7 +165,7 @@ static int tune_patch_func_jump(const struct patch_s *p, struct func_jump_s *fj,
 	fj->func_addr = dlm_load_base(p->target_dlm) + fj->func_value;
 	patch_addr = dlm_load_base(p->patch_dlm) + fj->patch_value;
 
-	size = x86_jmpq_instruction(fj->func_jump, sizeof(fj->func_jump),
+        size = x86_jmpq_instruction(fj->func_jump, sizeof(fj->func_jump),
 				    fj->func_addr, patch_addr);
 	if (size < 0)
 		return size;
@@ -254,7 +254,7 @@ static int func_jump_applied(struct process_ctx_s *ctx,
 	if (!fj->func_addr)
 		return 0;
 
-	err = process_read_data(ctx, fj->func_addr, code, sizeof(code));
+	err = ctx->arch_callback->process_read_data(ctx, fj->func_addr, code, sizeof(code));
 	if (err)
 		return err;
 
@@ -370,7 +370,7 @@ static int write_static_ref(const struct process_ctx_s *ctx,
 	if (offset_size == 4) {
 		int err;
 
-		err = process_read_data(ctx, addr, bytes, sizeof(bytes));
+		err = ctx->arch_callback->process_read_data(ctx, addr, bytes, sizeof(bytes));
 		if (err)
 			return err;
 
@@ -379,7 +379,7 @@ static int write_static_ref(const struct process_ctx_s *ctx,
 
 	memcpy(bytes, off, offset_size);
 
-	return process_write_data(ctx, addr, bytes, sizeof(bytes));
+	return ctx->arch_callback->process_write_data(ctx, addr, bytes, sizeof(bytes));
 }
 
 /*
@@ -688,14 +688,22 @@ static int init_context(struct process_ctx_s *ctx, pid_t pid,
 	ctx->pid = pid;
 	ctx->patchfile = patchfile;
 	ctx->dry_run = dry_run;
-
+    
 	if (init_patch(ctx))
 		return 1;
 
 	pr_info("  Patch path    : %s\n", ctx->patchfile);
 	pr_info("  Target BuildId: %s\n", PI(ctx)->target_bid);
 	pr_info("  Patch BuildId : %s\n", PI(ctx)->patch_bid);
-
+	pr_info("  Patch architecture type : %s\n", PI(ctx)->patch_arch_type);
+	if(!strcmp(PI(ctx)->patch_arch_type, "EM_X86_64"))
+	{
+		ctx->arch_callback = &x86_64_cb;
+	}
+	if(!strcmp(PI(ctx)->patch_arch_type, "EM_386"))
+	{
+		ctx->arch_callback = &x86_cb;
+	}
 	return 0;
 }
 

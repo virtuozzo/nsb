@@ -8,10 +8,11 @@
 #include "include/rtld.h"
 #include "include/log.h"
 #include "include/xmalloc.h"
+#include "include/x86_64.h"
 
 static int rtld_get_dyn(struct process_ctx_s *ctx, const void *addr, GElf_Dyn *dyn)
 {
-	return process_read_data(ctx, (uint64_t)addr, dyn, sizeof(*dyn));
+	return ctx->arch_callback->process_read_data(ctx, (uint64_t)addr, dyn, sizeof(*dyn));
 }
 
 static int64_t rtld_dynamic_tag_val(struct process_ctx_s *ctx,
@@ -37,7 +38,7 @@ static int64_t rtld_dynamic_tag_val(struct process_ctx_s *ctx,
 
 static int rtld_get_lm(struct process_ctx_s *ctx, void *addr, struct link_map *lm)
 {
-	return process_read_data(ctx, (uint64_t)addr, lm, sizeof(*lm));
+	return ctx->arch_callback->process_read_data(ctx, (uint64_t)addr, lm, sizeof(*lm));
 }
 
 int rtld_needed_array(struct process_ctx_s *ctx, uint64_t _r_debug_addr,
@@ -49,7 +50,7 @@ int rtld_needed_array(struct process_ctx_s *ctx, uint64_t _r_debug_addr,
 	const int step = 10;
 	uint64_t *arr = NULL;
 
-	err = process_read_data(ctx, _r_debug_addr + offsetof(struct r_debug, r_map),
+	err = ctx->arch_callback->process_read_data(ctx, _r_debug_addr + offsetof(struct r_debug, r_map),
 				&lm_addr, sizeof(lm_addr));
 	if (err)
 		return err;

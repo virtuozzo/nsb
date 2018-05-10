@@ -9,7 +9,6 @@
 #include "include/log.h"
 #include "include/xmalloc.h"
 #include "include/util.h"
-
 #include <protobuf/binpatch.pb-c.h>
 #include <protobuf/funcjump.pb-c.h>
 
@@ -160,6 +159,7 @@ int unpack_protobuf_binpatch(struct patch_info_s *patch_info, const void *data, 
 	}
 
 	patch_info->target_bid = strdup(bp->old_bid);
+	patch_info->patch_arch_type = strdup(bp->new_arch_type);
 	if (!patch_info->target_bid)
 		goto free_unpacked;
 

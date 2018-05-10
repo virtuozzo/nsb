@@ -2,6 +2,7 @@ import os
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.enums import ENUM_E_TYPE
+from elftools.elf.enums import ENUM_E_MACHINE
 
 from consts import *
 from elffile import get_build_id
@@ -51,9 +52,12 @@ class BinPatch:
 		pi.old_bid = get_build_id(self.bf_old.elf)
 		pi.new_bid = get_build_id(self.bf_new.elf)
 
+		pi.new_arch_type = self.bf_new.elf.header.e_machine
+
 		print "Header:"
 		print "  Target BuildId: %s" % pi.old_bid
 		print "  Patch BuildId : %s" % pi.new_bid
+		print "  Architecture on which patch is built : %s" % pi.new_arch_type
 
 		if self.patchfile:
 			pi.new_path = self.bf_new.filename

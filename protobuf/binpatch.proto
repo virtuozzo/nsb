@@ -10,4 +10,5 @@ message BinPatch {
 	repeated MarkedSym	manual_symbols	= 5;
 	repeated StaticSym	static_symbols	= 6;
 	repeated MarkedSym	global_symbols	= 7;
+	required string 	new_arch_type 	= 8;
 }
