@@ -239,7 +239,7 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 	load_size = ELF_PAGESTART(dl_map_end(dlm)) -
 		    ELF_PAGESTART(dl_map_start(dlm));
 
-	hint = dl_map_jump_hint(TDLM(ctx));
+	hint = dl_map_jump_hint(TDLM(ctx), ctx);
 
 	hole = process_find_place_for_elf(ctx, hint, load_size);
 	if (hole < 0) {
@@ -248,8 +248,8 @@ static int pin_elf_mmaps(struct process_ctx_s *ctx, struct dl_map *dlm,
 		return hole;
 	}
 
-	if (dl_map_check_jump_range(TDLM(ctx), hole) ||
-	    dl_map_check_jump_range(TDLM(ctx), hole + load_size)) {
+	if (dl_map_check_jump_range(TDLM(ctx), hole, ctx) ||
+		dl_map_check_jump_range(TDLM(ctx), hole + load_size, ctx)) {
 		pr_err("failed to find suitable address hole to patch %s\n",
 				TDLM(ctx)->ei->path);
 		pr_err("the nearest suitable hole is: %lx-%lx\n",

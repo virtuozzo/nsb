@@ -6,6 +6,7 @@
 #include "include/context.h"
 #include "include/vma.h"
 #include "include/dl_map.h"
+#include "include/x86_64.h"
 
 static void print_relocation(const struct list_head *head, const char *name)
 {
@@ -236,7 +237,7 @@ static int apply_es(const struct process_ctx_s *ctx, struct extern_symbol *es)
 			((es->dlm) ? es->dlm->path : TDLM(ctx)->path),
 			es->address);
 
-	err = process_write_data(ctx, plt_addr, &func_addr, sizeof(func_addr));
+	err = ctx->arch_callback->process_write_data(ctx, plt_addr, &func_addr, sizeof(func_addr));
 	if (err) {
 		pr_err("failed to write to addr %#lx in process %d\n",
 				plt_addr, ctx->pid);

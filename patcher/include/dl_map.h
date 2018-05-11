@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "list.h"
+#include "context.h"
 
 struct dl_map {
 	struct list_head	list;
@@ -45,7 +46,7 @@ int iterate_dl_maps(const struct list_head *head, void *data,
 
 void print_dl_vmas(const struct dl_map *dlm);
 
-uint64_t dl_map_jump_hint(const struct dl_map *dlm);
-int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base);
+uint64_t dl_map_jump_hint(const struct dl_map *dlm, struct process_ctx_s *ctx);
+int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base, struct process_ctx_s *ctx);
 
 #endif /* __PATCHER_DL_MAP_H__ */

@@ -311,21 +311,21 @@ int iterate_dl_vmas(const struct dl_map *dlm, void *data,
 	return err;
 }
 
-uint64_t dl_map_jump_hint(const struct dl_map *dlm)
+uint64_t dl_map_jump_hint(const struct dl_map *dlm, struct process_ctx_s *ctx)
 {
 	/* In case of static binary simply return end of the dl_map object. */
-        if (!elf_type_dyn(dlm->ei))
+	if (!elf_type_dyn(dlm->ei))
 		return dl_map_end(dlm);
 
-	return x86_jump_min_address(vma_end(last_dl_vma(dlm)));
+	return ctx->arch_callback->jump_min_address(vma_end(last_dl_vma(dlm)));
 }
 
-int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base)
+int dl_map_check_jump_range(const struct dl_map *dlm, uint64_t base, struct process_ctx_s *ctx)
 {
-	if (base < x86_jump_min_address(vma_end(last_dl_vma(dlm))))
+	if (base < ctx->arch_callback->jump_min_address(vma_end(last_dl_vma(dlm))))
 		return -ERANGE;
 
-	if (base > x86_jump_max_address(vma_start(first_dl_vma(dlm))))
+	if (base > ctx->arch_callback->jump_max_address(vma_start(first_dl_vma(dlm))))
 		return -ERANGE;
 
 	return 0;
